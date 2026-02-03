@@ -1,0 +1,601 @@
+﻿@inherits LayoutComponentBase
+@implements IDisposable
+  @using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
+@inject DemoConfiguration Configuration
+@inject DemoThemeService Themes
+@inject UserSessionService UserSessionService
+@inject NavigationManager Navigation
+@inject ProtectedLocalStorage ProtectedLocalStore
+@inject IJSRuntime JS
+@inject SessionStateService SessionState
+@inject EmployeeAdoNetService EmployeeService
+@* <div class="layout-header d-flex justify-content-between align-items-center px-4 py-2 bg-light border-bottom">
+    <div class="logo">
+        <h5 class="mb-0">My App</h5>
+    </div>
+
+    @if (UserSessionService.IsAuthenticated)
+    {
+        <div class="user-info d-flex align-items-center">
+            <span class="me-3 fw-semibold">Hello, @UserSessionService.Username</span>
+            <button class="btn btn-outline-danger btn-sm" @onclick="Logout">Logout</button>
+        </div>
+    }
+</div>
+
+ *@
+  @if (IsLoginPage())
+{
+    @Body
+}
+else
+{
+<link href="css/all.min.css" rel="stylesheet">
+<DemoScriptLoader @ref=@pageHelper Src="_content/BlazorDemo/lib/page-helper.js" />
+<header class="@GetDemoHeaderContainerCss()">
+  
+   @*  <nav class="demo-header p-0 navbar navbar-dark border-bottom"
+     style="background-color: rgb(249, 249, 249); min-height: 60px;"
+     aria-label="Header menu">
+    <div class="d-flex align-items-center px-3 logo-container">
+        <img src="images/logo.png" alt="Logo" class="header-logo" />
+    </div>
+</nav>
+        *@
+    <nav class="demo-header p-0 navbar navbar-dark" aria-label="Header menu">
+
+        <DemoLayoutToggleButton @bind-Toggled="@LayoutToggled" />
+            <div class="d-flex align-items-center px-3 logo-container">
+                <img src="images/logo.png" alt="Logo" class="header-logo" />
+            </div>
+    
+            <style>
+                .logo-container {
+                    overflow: hidden;
+                    height: 60px; /* match header height */
+                }
+
+                .border-bottom {
+                    position: relative;
+                    z-index: 2; /* ensure it's above */
+                }
+
+              
+
+
+    /* Larger logo on desktop */
+    @@media (min-width: 1200px) {
+        .header-logo {
+            height: 90px;
+        }
+    }
+
+    /* Medium screens */
+    @@media (max-width: 1199px) and (min-width: 768px) {
+        .header-logo {
+            height: 70px;
+        }
+    }
+
+    /* Mobile screens */
+    @@media (max-width: 767px) {
+        .header-logo {
+            height: 50px;
+        }
+        .logo-container {
+            max-width: 200px;
+            min-width: 150px;
+        }
+    }
+
+    /* Very small screens */
+    @@media (max-width: 480px) {
+        .header-logo {
+            height: 50px;
+        }
+        .logo-container {
+            max-width: 150px;
+        }
+    }
+</style>
+            
+            <span class="username-display">
+
+                <strong> <text>Welcome,  @UserSessionService.GlobalUserGroup || @UserSessionService.Usernamel ||Unit:@UserSessionService.UnitNamel:@UserSessionService.UnitId  </text></strong>
+
+            </span>
+        <div class="demo-btn-container d-flex">
+                <DxButton @onclick="@ShowLogoutConfirmation"
+                          CssClass="github-btn"
+                          IconCssClass="demo-github-icon"
+                          RenderStyle="ButtonRenderStyle.Secondary"
+                          RenderStyleMode="ButtonRenderStyleMode.Outline"
+                          SizeMode="SizeMode.Large"
+                          Text="Logout" />
+            <div class="btn-sep"></div>
+            <DxButton Click="@ToggleThemeSwitcherPanel" CssClass="@GetThemeSwitcherCssClass()" SizeMode="SizeMode.Large"
+                      RenderStyle="ButtonRenderStyle.Secondary" RenderStyleMode="ButtonRenderStyleMode.Outline" IconCssClass="demo-theme-icon"
+                      aria-label="Themes"
+                      aria-haspopup="True"
+                      aria-expanded="@(ThemeSwitcherShown.ToString())">
+            </DxButton>
+        </div>
+        <ThemeSwitcher @bind-Shown="@ThemeSwitcherShown" @bind-ThemeName="@ThemeName" />
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center py-2 px-3 border-bottom"
+         style="background-color: rgb(249, 249, 249); min-height: 40px;">
+    </div>
+
+    <PageTitle>CA Store System</PageTitle>
+</header>
+<main class="@GetDemoContentContainerCss()" @ref="@contentContainerRef">
+    <div class="container-fluid px-0">
+        <div class="demo-content @LayoutStateCssClass">
+            <div class="sidebar">
+                <DemoSideBar />
+            </div>
+            <div class="main">
+                <div class="content" @key="ShouldUseThemeNameKey() ? ThemeName : null">
+                    <CascadingValue Value="@ThemeName" Name="ThemeName">
+                        @Body
+                    </CascadingValue>
+                </div>
+                <div class="content-footer"></div>
+            </div>
+            @if (!_isDesktop)
+            {
+                @* <DemoModalBackdrop /> *@
+            }
+        </div>
+    </div>
+</main>
+}
+
+
+
+
+<DxPopup @bind-Visible="@isDialogVisible"
+         HeaderText="Confirmation"
+         ShowCloseButton="true"
+         CssClass="validation-dialog">
+    <Content>
+       <strong> Are you sure you want to Log out</strong>?
+        <div>
+            <DxButton RenderStyle="ButtonRenderStyle.Primary" Click="@OnConfirmYes">Yes</DxButton>
+            <DxButton RenderStyle="ButtonRenderStyle.Secondary" Click="@OnConfirmNo">No</DxButton>
+        </div>
+    </Content>
+
+</DxPopup>
+
+
+
+@code {
+    string _themeName;
+    bool _layoutToggled;
+    bool _themeSwitcherShown;
+    bool _isDesktop = true;
+    ElementReference contentContainerRef;
+    private List<string> _allowedPages = new();
+    DemoScriptLoader pageHelper;
+
+    [Inject]
+    protected NavigationManager NavigationManager { get; set; }
+    [Inject]
+    IJSRuntime JsRuntime { get; set; }
+    // protected override async Task OnAfterRenderAsync(bool firstRender)
+    // {
+    //     if (firstRender)
+    //     {
+    //         await JS.InvokeVoidAsync("setDocumentTitle", "My Custom Title");
+    //     }
+    // }
+    protected string ThemeName
+    {
+        get { return _themeName; }
+        set
+        {
+            if (_themeName != value)
+            {
+                _themeName = value;
+                Themes.SetActiveThemeByName(value);
+            }
+        }
+    }
+    private void OnConfirmNo()
+    {
+        isDialogVisible = false;
+    }
+
+    
+    
+      private void ShowLogoutConfirmation()
+    {
+        isDialogVisible = true;
+    }
+    
+    
+    
+    
+    protected bool IsBootstrapNative
+    {
+        get { return Themes.ActiveTheme.IsBootstrapNative; }
+    }
+
+    protected async override void OnInitialized()
+    {
+#if MAUI
+    ThemeName = "";
+#else
+        ThemeName = Themes.ActiveTheme.Name;
+#endif
+        var userResult = await ProtectedLocalStore.GetAsync<string>("Username");
+        string userName = userResult.Success ? userResult.Value : null;
+
+        var userResult1 = await ProtectedLocalStore.GetAsync<string>("Unitname");
+        string UnitName = userResult1.Success ? userResult1.Value : null;
+
+
+
+        var userResult11 = await ProtectedLocalStore.GetAsync<string>("Unitidno");
+        string Unitid = userResult11.Success ? userResult11.Value : null;
+
+
+
+        var userResult13 = await ProtectedLocalStore.GetAsync<string>("UserGroup");
+        string GlobalUserGroup = userResult13.Success ? userResult13.Value : null;
+
+
+
+        // var userResult3 = await ProtectedLocalStore.GetAsync<string>("Unitidno").ConfigureAwait(false);
+        // int unitId = 0;
+        // if (userResult3.Success && int.TryParse(userResult3.Value, out var parsedUnitId))
+        // {
+        //     unitId = parsedUnitId;
+        // }
+
+
+        if (userName != null)
+        {
+            
+            await UserSessionService.SaveUserGroupAsync(GlobalUserGroup);
+
+            await UserSessionService.LoginAsync(userName, UnitName, Convert.ToInt32(Unitid), GlobalUserGroup);
+            _allowedPages = await EmployeeService.GetAllowedPagesAsync(GlobalUserGroup);
+
+            StateHasChanged();
+        }
+
+        NavigationManager.LocationChanged += OnLocationChanged;
+
+    }
+
+    void TryRedirect(string url)
+    {
+        if (TryGetRedirectUrl(url, out var uri))
+            NavigationManager.NavigateTo(uri, true);
+    }
+
+
+    protected async Task OnConfirmYes()
+    {
+
+        isDialogVisible = false;
+        await UserSessionService.LogoutAsync(NavigationManager);
+
+
+        
+
+    }
+
+
+
+    protected bool TryGetRedirectUrl(string currentUrl, out string redirectUrl)
+    {
+        redirectUrl = "";
+        return currentUrl?.Length > NavigationManager.BaseUri?.Length && Configuration.Redirects.TryGetValue(currentUrl.Substring(NavigationManager.BaseUri.Length).ToLower(), out redirectUrl);
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        TryRedirect(NavigationManager.Uri);
+        if (firstRender && pageHelper != null)
+        {
+            await ScrollToMainTopIfNeeded(NavigationManager.Uri);
+
+            await pageHelper.InvokeVoidAsync("DemoPageHelper.demoMatchesQuery", "(min-width: 1200px)", DotNetObjectReference.Create(this));
+            await pageHelper.InvokeVoidAsync("DemoPageHelper.patchAppElement");
+            await UpdateDocumentTitle();
+            await Task.Delay(100);
+            
+           
+        }
+        else
+        {
+            // await pageHelper.InvokeVoidAsync("DemoPageHelper.themes.setThemeName", DemoThemeService.ThemeCookieKey, ThemeName);
+
+            if (_isDesktop && SavedLayoutToggled != LayoutToggled)
+                await pageHelper.InvokeVoidAsync("DemoPageHelper.raiseWindowOnResize");
+        }
+        await ScrollToTargetIfNeeded(NavigationManager.Uri);
+        SavedLayoutToggled = LayoutToggled;
+        IsFirstTimeRendered = true;
+    }
+
+
+
+    private async Task InitializeAfterRender()
+    {
+        // Wait for services to be ready
+        await Task.Delay(100);
+
+        if (ProtectedLocalStore != null)
+        {
+            await LoadUsername();
+            StateHasChanged();
+        }
+    }
+
+
+
+
+
+
+
+
+
+
+
+    async void OnLocationChanged(object sender, LocationChangedEventArgs args)
+    {
+        TryRedirect(args.Location);
+        ThemeSwitcherShown = false;
+        if (!_isDesktop)
+        {
+            LayoutToggled = false;
+        }
+        if (_isDesktop)
+        {
+            LayoutToggled = true;
+        }
+        await ScrollToMainTopIfNeeded(args.Location);
+        await UpdateDocumentTitle();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    [JSInvokable]
+    public async Task OnQueryChanged(bool isDesktop)
+    {
+        if (_isDesktop != isDesktop)
+        {
+            _isDesktop = isDesktop;
+            LayoutToggled = false;
+            ThemeSwitcherShown = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    bool LayoutToggled
+    {
+        get { return _layoutToggled; }
+        set
+        {
+            if (_layoutToggled != value)
+            {
+                _layoutToggled = value;
+                if (!_isDesktop && _layoutToggled)
+                    ThemeSwitcherShown = false;
+            }
+        }
+    }
+    string LayoutStateCssClass { get { return IsFirstTimeRendered ? ((_isDesktop && LayoutToggled || !_isDesktop && !LayoutToggled) ? "sidebar-hidden" : "sidebar-shown") : ""; } }
+    bool SavedLayoutToggled { get; set; }
+    bool ModalBackgroundShown { get { return !_isDesktop && (ThemeSwitcherShown || LayoutToggled); } }
+    bool IsFirstTimeRendered { get; set; }
+
+    bool ThemeSwitcherShown
+    {
+        get { return _themeSwitcherShown; }
+        set
+        {
+            if (_themeSwitcherShown != value)
+            {
+                _themeSwitcherShown = value;
+                if (!_isDesktop && _themeSwitcherShown)
+                    LayoutToggled = false;
+            }
+        }
+    }
+
+    void ToggleThemeSwitcherPanel()
+    {
+        ThemeSwitcherShown = !ThemeSwitcherShown;
+    }
+
+    private string username;
+    private string Unitname;
+    private int unitid;
+    private bool DeleteDialog = false;
+    private bool isDialogVisible = false;
+
+    private bool ShowEmptyFieldDialogError { get; set; }
+
+    private bool ShowEmptyFieldDialog { get; set; }
+
+
+    private async Task LoadUsername()
+    {
+        // var userResult = await ProtectedLocalStore.GetAsync<string>("Username");
+        // if (userResult.Success)
+        // {
+        //     username = userResult.Value;
+        // }
+
+        // var userUnit = await ProtectedLocalStore.GetAsync<string>("Unitname");
+        // if (userUnit.Success)
+        // {
+        //     Unitname = userUnit.Value;
+        // }
+
+
+        // var userunitid = await ProtectedLocalStore.GetAsync<string>("Unitidno");
+        // if (userunitid.Success)
+        // {
+        //     unitid = Convert.ToInt32(userunitid);
+        // }
+
+
+
+
+
+    }
+
+
+
+
+
+
+
+    bool ShouldUseThemeNameKey()
+    {
+        var page = Configuration.GetDemoPageByUrl(NavigationManager, NavigationManager.Uri);
+        while (page != null)
+        {
+            if (page.ReCreateOnThemeChange.HasValue)
+                return page.ReCreateOnThemeChange.Value;
+            page = page.ParentPage;
+        }
+        return true;
+    }
+
+   
+
+
+
+
+
+
+
+
+
+
+    private string myValue = "Initial Value";
+
+    void ModalBackdropShownChanged(bool shown)
+    {
+        if (!shown)
+        {
+            ThemeSwitcherShown = false;
+            LayoutToggled = false;
+        }
+    }
+
+    bool HasAnchorInUrl(string uri)
+    {
+        return !string.IsNullOrEmpty(NavigationManager.ToAbsoluteUri(uri).Fragment.Replace("#", ""));
+    }
+    async Task ScrollToMainTopIfNeeded(string uri)
+    {
+        if (!HasAnchorInUrl(uri))
+            await pageHelper.InvokeVoidAsync("DemoPageHelper.scroll.toElementTop", contentContainerRef);
+    }
+    async Task ScrollToTargetIfNeeded(string uri)
+    {
+        if (HasAnchorInUrl(uri))
+            await pageHelper.InvokeVoidAsync("DemoPageHelper.scroll.ensureNavigationTargetIsVisible");
+    }
+    string GetDemoContentContainerCss()
+    {
+        List<string> cssClasses = new List<string>();
+        cssClasses.Add("demo-content-container");
+#if !VISUALTESTS
+        if (IsFirstTimeRendered)
+            cssClasses.Add("animated");
+#endif
+        cssClasses.Add("theme-" + ThemeName.Replace(" ", "-"));
+        if (IsBootstrapNative)
+            cssClasses.Add("theme-external");
+        return string.Join(" ", cssClasses);
+    }
+    string GetDemoBreadcrumbsContainerCss()
+    {
+        List<string> cssClasses = new List<string>();
+        cssClasses.Add("demo-breadcrumbs-container");
+        cssClasses.Add("theme-" + ThemeName.Replace(" ", "-"));
+        if (IsBootstrapNative)
+            cssClasses.Add("theme-external");
+        return string.Join(" ", cssClasses);
+    }
+    string GetDemoBreadcrumbsCss()
+    {
+        List<string> cssClasses = new List<string>();
+        cssClasses.Add("demo-breadcrumbs");
+        cssClasses.Add(LayoutStateCssClass);
+        return string.Join(" ", cssClasses);
+    }
+    string GetDemoHeaderContainerCss()
+    {
+        List<string> cssClasses = new List<string>();
+        cssClasses.Add("demo-header-container");
+        cssClasses.Add("theme-" + ThemeName.Replace(" ", "-"));
+        if (IsBootstrapNative)
+            cssClasses.Add("theme-external");
+        return string.Join(" ", cssClasses);
+    }
+    string GetThemeSwitcherCssClass()
+    {
+        return "theme-settings " + ThemeSwitcherShown;
+    }
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= OnLocationChanged;
+    }
+
+    // private void Logout()
+    // {
+    //     UserSessionService.Logout();
+    //     Navigation.NavigateTo("/login", true);
+    // }
+    private bool IsLoginPage()
+    {
+        return Navigation.Uri.Contains("/login", StringComparison.OrdinalIgnoreCase) ||
+               Navigation.Uri.EndsWith("/") && !UserSessionService.IsAuthenticated;
+    }
+
+    private async Task UpdateDocumentTitle()
+    {
+        var uri = new Uri(NavigationManager.Uri);
+        var path = uri.AbsolutePath.Trim('/');
+
+        string pageName = string.IsNullOrWhiteSpace(path)
+            ? "Home"
+            : System.Globalization.CultureInfo.CurrentCulture.TextInfo
+                .ToTitleCase(path.Replace("-", " ").Replace("/", " / "));
+
+        string title = $"Cold Store | {pageName}";
+
+        await JsRuntime.InvokeVoidAsync("setDocumentTitle", title);
+    }
+
+
+
+
+}

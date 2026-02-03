@@ -1,0 +1,55 @@
+﻿@implements IDisposable
+@using System.Threading
+@if (!string.IsNullOrEmpty(Data))
+{
+    <p>@Data</p>
+}
+else
+{
+    <p>Loading...</p>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public Func<Task<string>>? FetchData { get; set; }
+
+    [Parameter]
+    public int IntervalMs { get; set; } = 5000;
+
+    private string? Data;
+    private CancellationTokenSource? _cts;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (FetchData == null)
+        {
+            throw new InvalidOperationException("You must provide a FetchData function.");
+        }
+
+        _cts = new CancellationTokenSource();
+        await StartRefreshLoop(_cts.Token);
+    }
+
+    private async Task StartRefreshLoop(CancellationToken token)
+    {
+        while (!token.IsCancellationRequested)
+        {
+            try
+            {
+                Data = await FetchData.Invoke();
+                await InvokeAsync(StateHasChanged);
+                await Task.Delay(IntervalMs, token);
+            }
+            catch (TaskCanceledException)
+            {
+                // Timer cancelled — expected
+            }
+        }
+    }
+
+    public void Dispose()
+    {
+        _cts?.Cancel();
+        _cts?.Dispose();
+    }
+}

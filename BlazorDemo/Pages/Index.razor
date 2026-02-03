@@ -1,0 +1,134 @@
+﻿@page "/index"
+@layout MainLayout
+@inject ProtectedLocalStorage ProtectedLocalStore
+
+@using BlazorDemo.Configuration
+@inject DemoConfiguration Configuration
+@inject DemoThemeService Themes
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JS
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/open-iconic/1.1.1/font/css/open-iconic-bootstrap.min.css">
+<script src="sessionHelper.js"></script>
+@{
+    RenderFragment<DemoProductInfo> DemoProduct = (info) =>
+    @<div class="col-xl-4 col-lg-6 col-xs-12">
+        <a class="demo-product" href="@info.PageUri">
+            <div class="demo-product-icon demo-product-icon-@info.IconName">
+                <svg role="img" title="<title>CA Store System</title>">
+                    <use href="@(StaticAssetUtils.GetImagePath("products.svg"))#@info.IconName"></use>
+                </svg>
+            </div>
+            <div class="flex-grow-1 text-body">
+                <h2>CA Store System</h2>
+                <span class="demo-product-info">CA Store System</span>
+            </div>
+        </a>
+    </div>;
+}
+
+
+
+@* <div class="demo-products demo-products-description theme-@Themes.ActiveTheme.Name.Replace(" ", "-")">
+    <h1 class="mb-4">DevExpress UI Components for Blazor</h1>
+    <p>The <a href="https://www.devexpress.com/blazor/" target="_blank">CA Store System</a> ships with a comprehensive suite of Blazor components (including a DataGrid, Scheduler, Chart, Data Editors, Rich Text Editor, and Reporting). To learn more about the capabilities of our Blazor UI suite for your next great Blazor-based web app, select a component library from the list below. DevExpress Blazor UI components ship as part of the DevExpress ASP.NET, DXperience, and Universal Subscriptions.</p>
+    <p>Should you have any questions about the products listed herein or are considering DevExpress UI components for an upcoming Blazor project, please email <a href="mailto:info@devexpress.com" tabindex="-1">info@devexpress.com</a>. We will be happy to follow-up.</p>
+    <div class="row mb-3">
+        @foreach(var info in Configuration.Products) {
+            @DemoProduct.Invoke(info)
+        }
+    </div>
+</div> *@
+
+<h2 class="mb-4"></h2>
+
+
+
+
+<ul>
+</ul>
+
+<h2 class="my-4"></h2>
+
+<p>
+</p>
+
+<ul>
+</ul>
+
+<h2 class="my-4"></h2>
+
+<p>
+</p>
+
+@code {
+    public override async Task SetParametersAsync(ParameterView parameters)
+    {
+        // if (Configuration.ShowOnlyReporting)
+        //     NavigationManager.NavigateTo("ReportViewer");
+        // else
+        //     await base.SetParametersAsync(parameters);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var uri = new Uri(NavigationManager.Uri);
+            var pageSegment = uri.AbsolutePath.Trim('/'); // "login", "dashboard", etc.
+
+            string pageName = string.IsNullOrWhiteSpace(pageSegment)
+                ? "Home"
+                : System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(pageSegment.Replace("-", " "));
+            pageName = "Home";
+            string title = $"Cold Store | {pageName}";
+            await JS.InvokeVoidAsync("setDocumentTitle", title);
+            var userResult = await ProtectedLocalStore.GetAsync<string>("Username");
+            if (userResult.Success)
+            {
+
+                // await JS.InvokeVoidAsync("alert", $"Username: {userResult.Value}");
+            }
+
+        }
+    }
+
+    protected async override void OnInitialized()
+    {
+        // var userResult = await ProtectedLocalStore.GetAsync<string>("Username");
+        // if (userResult.Success)
+        // {
+        //     //username = userResult.Value;
+        // }
+
+        // var userUnit = await ProtectedLocalStore.GetAsync<string>("Unitname");
+        // if (userUnit.Success)
+        // {
+        //     //Unitname = userUnit.Value;
+        // }
+
+
+        // var userunitid = await ProtectedLocalStore.GetAsync<string>("Unitidno");
+        // if (userunitid.Success)
+        // {
+        //     //unitid = Convert.ToInt32(userunitid);
+        // }
+
+
+
+      
+    }
+
+
+}
+ @* <script>
+    function isonlynumber(evt) {
+        var charCode = (evt.which) ? evt.which : evt.keyCode;
+        // Allow only digits (0–9)
+        if (charCode < 48 || charCode > 57) {
+            evt.preventDefault();
+            return false;
+        }
+        return true;
+    }
+</script>  *@

@@ -1,0 +1,313 @@
+/* ============================================
+   MODERN NAVMENU STYLES
+   Clean, Professional Navigation
+   ============================================ */
+
+:root {
+    --sidebar-bg: #2d3748;
+    --sidebar-text: #e2e8f0;
+    --sidebar-hover: #374151;
+    --sidebar-active: #667eea;
+    --sidebar-border: #4a5568;
+    --sidebar-icon: #a0aec0;
+}
+
+/* ============================================
+   SIDEBAR CONTAINER
+   ============================================ */
+
+.modern-sidebar {
+    height: 100%;
+    background: var(--sidebar-bg);
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* Custom scrollbar */
+.modern-sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.modern-sidebar::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.modern-sidebar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+}
+
+.modern-sidebar::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* ============================================
+   TREEVIEW STYLES
+   ============================================ */
+
+.modern-tree {
+    background: transparent !important;
+    border: none !important;
+    color: var(--sidebar-text) !important;
+}
+
+/* TreeView container */
+.modern-tree .dx-treeview {
+    background: transparent !important;
+    border: none !important;
+}
+
+/* Remove borders */
+.modern-tree .dx-treeview-border-visible {
+    border: none !important;
+}
+
+.modern-tree .dx-scrollable-content {
+    background: transparent !important;
+}
+
+/* ============================================
+   TREE NODES
+   ============================================ */
+
+.modern-tree .dx-treeview-node {
+    background: transparent !important;
+    border: none !important;
+}
+
+/* Node items */
+.modern-tree .dx-treeview-item {
+    background: transparent !important;
+    color: var(--sidebar-text) !important;
+    border: none !important;
+    padding: 12px 16px !important;
+    margin: 2px 8px !important;
+    border-radius: 8px !important;
+    transition: all 0.2s ease !important;
+    font-size: 0.95rem !important;
+    font-weight: 500 !important;
+}
+
+/* Parent nodes (with children) */
+.modern-tree .dx-treeview-item-with-children {
+    font-weight: 600 !important;
+    margin-top: 8px !important;
+}
+
+/* Child nodes */
+.modern-tree .dx-treeview-item-with-children + .dx-treeview-node .dx-treeview-item {
+    padding-left: 40px !important;
+    font-size: 0.9rem !important;
+    font-weight: 400 !important;
+}
+
+/* ============================================
+   HOVER & ACTIVE STATES
+   ============================================ */
+
+/* Hover state */
+.modern-tree .dx-treeview-item:hover {
+    background: var(--sidebar-hover) !important;
+    color: white !important;
+    transform: translateX(2px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Active/Selected state */
+.modern-tree .dx-treeview-item.dx-state-selected,
+.modern-tree .dx-treeview-item.active {
+    background: var(--sidebar-active) !important;
+    color: white !important;
+    font-weight: 600 !important;
+    box-shadow: 0 4px 6px rgba(102, 126, 234, 0.3);
+}
+
+/* ============================================
+   ICONS
+   ============================================ */
+
+/* All icons */
+.modern-tree .dx-treeview-item .fa,
+.modern-tree .dx-treeview-item .fas {
+    color: var(--sidebar-icon) !important;
+    margin-right: 12px !important;
+    font-size: 1rem !important;
+    width: 20px !important;
+    text-align: center !important;
+}
+
+/* Icons on hover */
+.modern-tree .dx-treeview-item:hover .fa,
+.modern-tree .dx-treeview-item:hover .fas {
+    color: white !important;
+}
+
+/* Icons when active */
+.modern-tree .dx-treeview-item.dx-state-selected .fa,
+.modern-tree .dx-treeview-item.dx-state-selected .fas,
+.modern-tree .dx-treeview-item.active .fa,
+.modern-tree .dx-treeview-item.active .fas {
+    color: white !important;
+}
+
+/* ============================================
+   EXPAND/COLLAPSE ICONS
+   ============================================ */
+
+.modern-tree .dx-treeview-toggle-item-visibility {
+    color: var(--sidebar-icon) !important;
+    opacity: 0.7 !important;
+    transition: all 0.2s ease !important;
+}
+
+.modern-tree .dx-treeview-toggle-item-visibility:hover {
+    opacity: 1 !important;
+    color: white !important;
+}
+
+/* Expanded state */
+.modern-tree .dx-treeview-node-is-expanded > .dx-treeview-item .dx-treeview-toggle-item-visibility {
+    color: white !important;
+    opacity: 1 !important;
+}
+
+/* ============================================
+   FOCUS STATES
+   ============================================ */
+
+.modern-tree .dx-treeview-item:focus {
+    outline: 2px solid rgba(102, 126, 234, 0.5) !important;
+    outline-offset: -2px !important;
+}
+
+/* ============================================
+   PARENT NODE STYLING
+   ============================================ */
+
+/* Top-level parent nodes */
+.modern-tree .dx-treeview > .dx-treeview-node > .dx-treeview-item {
+    margin-top: 4px !important;
+    margin-bottom: 4px !important;
+}
+
+/* Nested children container */
+.modern-tree .dx-treeview-node-container {
+    padding-top: 4px !important;
+    padding-bottom: 4px !important;
+}
+
+/* ============================================
+   TEXT STYLING
+   ============================================ */
+
+.modern-tree .dx-treeview-item-content {
+    display: flex !important;
+    align-items: center !important;
+}
+
+/* Prevent text wrapping */
+.modern-tree .dx-treeview-item .dx-item-content {
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+/* ============================================
+   RESPONSIVE ADJUSTMENTS
+   ============================================ */
+
+@media (max-width: 1200px) {
+    .modern-tree .dx-treeview-item {
+        padding: 10px 12px !important;
+        font-size: 0.9rem !important;
+    }
+    
+    .modern-tree .dx-treeview-item .fa,
+    .modern-tree .dx-treeview-item .fas {
+        margin-right: 10px !important;
+        font-size: 0.95rem !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .modern-tree .dx-treeview-item {
+        padding: 12px 16px !important;
+        margin: 3px 4px !important;
+    }
+    
+    .modern-tree .dx-treeview-item-with-children + .dx-treeview-node .dx-treeview-item {
+        padding-left: 32px !important;
+    }
+}
+
+/* ============================================
+   ANIMATIONS
+   ============================================ */
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.modern-tree .dx-treeview-node-container {
+    animation: slideIn 0.2s ease;
+}
+
+/* ============================================
+   SEPARATORS (Optional Visual Enhancement)
+   ============================================ */
+
+/* Add subtle separator after parent nodes */
+.modern-tree .dx-treeview-item-with-children::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 16px;
+    right: 16px;
+    height: 1px;
+    background: var(--sidebar-border);
+    opacity: 0.3;
+}
+
+/* ============================================
+   ACCESSIBILITY IMPROVEMENTS
+   ============================================ */
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .modern-tree .dx-treeview-item {
+        border: 1px solid var(--sidebar-border) !important;
+    }
+    
+    .modern-tree .dx-treeview-item.dx-state-selected {
+        border-color: white !important;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .modern-tree .dx-treeview-item,
+    .modern-tree .dx-treeview-toggle-item-visibility {
+        transition: none !important;
+    }
+    
+    .modern-tree .dx-treeview-node-container {
+        animation: none !important;
+    }
+}
+
+/* ============================================
+   PRINT STYLES
+   ============================================ */
+
+@media print {
+    .modern-sidebar {
+        display: none;
+    }
+}

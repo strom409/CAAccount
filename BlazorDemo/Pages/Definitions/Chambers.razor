@@ -1,0 +1,362 @@
+﻿@page "/Chambers"
+
+@using Microsoft.AspNetCore.Components.Web
+
+@inject EmployeeAdoNetService EmployeeService
+
+@using BlazorDemo.Services;
+@using BlazorDemo;
+@inject IJSRuntime JS
+@inject NavigationManager NavigationManager
+
+
+<div class="row g-4">
+    <!-- Left Form (Single Column) -->
+    <div class="d-flex justify-content-between align-items-center p-3 bg-light border-bottom">
+
+        <h6><strong>Chamber Details</strong></h6>
+        <button @onclick="AddChamber" class="btn btn-primary btn-sm">Add</button>
+
+    </div>
+</div>
+
+<style>
+    .grid-container {
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+    }
+
+        /* Optional: Make the grid itself wider than viewport */
+        .grid-container .dxbl-grid {
+            min-width: 800px; /* Adjust based on your total column widths */
+        }
+</style>
+
+
+<style>
+    .alt-item {
+        background-color: rgba(243, 244, 245, 1) !important;
+    }
+
+        .alt-item > td {
+            --dxbl-grid-bg: rgba(243, 244, 245, 1) !important;
+            background-color: rgba(243, 244, 245, 1) !important;
+        }
+</style>
+<div style="overflow-x:auto; width:100%;">
+    <DxGrid Data="@banks" ShowSearchBox="true"
+            ShowGroupPanel="false" FilterMenuButtonDisplayMode="GridFilterMenuButtonDisplayMode.Always"
+            ColumnResizeMode="GridColumnResizeMode.NextColumn" CustomizeElement="Grid_CustomizeElement" TextWrapEnabled="true">
+
+    <Columns>
+            <DxGridDataColumn FieldName=@nameof(companyModel.ChamberId) Caption="Ch No"  MinWidth="100" Width="5%" />
+            <DxGridDataColumn FieldName=@nameof(companyModel.ChamberName) Caption="Name" MinWidth="100" Width="30%" />
+            <DxGridDataColumn FieldName=@nameof(companyModel.Unitname) Caption="Unit Name" MinWidth="100" Width="30%" />
+            <DxGridDataColumn FieldName=@nameof(companyModel.Capacity) Caption="Capacity" DisplayFormat="F0" MinWidth="100" Width="20%" />
+            <DxGridDataColumn FieldName=@nameof(companyModel.ChamberType) Caption="Type" DisplayFormat="F0" MinWidth="100" Width="20%" />
+
+            <DxGridDataColumn FieldName="@nameof(companyModel.chamberstatus)" MinWidth="100" Caption="Status" Width="10%">
+                <CellDisplayTemplate Context="cellData">
+                    @{
+                        var status = cellData.Value?.ToString();
+                        var iconClass = status switch
+                        {
+                            "True" => "oi oi-circle-check text-success",
+                            "true" => "oi oi-x text-danger",
+                            "False" => "oi oi oi-x text-danger",
+                            _ => "oi oi-question-mark text-secondary"
+                        };
+                        var growerId = ((CompanyModel)cellData.DataItem).ChamberId;
+                    }
+                    <span class="@iconClass"
+                          title="Click to change status"
+                          style="cursor: pointer;"
+                          @onclick="() => ShowConfirmDialog(growerId)">
+                    </span>
+
+
+
+                </CellDisplayTemplate>
+
+            </DxGridDataColumn>
+
+
+
+
+
+
+
+
+
+            <DxGridCommandColumn Width="30%">
+                <HeaderTemplate>
+                    <strong>Actions</strong>
+                    @* <a class="oi oi-action"  style="text-decoration: none;" href="javascript:void(0);"></a> *@
+                </HeaderTemplate>
+                <CellDisplayTemplate>
+
+
+                    <a title="Edit Chamber" class="oi oi-pencil" @onclick="@(() => EditChamber(((CompanyModel)context.DataItem).ChamberId))"
+                           style="cursor: pointer; cursor: pointer;"></a>
+
+
+
+                    <a title="Delete Chamber" class="fa fa-trash text-red" @onclick="@(() => DeleteChamber(((CompanyModel)context.DataItem).ChamberId))" style="cursor: pointer;"></a>
+
+
+
+                    <a title="View Chamber" class="oi oi-eye" @onclick="@(() => ViewChamber(((CompanyModel)context.DataItem).ChamberId))" style="cursor: pointer;"></a>
+
+                    <a title="Add Chamber" class="oi oi-plus" @onclick="@(() => AddChamber(((CompanyModel)context.DataItem).ChamberId))" style="cursor: pointer;"></a>
+                </CellDisplayTemplate>
+            </DxGridCommandColumn>
+
+
+        </Columns>
+        
+      <TotalSummary>
+                <DxGridSummaryItem SummaryType="GridSummaryItemType.Count" FieldName="@nameof(companyModel.Chbcode)" />
+                <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum" FieldName="@nameof(companyModel.Cft)" />
+                <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum" FieldName="@nameof(companyModel.Asize)" />
+                <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum" FieldName="@nameof(companyModel.Usize)" />
+                <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum" FieldName="@nameof(companyModel.Sft)" />
+        </TotalSummary>
+
+
+</DxGrid>
+</div>
+
+@* <style>
+    .e-grid .e-headercelldiv {
+        font-size: 12px;
+        font-weight: normal;
+        color: black;
+    }
+
+    <style >
+    .e-grid .e-headercell {
+        white-space: normal !important;
+        word-break: break-word;
+    }
+</style>
+    .e-grid .e-headercell {
+        color: gainsboro;
+        background-color: gainsboro;
+    }
+
+    .e-grid .e-gridheader {
+        border: 2px solid gainsboro;
+    }
+
+    .e-grid .e-summaryrow td {
+        background-color: #f0f0f0;
+        font-weight: bold;
+    }
+
+    .e-grid .e-groupfootercell {
+        background-color: #e0e0e0;
+    }
+    .e-grid .e-altrow {
+        background-color: #f0f0f0;
+        ;
+    }
+
+</style> *@
+<DxPopup @bind-Visible="@AddSub"
+         HeaderText="Add New Grower"
+         Width="500px">
+    <Content>
+       
+
+            <!-- First Row -->
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label class="form-label">Chamber type</label>
+                    <InputText id="remarks"
+                               style="font-size: 14px; height: 30px; font-family: 'Source Sans Pro', sans-serif;"
+                               class="form-control input-placeholder-dim input-focus-dark"
+                               @bind-Value="EditModel.GrowerGroupName"
+                               placeholder="Group Name" readonly />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Unit Name</label>
+                    <InputText id="remarks"
+                               style="font-size: 14px; height: 30px; font-family: 'Source Sans Pro', sans-serif;"
+                               class="form-control input-placeholder-dim input-focus-dark"
+                               @bind-Value="EditModel.GrowerName"
+                               placeholder="Grower Name" />
+                </div>
+            </div>
+
+            <!-- Second Row -->
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label class="form-label">Grower Address</label>
+                    <InputText id="remarks"
+                               style="font-size: 14px; height: 30px; font-family: 'Source Sans Pro', sans-serif;"
+                               class="form-control input-placeholder-dim input-focus-dark"
+                               @bind-Value="EditModel.GrowerAddress"
+                               placeholder="Address" />
+                </div>
+              
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <label class="form-label">Crate Issue Qty</label>
+                    <InputNumber id="remarks"
+                                 style="font-size: 14px; height: 30px; font-family: 'Source Sans Pro', sans-serif;"
+                                 class="form-control input-placeholder-dim input-focus-dark"
+                                 @bind-Value="EditModel.GrowerCrateissue"
+                                 placeholder="Crate Issue Qty" />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Crate Limit</label>
+                    <InputNumber id="remarks"
+                                 style="font-size: 14px; height: 30px; font-family: 'Source Sans Pro', sans-serif;"
+                                 class="form-control input-placeholder-dim input-focus-dark"
+                                 @bind-Value="EditModel.GrowerCratelimit"
+                                 placeholder="Limit Percent" />
+                </div>
+
+
+            </div>
+
+
+
+            <div class="modal-footer" style="display: flex; justify-content: space-between; flex-direction: row-reverse;">
+                <div class="d-flex gap-2">
+                 @*    <DxButton class="btn btn-primary btn-sm" Text="Save" @onclick="SaveNewSub" />
+                    <DxButton class="btn btn-primary btn-sm" Text="Close" @onclick="HideNewsub" /> *@
+                </div>
+            </div>
+     
+    </Content>
+</DxPopup>
+
+@code {
+    private CompanyModel EditModel = new();
+
+    private bool AddSub { get; set; } = false;
+
+    void ChangeSearchMode(string key)
+    {
+        // CurrentSearchTextParseModeDisplayText = key;
+        // CurrentSearchTextParseMode = SearchTextParseModes[key];
+    }
+
+    public void ShowDetails(int employeeId)
+    {
+
+    }
+    public void ShowDetails1(string ename)
+    {
+
+    }
+
+    private void ViewChamber(int growerId)
+    {
+        companyModel.Growerid = growerId;
+
+
+       // NavigationManager.NavigateTo($"/ViewGrowerAgreement/{growerId}");
+
+    }
+
+    private void DeleteChamber(int growerId)
+    {
+        // selectedGrowerId = growerId;
+        // DeleteDialog = true;
+
+
+    }
+    private void AddChamber(int growerId)
+    {
+        companyModel.Growerid = growerId;
+
+
+      //  NavigationManager.NavigateTo($"/AddGrower");
+
+    }
+    private void EditChamber(int growerId)
+    {
+        companyModel.ChamberId = growerId;
+
+
+       NavigationManager.NavigateTo($"/EditChamber/{growerId}");
+
+    }
+    public void ShowDetails2(string dept)
+    {
+
+    }
+
+    private void ShowConfirmDialog(int growerId)
+    {
+        //selectedGrowerId = growerId;
+        //isDialogVisible = true;
+
+
+    }
+    // private string activeBreakpoint { get; set; }
+
+    // // private List<Order> orders { get; set; }
+
+    // private bool enableAdaptiveUIMode { get; set; }
+    // private RowDirection renderingMode { get; set; }
+    CompanyModel companyModel = new CompanyModel();
+      IGrid MyGrid { get; set; }
+    List<CompanyModel> banks = new List<CompanyModel>();
+    
+    protected override async Task OnInitializedAsync()
+    {
+        banks = await EmployeeService.GetallChambers();
+    }
+   // SfGrid<CompanyModel> Grid;
+    
+    // FilterSettings filterSettings = new FilterSettings { Type = FilterType.Excel };
+
+
+    private void AddChamber()
+    {
+        NavigationManager.NavigateTo("/AddChamber");
+    }
+
+
+
+    private async Task EditHandler(Employee employee)
+    {
+        // await Grid.SelectRowAsync(companyModel.chid);
+        // await Grid.StartEditAsync();
+    }
+
+
+    private async Task DeleteHandler(Employee employee)
+    {
+       
+    }
+    protected async Task SaveUnit()
+    {
+        }
+    void Grid_CustomizeElement(GridCustomizeElementEventArgs e)
+    {
+        if (e.ElementType == GridElementType.DataRow && e.VisibleIndex % 2 == 1)
+        {
+            e.CssClass = "alt-item";
+        }
+        if (e.ElementType == GridElementType.HeaderCell)
+        {
+            e.Style = "background-color: var(--DS-color-surface-neutral-default-selected)";
+            e.CssClass = "header-bold";
+        }
+    }
+
+    public class Order
+    {
+        public int? OrderID { get; set; }
+        public string CustomerID { get; set; }
+        public DateTime? OrderDate { get; set; }
+        public double? Freight { get; set; }
+    }
+}

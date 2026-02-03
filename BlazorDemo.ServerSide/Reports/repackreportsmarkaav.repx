@@ -1,0 +1,323 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<XtraReportsLayoutSerializer SerializerVersion="24.2.6.0" Ref="1" ControlType="DevExpress.XtraReports.UI.XtraReport, DevExpress.XtraReports.v24.2, Version=24.2.6.0, Culture=neutral, PublicKeyToken=b88d1754d700e49a" Name="XtraReport2" DisplayName="repackdet" Margins="10, 9, 92.70834, 0" PaperKind="A4" PageWidth="827" PageHeight="1169" Version="24.2" DataMember="Query" DataSource="#Ref-0" Font="Arial, 10pt">
+  <Bands>
+    <Item1 Ref="2" ControlType="TopMarginBand" Name="topMarginBand4" HeightF="92.70834">
+      <Controls>
+        <Item1 Ref="3" ControlType="XRLabel" Name="xrLabel4" KeepTogether="true" Multiline="true" TextAlignment="TopLeft" SizeF="657.81,25" LocationFloat="0,62.89001" Font="tahoma, 9pt, style=Bold" Padding="3,3,3,3,100" BorderColor="Black" Borders="None" BorderWidth="1" BorderDashStyle="Solid">
+          <ExpressionBindings>
+            <Item1 Ref="4" EventName="BeforePrint" PropertyName="Text" Expression="'Report Date:'+'  '+ Now()" />
+          </ExpressionBindings>
+        </Item1>
+        <Item2 Ref="5" ControlType="XRLabel" Name="xrLabel2" KeepTogether="true" Multiline="true" TextAlignment="TopLeft" SizeF="657.81,25" LocationFloat="0,35.00001" Font="tahoma, 9pt, style=Bold" Padding="3,3,3,3,100" BorderColor="Black" Borders="None" BorderWidth="1" BorderDashStyle="Solid">
+          <ExpressionBindings>
+            <Item1 Ref="6" EventName="BeforePrint" PropertyName="Text" Expression="[cname]" />
+          </ExpressionBindings>
+        </Item2>
+      </Controls>
+    </Item1>
+    <Item2 Ref="7" ControlType="BottomMarginBand" Name="bottomMarginBand3" HeightF="0" />
+    <Item3 Ref="8" ControlType="DetailBand" Name="detailBand3" HeightF="25" Visible="false">
+      <MultiColumn Ref="9" ColumnSpacing="50" />
+      <Controls>
+        <Item1 Ref="10" ControlType="XRTable" Name="xrTable1" SizeF="808,25" LocationFloat="0,0">
+          <Rows>
+            <Item1 Ref="11" ControlType="XRTableRow" Name="xrTableRow6" Weight="1">
+              <Cells>
+                <Item1 Ref="12" ControlType="XRTableCell" Name="xrTableCell1" Weight="0.18707302321689068" KeepTogether="true" TextAlignment="TopLeft" Font="tahoma, 8pt" Padding="3,3,3,3,100" BorderColor="Black" Borders="All" BorderWidth="0.69" BorderDashStyle="Solid">
+                  <ExpressionBindings>
+                    <Item1 Ref="13" EventName="BeforePrint" PropertyName="Text" Expression="[recipename]" />
+                  </ExpressionBindings>
+                </Item1>
+                <Item2 Ref="14" ControlType="XRTableCell" Name="xrTableCell2" Weight="0.0995420694948935" KeepTogether="true" TextAlignment="TopLeft" Font="tahoma, 8pt" Padding="3,3,3,3,100" BorderColor="Black" Borders="All" BorderWidth="0.69" BorderDashStyle="Solid">
+                  <ExpressionBindings>
+                    <Item1 Ref="15" EventName="BeforePrint" PropertyName="Text" Expression="[palletIrn]" />
+                  </ExpressionBindings>
+                </Item2>
+                <Item3 Ref="16" ControlType="XRTableCell" Name="xrTableCell3" Weight="0.1082724053204271" KeepTogether="true" TextAlignment="TopLeft" Font="tahoma, 8pt" Padding="3,3,3,3,100" BorderColor="Black" Borders="All" BorderWidth="0.69" BorderDashStyle="Solid">
+                  <ExpressionBindings>
+                    <Item1 Ref="17" EventName="BeforePrint" PropertyName="Text" Expression="[marka]" />
+                  </ExpressionBindings>
+                </Item3>
+                <Item4 Ref="18" ControlType="XRTableCell" Name="xrTableCell4" Weight="0.11213997960865985" KeepTogether="true" TextAlignment="TopLeft" Font="tahoma, 8pt" Padding="3,3,3,3,100" BorderColor="Black" Borders="All" BorderWidth="0.69" BorderDashStyle="Solid">
+                  <ExpressionBindings>
+                    <Item1 Ref="19" EventName="BeforePrint" PropertyName="Text" Expression="[BrandName]" />
+                  </ExpressionBindings>
+                </Item4>
+                <Item5 Ref="20" ControlType="XRTableCell" Name="xrTableCell5" Weight="0.10182651112217281" KeepTogether="true" TextAlignment="TopLeft" Font="tahoma, 8pt" Padding="3,3,3,3,100" BorderColor="Black" Borders="All" BorderWidth="0.69" BorderDashStyle="Solid">
+                  <ExpressionBindings>
+                    <Item1 Ref="21" EventName="BeforePrint" PropertyName="Text" Expression="[Gradename]" />
+                  </ExpressionBindings>
+                </Item5>
+                <Item6 Ref="22" ControlType="XRTableCell" Name="xrTableCell6" Weight="0.0898962915413946" KeepTogether="true" TextAlignment="TopLeft" Font="tahoma, 8pt" Padding="3,3,3,3,100" BorderColor="Black" Borders="All" BorderWidth="0.69" BorderDashStyle="Solid">
+                  <ExpressionBindings>
+                    <Item1 Ref="23" EventName="BeforePrint" PropertyName="Text" Expression="[Location]" />
+                  </ExpressionBindings>
+                </Item6>
+                <Item7 Ref="24" ControlType="XRTableCell" Name="xrTableCell7" Weight="0.092440046711989909" KeepTogether="true" TextAlignment="TopRight" Font="tahoma, 8pt" Padding="3,3,3,3,100" BorderColor="Black" Borders="All" BorderWidth="0.69" BorderDashStyle="Solid">
+                  <ExpressionBindings>
+                    <Item1 Ref="25" EventName="BeforePrint" PropertyName="Text" Expression="[TotalQty]" />
+                  </ExpressionBindings>
+                </Item7>
+                <Item8 Ref="26" ControlType="XRTableCell" Name="xrTableCell16" Weight="0.1044048404745144" KeepTogether="true" TextAlignment="TopRight" Font="tahoma, 8pt" Padding="3,3,3,3,100" BorderColor="Black" Borders="All" BorderWidth="0.69" BorderDashStyle="Solid">
+                  <ExpressionBindings>
+                    <Item1 Ref="27" EventName="BeforePrint" PropertyName="Text" Expression="[AllocatedQty]" />
+                  </ExpressionBindings>
+                </Item8>
+                <Item9 Ref="28" ControlType="XRTableCell" Name="xrTableCell17" Weight="0.1044048404745144" KeepTogether="true" TextAlignment="TopRight" Font="tahoma, 8pt" Padding="3,3,3,3,100" BorderColor="Black" Borders="All" BorderWidth="0.69" BorderDashStyle="Solid">
+                  <ExpressionBindings>
+                    <Item1 Ref="29" EventName="BeforePrint" PropertyName="Text" Expression="[AvailableQty]" />
+                  </ExpressionBindings>
+                </Item9>
+              </Cells>
+            </Item1>
+          </Rows>
+        </Item1>
+      </Controls>
+    </Item3>
+    <Item4 Ref="30" ControlType="PageFooterBand" Name="pageFooterBand3" HeightF="29.17" TextAlignment="TopLeft" BorderColor="Black" Borders="None" BorderWidth="1" BorderDashStyle="Solid">
+      <Controls>
+        <Item1 Ref="31" ControlType="XRLabel" Name="xrLabel3" KeepTogether="true" Multiline="true" TextAlignment="TopCenter" SizeF="808,27.58" LocationFloat="0,0" Padding="3,3,3,3,100" BorderColor="Black" Borders="None" BorderWidth="1" BorderDashStyle="Solid" />
+      </Controls>
+    </Item4>
+    <Item5 Ref="32" ControlType="GroupHeaderBand" Name="groupHeaderBand1" Level="3" HeightF="25">
+      <GroupFields>
+        <Item1 Ref="33" FieldName="PackingDraftno" />
+      </GroupFields>
+      <Controls>
+        <Item1 Ref="34" ControlType="XRTable" Name="xrTable3" SizeF="808,25" LocationFloat="2.384186E-05,0" Font="Arial, 10pt, style=Bold" BackColor="LightGray">
+          <Rows>
+            <Item1 Ref="35" ControlType="XRTableRow" Name="xrTableRow8" Weight="1">
+              <Cells>
+                <Item1 Ref="36" ControlType="XRTableCell" Name="xrTableCell27" Weight="0.36896031721694084" KeepTogether="true" TextAlignment="TopLeft" Font="tahoma, 8pt, style=Bold" BackColor="MediumAquamarine" Padding="3,3,3,3,100" BorderColor="Black" Borders="All" BorderWidth="0.69" BorderDashStyle="Solid">
+                  <ExpressionBindings>
+                    <Item1 Ref="37" EventName="BeforePrint" PropertyName="Text" Expression="[PackingDraftno] +' '+ '('+ [PartyName]+')'" />
+                  </ExpressionBindings>
+                  <StylePriority Ref="38" UseFont="false" UseBackColor="false" />
+                </Item1>
+                <Item2 Ref="39" ControlType="XRTableCell" Name="xrTableCell28" Weight="0.63103967087073576" Multiline="true" TextAlignment="TopLeft" Font="tahoma, 8pt, style=Bold" BackColor="MediumAquamarine" Padding="3,3,3,3,100" BorderColor="Black" Borders="All" BorderWidth="0.69" BorderDashStyle="Solid">
+                  <StylePriority Ref="40" UseFont="false" UseBackColor="false" />
+                </Item2>
+              </Cells>
+            </Item1>
+          </Rows>
+          <StylePriority Ref="41" UseFont="false" UseBackColor="false" />
+        </Item1>
+      </Controls>
+    </Item5>
+    <Item6 Ref="42" ControlType="GroupFooterBand" Name="GroupFooter1" Level="3" HeightF="25">
+      <Controls>
+        <Item1 Ref="43" ControlType="XRTable" Name="xrTable4" SizeF="807.9999,25" LocationFloat="0.0001033147,0" Font="Arial, 10pt, style=Bold" BackColor="LightGray">
+          <Rows>
+            <Item1 Ref="44" ControlType="XRTableRow" Name="xrTableRow9" Weight="1">
+              <Cells>
+                <Item1 Ref="45" ControlType="XRTableCell" Name="xrTableCell30" Weight="0.36439383935263603" Multiline="true" Text="xrTableCell28" TextAlignment="TopRight" Font="tahoma, 8pt, style=Bold" BackColor="Khaki" Padding="3,3,3,3,100" BorderColor="Black" Borders="All" BorderWidth="0.69" BorderDashStyle="Solid">
+                  <ExpressionBindings>
+                    <Item1 Ref="46" EventName="BeforePrint" PropertyName="Text" Expression="'Total'" />
+                  </ExpressionBindings>
+                  <StylePriority Ref="47" UseFont="false" UseBackColor="false" UseTextAlignment="false" />
+                </Item1>
+                <Item2 Ref="48" ControlType="XRTableCell" Name="xrTableCell33" Weight="0.19389458218021527" Multiline="true" Text="xrTableCell33" TextAlignment="TopRight" Font="tahoma, 8pt, style=Bold" BackColor="Khaki" Padding="3,3,3,3,100" BorderColor="Black" Borders="All" BorderWidth="0.69" BorderDashStyle="Solid">
+                  <Summary Ref="49" Running="Group" />
+                  <ExpressionBindings>
+                    <Item1 Ref="50" EventName="BeforePrint" PropertyName="Text" Expression="sumSum([TotalQty])" />
+                  </ExpressionBindings>
+                  <StylePriority Ref="51" UseFont="false" UseBackColor="false" UseTextAlignment="false" />
+                </Item2>
+                <Item3 Ref="52" ControlType="XRTableCell" Name="xrTableCell32" Weight="0.18953388796104978" Multiline="true" Text="xrTableCell32" TextAlignment="TopRight" Font="tahoma, 8pt, style=Bold" BackColor="Khaki" Padding="3,3,3,3,100" BorderColor="Black" Borders="All" BorderWidth="0.69" BorderDashStyle="Solid">
+                  <Summary Ref="53" Running="Group" />
+                  <ExpressionBindings>
+                    <Item1 Ref="54" EventName="BeforePrint" PropertyName="Text" Expression="sumSum([AllocatedQty])" />
+                  </ExpressionBindings>
+                  <StylePriority Ref="55" UseFont="false" UseBackColor="false" UseTextAlignment="false" />
+                </Item3>
+                <Item4 Ref="56" ControlType="XRTableCell" Name="xrTableCell31" Weight="0.23980129004032527" Multiline="true" Text="xrTableCell31" TextAlignment="TopRight" Font="tahoma, 8pt, style=Bold" BackColor="Khaki" Padding="3,3,3,3,100" BorderColor="Black" Borders="All" BorderWidth="0.69" BorderDashStyle="Solid">
+                  <Summary Ref="57" Running="Group" />
+                  <ExpressionBindings>
+                    <Item1 Ref="58" EventName="BeforePrint" PropertyName="Text" Expression="sumSum([AvailableQty])" />
+                  </ExpressionBindings>
+                  <StylePriority Ref="59" UseFont="false" UseBackColor="false" UseTextAlignment="false" />
+                </Item4>
+              </Cells>
+            </Item1>
+          </Rows>
+          <StylePriority Ref="60" UseFont="false" UseBackColor="false" />
+        </Item1>
+      </Controls>
+    </Item6>
+    <Item7 Ref="61" ControlType="ReportFooterBand" Name="ReportFooter" HeightF="27.08333">
+      <Controls>
+        <Item1 Ref="62" ControlType="XRTable" Name="xrTable5" SizeF="807.9999,25" LocationFloat="0,0" Font="Arial, 10pt, style=Bold" BackColor="LightGray">
+          <Rows>
+            <Item1 Ref="63" ControlType="XRTableRow" Name="xrTableRow10" Weight="1">
+              <Cells>
+                <Item1 Ref="64" ControlType="XRTableCell" Name="xrTableCell34" Weight="0.1847577540998652" KeepTogether="true" TextAlignment="TopLeft" Font="tahoma, 8pt, style=Bold" BackColor="LightGray" Padding="3,3,3,3,100" BorderColor="Black" Borders="All" BorderWidth="0.69" BorderDashStyle="Solid">
+                  <StylePriority Ref="65" UseFont="false" UseBackColor="false" />
+                </Item1>
+                <Item2 Ref="66" ControlType="XRTableCell" Name="xrTableCell35" Weight="0.505344430118913" Multiline="true" Text="xrTableCell28" TextAlignment="TopRight" Font="tahoma, 8pt, style=Bold" BackColor="LightGray" Padding="3,3,3,3,100" BorderColor="Black" Borders="All" BorderWidth="0.69" BorderDashStyle="Solid">
+                  <ExpressionBindings>
+                    <Item1 Ref="67" EventName="BeforePrint" PropertyName="Text" Expression="'Grand Total'" />
+                  </ExpressionBindings>
+                  <StylePriority Ref="68" UseFont="false" UseBackColor="false" UseTextAlignment="false" />
+                </Item2>
+                <Item3 Ref="69" ControlType="XRTableCell" Name="xrTableCell36" Weight="0.091295952024171817" Multiline="true" Text="xrTableCell33" TextAlignment="TopRight" Font="tahoma, 8pt, style=Bold" BackColor="LightGray" Padding="3,3,3,3,100" BorderColor="Black" Borders="All" BorderWidth="0.69" BorderDashStyle="Solid">
+                  <Summary Ref="70" Running="Report" />
+                  <ExpressionBindings>
+                    <Item1 Ref="71" EventName="BeforePrint" PropertyName="Text" Expression="sumSum([TotalQty])" />
+                  </ExpressionBindings>
+                  <StylePriority Ref="72" UseFont="false" UseBackColor="false" UseTextAlignment="false" />
+                </Item3>
+                <Item4 Ref="73" ControlType="XRTableCell" Name="xrTableCell37" Weight="0.10311265452143523" Multiline="true" Text="xrTableCell32" TextAlignment="TopRight" Font="tahoma, 8pt, style=Bold" BackColor="LightGray" Padding="3,3,3,3,100" BorderColor="Black" Borders="All" BorderWidth="0.69" BorderDashStyle="Solid">
+                  <Summary Ref="74" Running="Report" />
+                  <ExpressionBindings>
+                    <Item1 Ref="75" EventName="BeforePrint" PropertyName="Text" Expression="sumSum([AllocatedQty])" />
+                  </ExpressionBindings>
+                  <StylePriority Ref="76" UseFont="false" UseBackColor="false" UseTextAlignment="false" />
+                </Item4>
+                <Item5 Ref="77" ControlType="XRTableCell" Name="xrTableCell38" Weight="0.10311280876984114" Multiline="true" Text="xrTableCell31" TextAlignment="TopRight" Font="tahoma, 8pt, style=Bold" BackColor="LightGray" Padding="3,3,3,3,100" BorderColor="Black" Borders="All" BorderWidth="0.69" BorderDashStyle="Solid">
+                  <Summary Ref="78" Running="Report" />
+                  <ExpressionBindings>
+                    <Item1 Ref="79" EventName="BeforePrint" PropertyName="Text" Expression="sumSum([AvailableQty])" />
+                  </ExpressionBindings>
+                  <StylePriority Ref="80" UseFont="false" UseBackColor="false" UseTextAlignment="false" />
+                </Item5>
+              </Cells>
+            </Item1>
+          </Rows>
+          <StylePriority Ref="81" UseFont="false" UseBackColor="false" />
+        </Item1>
+      </Controls>
+    </Item7>
+    <Item8 Ref="82" ControlType="GroupHeaderBand" Name="groupHeaderBand2" Level="2" HeightF="26.04167">
+      <GroupFields>
+        <Item1 Ref="83" FieldName="marka" />
+      </GroupFields>
+      <Controls>
+        <Item1 Ref="84" ControlType="XRTable" Name="xrTable6" SizeF="807.9997,25" LocationFloat="0.0002702077,0" Font="Arial, 10pt, style=Bold" BackColor="LightGray">
+          <Rows>
+            <Item1 Ref="85" ControlType="XRTableRow" Name="xrTableRow11" Weight="1">
+              <Cells>
+                <Item1 Ref="86" ControlType="XRTableCell" Name="xrTableCell39" Weight="0.18475758876212256" KeepTogether="true" TextAlignment="TopCenter" Font="tahoma, 8pt, style=Bold" BackColor="Khaki" Padding="3,3,3,3,100" BorderColor="Black" Borders="All" BorderWidth="0.69" BorderDashStyle="Solid">
+                  <ExpressionBindings>
+                    <Item1 Ref="87" EventName="BeforePrint" PropertyName="Text" Expression="[marka]+'  '+[BrandName]" />
+                  </ExpressionBindings>
+                  <StylePriority Ref="88" UseFont="false" UseBackColor="false" UseTextAlignment="false" />
+                </Item1>
+                <Item2 Ref="89" ControlType="XRTableCell" Name="xrTableCell41" Weight="0.0983100776911064" Multiline="true" Text="xrTableCell33" TextAlignment="TopRight" Font="tahoma, 8pt, style=Bold" BackColor="Khaki" Padding="3,3,3,3,100" BorderColor="Black" Borders="All" BorderWidth="0.69" BorderDashStyle="Solid">
+                  <Summary Ref="90" Running="Group" />
+                  <ExpressionBindings>
+                    <Item1 Ref="91" EventName="BeforePrint" PropertyName="Text" Expression="sumSum([TotalQty])" />
+                  </ExpressionBindings>
+                  <StylePriority Ref="92" UseFont="false" UseBackColor="false" UseTextAlignment="false" />
+                </Item2>
+                <Item3 Ref="93" ControlType="XRTableCell" Name="xrTableCell42" Weight="0.0960987526655273" Multiline="true" Text="xrTableCell32" TextAlignment="TopRight" Font="tahoma, 8pt, style=Bold" BackColor="Khaki" Padding="3,3,3,3,100" BorderColor="Black" Borders="All" BorderWidth="0.69" BorderDashStyle="Solid">
+                  <Summary Ref="94" Running="Group" />
+                  <ExpressionBindings>
+                    <Item1 Ref="95" EventName="BeforePrint" PropertyName="Text" Expression="sumSum([AllocatedQty])" />
+                  </ExpressionBindings>
+                  <StylePriority Ref="96" UseFont="false" UseBackColor="false" UseTextAlignment="false" />
+                </Item3>
+                <Item4 Ref="97" ControlType="XRTableCell" Name="xrTableCell43" Weight="0.12158579788387697" Multiline="true" Text="xrTableCell31" TextAlignment="TopRight" Font="tahoma, 8pt, style=Bold" BackColor="Khaki" Padding="3,3,3,3,100" BorderColor="Black" Borders="All" BorderWidth="0.69" BorderDashStyle="Solid">
+                  <Summary Ref="98" Running="Group" />
+                  <ExpressionBindings>
+                    <Item1 Ref="99" EventName="BeforePrint" PropertyName="Text" Expression="sumSum([AvailableQty])" />
+                  </ExpressionBindings>
+                  <StylePriority Ref="100" UseFont="false" UseBackColor="false" UseTextAlignment="false" />
+                </Item4>
+              </Cells>
+            </Item1>
+          </Rows>
+          <StylePriority Ref="101" UseFont="false" UseBackColor="false" />
+        </Item1>
+      </Controls>
+    </Item8>
+    <Item9 Ref="102" ControlType="GroupHeaderBand" Name="groupHeaderBand3" HeightF="25">
+      <GroupFields>
+        <Item1 Ref="103" FieldName="recipename" />
+      </GroupFields>
+      <Controls>
+        <Item1 Ref="104" ControlType="XRTable" Name="xrTable7" SizeF="807.9996,25" LocationFloat="0.0002702077,0">
+          <Rows>
+            <Item1 Ref="105" ControlType="XRTableRow" Name="xrTableRow12" Weight="1">
+              <Cells>
+                <Item1 Ref="106" ControlType="XRTableCell" Name="xrTableCell44" Weight="0.15003924707888361" KeepTogether="true" TextAlignment="TopLeft" Font="tahoma, 8pt" Padding="3,3,3,3,100" BorderColor="Black" Borders="All" BorderWidth="0.69" BorderDashStyle="Solid">
+                  <ExpressionBindings>
+                    <Item1 Ref="107" EventName="BeforePrint" PropertyName="Text" Expression="[recipename]" />
+                  </ExpressionBindings>
+                </Item1>
+                <Item2 Ref="108" ControlType="XRTableCell" Name="xrTableCell50" Weight="0.0798362077922625" KeepTogether="true" TextAlignment="TopRight" Font="tahoma, 8pt" Padding="3,3,3,3,100" BorderColor="Black" Borders="All" BorderWidth="0.69" BorderDashStyle="Solid">
+                  <Summary Ref="109" Running="Group" />
+                  <ExpressionBindings>
+                    <Item1 Ref="110" EventName="BeforePrint" PropertyName="Text" Expression="sumSum([TotalQty])" />
+                  </ExpressionBindings>
+                </Item2>
+                <Item3 Ref="111" ControlType="XRTableCell" Name="xrTableCell51" Weight="0.078040631478626207" KeepTogether="true" TextAlignment="TopRight" Font="tahoma, 8pt" Padding="3,3,3,3,100" BorderColor="Black" Borders="All" BorderWidth="0.69" BorderDashStyle="Solid">
+                  <Summary Ref="112" Running="Group" />
+                  <ExpressionBindings>
+                    <Item1 Ref="113" EventName="BeforePrint" PropertyName="Text" Expression="sumSum([AllocatedQty])" />
+                  </ExpressionBindings>
+                </Item3>
+                <Item4 Ref="114" ControlType="XRTableCell" Name="xrTableCell52" Weight="0.098738280076119622" KeepTogether="true" TextAlignment="TopRight" Font="tahoma, 8pt" Padding="3,3,3,3,100" BorderColor="Black" Borders="All" BorderWidth="0.69" BorderDashStyle="Solid">
+                  <Summary Ref="115" Running="Group" />
+                  <ExpressionBindings>
+                    <Item1 Ref="116" EventName="BeforePrint" PropertyName="Text" Expression="sumSum([AvailableQty])" />
+                  </ExpressionBindings>
+                </Item4>
+              </Cells>
+            </Item1>
+          </Rows>
+        </Item1>
+      </Controls>
+    </Item9>
+    <Item10 Ref="117" ControlType="GroupHeaderBand" Name="groupHeaderBand4" Level="4" HeightF="0">
+      <GroupFields>
+        <Item1 Ref="118" FieldName="DRAFTID" />
+      </GroupFields>
+    </Item10>
+    <Item11 Ref="119" ControlType="GroupHeaderBand" Name="groupHeaderBand5" Level="1" HeightF="30.208334">
+      <GroupFields>
+        <Item1 Ref="120" FieldName="Gradename" />
+      </GroupFields>
+      <Controls>
+        <Item1 Ref="121" ControlType="XRTable" Name="xrTable2" SizeF="807.9997,25" LocationFloat="0.000290075928,2.49999356" Font="Arial, 10pt, style=Bold" BackColor="LightGray">
+          <Rows>
+            <Item1 Ref="122" ControlType="XRTableRow" Name="xrTableRow7" Weight="1">
+              <Cells>
+                <Item1 Ref="123" ControlType="XRTableCell" Name="xrTableCell18" Weight="0.18475758876212256" KeepTogether="true" TextAlignment="TopCenter" Font="tahoma, 8pt, style=Bold" BackColor="Khaki" Padding="3,3,3,3,100" BorderColor="Black" Borders="All" BorderWidth="0.69" BorderDashStyle="Solid">
+                  <ExpressionBindings>
+                    <Item1 Ref="124" EventName="BeforePrint" PropertyName="Text" Expression="[Gradename]" />
+                  </ExpressionBindings>
+                  <StylePriority Ref="125" UseFont="false" UseBackColor="false" UseTextAlignment="false" />
+                </Item1>
+                <Item2 Ref="126" ControlType="XRTableCell" Name="xrTableCell19" Weight="0.0983100776911064" Multiline="true" Text="xrTableCell33" TextAlignment="TopRight" Font="tahoma, 8pt, style=Bold" BackColor="Khaki" Padding="3,3,3,3,100" BorderColor="Black" Borders="All" BorderWidth="0.69" BorderDashStyle="Solid">
+                  <Summary Ref="127" Running="Group" />
+                  <ExpressionBindings>
+                    <Item1 Ref="128" EventName="BeforePrint" PropertyName="Text" Expression="sumSum([TotalQty])" />
+                  </ExpressionBindings>
+                  <StylePriority Ref="129" UseFont="false" UseBackColor="false" UseTextAlignment="false" />
+                </Item2>
+                <Item3 Ref="130" ControlType="XRTableCell" Name="xrTableCell20" Weight="0.0960987526655273" Multiline="true" Text="xrTableCell32" TextAlignment="TopRight" Font="tahoma, 8pt, style=Bold" BackColor="Khaki" Padding="3,3,3,3,100" BorderColor="Black" Borders="All" BorderWidth="0.69" BorderDashStyle="Solid">
+                  <Summary Ref="131" Running="Group" />
+                  <ExpressionBindings>
+                    <Item1 Ref="132" EventName="BeforePrint" PropertyName="Text" Expression="sumSum([AllocatedQty])" />
+                  </ExpressionBindings>
+                  <StylePriority Ref="133" UseFont="false" UseBackColor="false" UseTextAlignment="false" />
+                </Item3>
+                <Item4 Ref="134" ControlType="XRTableCell" Name="xrTableCell21" Weight="0.12158579788387697" Multiline="true" Text="xrTableCell31" TextAlignment="TopRight" Font="tahoma, 8pt, style=Bold" BackColor="Khaki" Padding="3,3,3,3,100" BorderColor="Black" Borders="All" BorderWidth="0.69" BorderDashStyle="Solid">
+                  <Summary Ref="135" Running="Group" />
+                  <ExpressionBindings>
+                    <Item1 Ref="136" EventName="BeforePrint" PropertyName="Text" Expression="sumSum([AvailableQty])" />
+                  </ExpressionBindings>
+                  <StylePriority Ref="137" UseFont="false" UseBackColor="false" UseTextAlignment="false" />
+                </Item4>
+              </Cells>
+            </Item1>
+          </Rows>
+          <StylePriority Ref="138" UseFont="false" UseBackColor="false" />
+        </Item1>
+      </Controls>
+    </Item11>
+  </Bands>
+  <ComponentStorage>
+    <Item1 Ref="0" ObjectType="DevExpress.DataAccess.Sql.SqlDataSource,DevExpress.DataAccess.v24.2" Name="sqlDataSource2" Base64="PFNxbERhdGFTb3VyY2UgTmFtZT0ic3FsRGF0YVNvdXJjZTIiPjxDb25uZWN0aW9uIE5hbWU9ImxvY2FsY29ubiIgRnJvbUFwcENvbmZpZz0idHJ1ZSIgLz48UXVlcnkgVHlwZT0iQ3VzdG9tU3FsUXVlcnkiIE5hbWU9IlF1ZXJ5Ij48U3FsPlNFTEVDVCANCiAgICBJU05VTEwoRy5EUkFGVElELCAwKSBBUyBEUkFGVElELA0KICAgIElTTlVMTChjcC5jbmFtZSwgJycpIEFTIGNuYW1lLA0KICAgIElTTlVMTChnLnBhY2tpbmdsb3RwcmVmaXgsICcnKSBBUyBwYWNraW5nbG90cHJlZml4LA0KICAgIElTTlVMTChwcy5wYXJ0eXR5cGVpZCwgJycpICsgDQogICAgQ0FTRSANCiAgICAgICAgV0hFTiBwcy5wYXJ0eXR5cGVpZCBJUyBOT1QgTlVMTCBBTkQgcHMucGFydHluYW1lIElTIE5PVCBOVUxMIFRIRU4gJy0nIA0KICAgICAgICBFTFNFICcnIA0KICAgIEVORCArIA0KICAgIElTTlVMTChwcy5wYXJ0eW5hbWUsICcnKSBBUyBQYXJ0eU5hbWUsDQogICAgSVNOVUxMKGcuZW5kZWZmZHQsICcxOTAwLTAxLTAxJykgQVMgZW5kZWZmZHQsDQogICAgSVNOVUxMKGcuUGFja2luZ0RyYWZ0aXRlbWlkLCAwKSBBUyBQYWNraW5nRHJhZnRpdGVtaWQsDQogICAgSVNOVUxMKGcuUGFja2luZ0RyYWZ0bm8sICcnKSBBUyBQYWNraW5nRHJhZnRubywNCiAgICBJU05VTEwoZy5wYWxsZXRubywgJycpIEFTIHBhbGxldG5vLA0KICAgIElTTlVMTChnLnBhbGxldElybiwgJycpIEFTIHBhbGxldElybiwNCiAgICBJU05VTEwocHIuaXRlbW5hbWUsICcnKSBBUyBpdGVtbmFtZSwNCiAgICBJU05VTEwocnAucmVjaXBlbmFtZSwgJycpIEFTIHJlY2lwZW5hbWUsDQogICAgSVNOVUxMKGlnLkdyYWRlbmFtZSwgJycpIEFTIEdyYWRlbmFtZSwNCiAgICBJU05VTEwoZy5RdHksIDApIEFTIFRvdGFsUXR5LA0KICAgIElTTlVMTChwby5hbGxvY2F0ZWRfcXR5LCAwKSBBUyBBbGxvY2F0ZWRRdHksDQogICAgKElTTlVMTChnLlF0eSwgMCkgLSBJU05VTEwocG8uYWxsb2NhdGVkX3F0eSwgMCkpIEFTIEF2YWlsYWJsZVF0eSwNCiAgICBJU05VTEwoZy5tYXJrYSwgJycpIEFTIG1hcmthLA0KICAgIElTTlVMTChwcS5uYW1lLCAnJykgQVMgQnJhbmROYW1lLA0KICAgIElTTlVMTChsZi5uYW1lLCAnJykgQVMgTG9jYXRpb24NCkZST00gUmVwYWNrRHJhZnRJdGVtc3ByaW50IGcNCkxFRlQgSk9JTiBwYXJ0eSBwcyBPTiBnLmxvdG5vID0gcHMucGFydHlpZA0KTEVGVCBKT0lOIGNvbXBhbnkgY3AgT04gZy5QYWNraW5nQ291bnRJZCA9IGNwLmNpZA0KTEVGVCBKT0lOIHVzZXJzIHVyIE9OIGcuQ3JlYXRlZGJ5ID0gdXIudXNlcmlkDQpMRUZUIEpPSU4gUmVjaXBlIHJwIE9OIGcuUmVjaXBlSWQgPSBycC5SZWNpcGVJZA0KTEVGVCBKT0lOIGl0ZW1ncmFkZXMgaWcgT04gZy5ncmFkZWlkID0gaWcuaWQNCkxFRlQgSk9JTiBwcm9kcWF1bCBwcSBPTiBnLmJyYW5kaWQgPSBwcS5pZA0KTEVGVCBKT0lOIGxvY2F0aW9uX21hc3RlciBsZiBPTiBnLmxvY2F0aW9uaWQgPSBsZi5pZA0KTEVGVCBKT0lOIHB1cmNoYXNlaXRlbSBQciBPTiBnLnBhY2thZ2VpZCA9IFByLmlkDQpMRUZUIEpPSU4gKA0KICAgIFNFTEVDVCANCiAgICAgICAgcGFsbGV0bm8sDQogICAgICAgIHVuaXRpZCwNCiAgICAgICAgU1VNKElTTlVMTChRdHksIDApKSBhcyBhbGxvY2F0ZWRfcXR5DQogICAgRlJPTSBwYWNraW5nb3JkZXJpdGVtcw0KICAgIFdIRVJFIGZsYWdkZWxldGVkID0gMA0KICAgIEdST1VQIEJZIHBhbGxldG5vLCB1bml0aWQNCikgcG8gT04gZy5wYWxsZXRubyA9IHBvLnBhbGxldG5vIEFORCBnLnVuaXRpZCA9IHBvLnVuaXRpZA0KV0hFUkUgZy5mbGFnZGVsZXRlZCA9IDANCkFORCAoSVNOVUxMKGcuUXR5LCAwKSAtIElTTlVMTChwby5hbGxvY2F0ZWRfcXR5LCAwKSkgJmd0OyAwDQoNCk9SREVSIEJZIElTTlVMTChnLnBhbGxldG5vLCAnJyk7PC9TcWw+PC9RdWVyeT48UmVzdWx0U2NoZW1hPjxEYXRhU2V0IE5hbWU9InNxbERhdGFTb3VyY2UyIj48VmlldyBOYW1lPSJRdWVyeSI+PEZpZWxkIE5hbWU9IkRSQUZUSUQiIFR5cGU9IkludDMyIiAvPjxGaWVsZCBOYW1lPSJjbmFtZSIgVHlwZT0iU3RyaW5nIiAvPjxGaWVsZCBOYW1lPSJwYWNraW5nbG90cHJlZml4IiBUeXBlPSJTdHJpbmciIC8+PEZpZWxkIE5hbWU9IlBhcnR5TmFtZSIgVHlwZT0iU3RyaW5nIiAvPjxGaWVsZCBOYW1lPSJlbmRlZmZkdCIgVHlwZT0iRGF0ZVRpbWUiIC8+PEZpZWxkIE5hbWU9IlBhY2tpbmdEcmFmdGl0ZW1pZCIgVHlwZT0iSW50MzIiIC8+PEZpZWxkIE5hbWU9IlBhY2tpbmdEcmFmdG5vIiBUeXBlPSJTdHJpbmciIC8+PEZpZWxkIE5hbWU9InBhbGxldG5vIiBUeXBlPSJJbnQzMiIgLz48RmllbGQgTmFtZT0icGFsbGV0SXJuIiBUeXBlPSJTdHJpbmciIC8+PEZpZWxkIE5hbWU9Iml0ZW1uYW1lIiBUeXBlPSJTdHJpbmciIC8+PEZpZWxkIE5hbWU9InJlY2lwZW5hbWUiIFR5cGU9IlN0cmluZyIgLz48RmllbGQgTmFtZT0iR3JhZGVuYW1lIiBUeXBlPSJTdHJpbmciIC8+PEZpZWxkIE5hbWU9IlRvdGFsUXR5IiBUeXBlPSJJbnQzMiIgLz48RmllbGQgTmFtZT0iQWxsb2NhdGVkUXR5IiBUeXBlPSJJbnQzMiIgLz48RmllbGQgTmFtZT0iQXZhaWxhYmxlUXR5IiBUeXBlPSJJbnQzMiIgLz48RmllbGQgTmFtZT0ibWFya2EiIFR5cGU9IlN0cmluZyIgLz48RmllbGQgTmFtZT0iQnJhbmROYW1lIiBUeXBlPSJTdHJpbmciIC8+PEZpZWxkIE5hbWU9IkxvY2F0aW9uIiBUeXBlPSJTdHJpbmciIC8+PC9WaWV3PjwvRGF0YVNldD48L1Jlc3VsdFNjaGVtYT48Q29ubmVjdGlvbk9wdGlvbnMgQ2xvc2VDb25uZWN0aW9uPSJ0cnVlIiAvPjwvU3FsRGF0YVNvdXJjZT4=" />
+  </ComponentStorage>
+</XtraReportsLayoutSerializer>

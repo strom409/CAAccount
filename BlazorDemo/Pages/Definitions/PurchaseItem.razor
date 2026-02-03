@@ -1,0 +1,941 @@
+﻿@page "/PurchaseItem"
+
+
+@using Microsoft.AspNetCore.Components.Web
+
+@inject EmployeeAdoNetService EmployeeService
+
+@using BlazorDemo.Services;
+@using BlazorDemo;
+@inject IJSRuntime JS
+@inject NavigationManager NavigationManager
+
+
+<h6>PURCHASE ITEMS</h6>
+
+    <div class="d-flex justify-content-end gap-1">
+        <!-- gap-3 = 1rem (~16px) spacing -->
+     
+        <button @onclick="GoBack" class="btn btn-primary">
+            <i class="fa fa-arrow-left"></i>
+        </button>
+
+    </div>
+<br />
+
+
+
+    <div class="card p-3 mb-4">
+        <div class="row g-3">
+
+
+
+        <div class="col-md-2">
+
+            <label for="lastName" class="centered-field">Purchase Group</label>
+            <DxComboBox Data="@GetgrowerList"
+                        SearchMode="@SearchMode"
+                        SearchFilterCondition="@SearchFilterCondition"
+                        SearchTextParseMode="@SearchTextParseMode"
+                        @bind-Value="EditModel.PurchGrp"
+                        TextFieldName="PurchGrp"
+                        ValueFieldName="PurchGrp"
+                        CssClass="cw-480"
+                        InputId="cbFiltering" />
+
+        
+        
+        </div>
+
+
+
+
+        <div class="col-md-4">
+
+                <label for="lastName" class="centered-field">Item Name</label>
+            <InputText id="lastName" style="font-size: 14px; font-family: 'Source Sans Pro', sans-serif;" class="form-control input-placeholder-dim input-focus-dark" @bind-Value="EditModel.PurchaseItemName" placeholder="master group name" />
+            
+        </div>
+
+
+
+
+
+
+
+        <div class="col-md-2">
+                <label for="email" class="centered-field">UOM</label>
+            <DxComboBox Data="@GetUomList"
+                        SearchMode="@SearchMode"
+                        SearchFilterCondition="@SearchFilterCondition"
+                        SearchTextParseMode="@SearchTextParseMode"
+                        @bind-Value="EditModel.ItemUom"
+                        TextFieldName="ItemUom"
+                        ValueFieldName="ItemUom"
+                        CssClass="cw-480"
+                        InputId="cbFiltering" />
+        
+        
+        
+        
+        
+        </div>
+      
+
+
+
+        <div class="col-md-2">
+            <label for="email" class="centered-field">GST</label>
+            <DxComboBox Data="@GetGstList"
+                        SearchMode="@SearchMode"
+                        SearchFilterCondition="@SearchFilterCondition"
+                        SearchTextParseMode="@SearchTextParseMode"
+                        @bind-Value="EditModel.ItemGst"
+                        TextFieldName="ItemGst"
+                        ValueFieldName="ItemGst"
+                        CssClass="cw-480"
+                        InputId="cbFiltering" />
+
+
+
+
+
+        </div>
+
+
+        <div class="col-md-2">
+            <label for="email" class="centered-field">Hsn Code</label>
+            
+            <InputText id="lastName" style="font-size: 14px; font-family: 'Source Sans Pro', sans-serif;" class="form-control input-placeholder-dim input-focus-dark" @bind-Value="EditModel.ItemHsn" placeholder="master group name" />
+
+
+
+
+        </div>
+
+
+
+
+
+    </div>
+
+    </div>
+
+
+
+
+
+<div class="row">
+    <div class="col-12 d-flex justify-content-end gap-2">
+        <DxButton class="btn btn-primary btn-sm" @onclick="SaveUnit">Save</DxButton>
+        <DxButton class="btn btn-primary btn-sm" @onclick="UpdateItemGroup">Update</DxButton>
+    </div>
+</div>
+<br />
+
+<style>
+    .centered-field {
+        display: flex;
+        flex-direction: column;
+        align-items: center; /* centers children horizontally */
+    }
+
+        .centered-field label {
+            text-align: center; /* centers the label’s text */
+            width: 100%; /* ensure the label fills the container */
+            margin-bottom: .5rem;
+        }
+
+        .centered-field input {
+            width: 200px; /* or whatever width you like */
+        }
+
+    /* Slightly darker but still subtle placeholder */
+    .input-placeholder-dim::placeholder {
+        color: rgba(130, 130, 130, 0.3) !important; /* dim gray, 30% opacity */
+        opacity: 1 !important;
+    }
+
+    /* Dark gray border on focus, no shadow */
+    .input-focus-dark:focus {
+        border-color: #343a40; /* dark gray */
+        box-shadow: none !important;
+        outline: none;
+    }
+
+    .table-responsive {
+        overflow-x: auto;
+        width: 100%;
+    }
+
+    .table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.875rem; /* optional small font */
+    }
+
+        .table th, .table td {
+            padding: 0.5rem;
+            text-align: left;
+        }
+
+    .zebra-table tbody tr:nth-child(odd) {
+        background-color: white;
+    }
+
+    .zebra-table tbody tr:nth-child(even) {
+        background-color: #f9f9f9;
+    }
+
+
+
+
+    /* Custom small font */
+    .small-font {
+        font-size: 0.82rem;
+    }
+
+    .control-wrapper {
+        max-width: 250px;
+        margin: 0 auto;
+        padding: 50px 0px 0px;
+    }
+
+    .example-label {
+        font-size: 14px;
+        margin-bottom: 6px;
+        /* Standardize form control styles for horizontal alignment */
+        input .form-control, .e-input-group, .e-control-wrapper, .e-autocomplete, .e-input
+
+    {
+        min-height: 38px; /* Bootstrap default */
+        line-height: 1.5;
+        font-size: 14px;
+        font-family: 'Source Sans Pro', sans-serif;
+        padding: 6px 12px;
+        box-sizing: border-box;
+    }
+
+    /* Optional: Align content inside Syncfusion AutoComplete */
+    .e-autocomplete .e-input {
+        padding: 6px 12px !important;
+    }
+
+    /* Remove extra bottom spacing in SfAutoComplete wrapper */
+    .e-autocomplete.e-control-wrapper {
+        margin-bottom: 0 !important;
+    }
+
+    /* Align labels consistently */
+    label.form-label {
+        font-size: 14px;
+        margin-bottom: 4px;
+        font-family: 'Source Sans Pro', sans-serif;
+    }
+
+    /* Remove extra vertical margin if any Syncfusion adds it */
+    .e-control-wrapper {
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
+    }
+
+</style>
+
+
+<style>
+    .alt-item {
+        background-color: rgba(243, 244, 245, 1) !important;
+    }
+
+        .alt-item > td {
+            --dxbl-grid-bg: rgba(243, 244, 245, 1) !important;
+            background-color: rgba(243, 244, 245, 1) !important;
+        }
+</style>
+<div style="overflow-x:auto; width:100%;">
+    
+    <DxGrid Data="@banks" PageSize="10" ShowSearchBox="true"
+        
+            ShowGroupPanel="false"  FilterMenuButtonDisplayMode="GridFilterMenuButtonDisplayMode.Always"
+            ColumnResizeMode="GridColumnResizeMode.NextColumn" CustomizeElement="Grid_CustomizeElement" TextWrapEnabled="false"
+          >
+
+    <Columns>
+            <DxGridDataColumn FieldName=@nameof(companyModel.Itemid) Caption="Code" Width="10%" />
+            <DxGridDataColumn FieldName=@nameof(companyModel.PurchGrp) Caption="Group" Width="10%" />
+            <DxGridDataColumn FieldName=@nameof(companyModel.PurchaseItemName) Caption="Name" Width="20%" />
+           
+            <DxGridDataColumn FieldName=@nameof(companyModel.ItemUom) Caption="Uom" Width="10%" />
+            <DxGridDataColumn FieldName=@nameof(companyModel.ItemGst) Caption="Gst" Width="10%" />
+
+
+            <DxGridDataColumn FieldName=@nameof(companyModel.ItemCreatedDate) Caption="Created" Width="10%" />
+
+
+
+            <DxGridDataColumn FieldName="@nameof(companyModel.ItemStatus)" Caption="Status" Width="10%">
+
+                <CellDisplayTemplate Context="cellData">
+                    @{
+                        var status = cellData.Value?.ToString();
+                        var iconClass = status switch
+                        {
+                            "True" => "oi oi-circle-check text-success",
+                            "true" => "oi oi-x text-danger",
+                            "False" => "oi oi oi-x text-danger",
+                            _ => "oi oi-question-mark text-secondary"
+                        };
+                        var Growerid = ((CompanyModel)cellData.DataItem).Itemid;
+                    }
+                    <span class="@iconClass"
+                          title="Click to change status"
+                          style="cursor: pointer;"
+                          @onclick="() => ShowConfirmDialog(Growerid)">
+                    </span>
+               
+                
+                
+                </CellDisplayTemplate>
+            </DxGridDataColumn>
+
+
+            <DxGridCommandColumn>
+                <HeaderTemplate>
+                   <strong>Actions</strong>
+                   @* <a class="oi oi-action"  style="text-decoration: none;" href="javascript:void(0);"></a> *@
+                </HeaderTemplate>
+                <CellDisplayTemplate>
+                    <a title="Edit Group" class="oi oi-pencil" @onclick="@(() => EditItem(context.DataItem))"
+
+                        style="cursor: pointer;">
+                    </a>
+                   
+                    <a title="Delete Group" class="fa fa-trash text-red" @onclick="@(() => DeleteGrower(((CompanyModel)context.DataItem).Itemid))" style="cursor: pointer;"></a>
+                   
+                </CellDisplayTemplate>
+            </DxGridCommandColumn>
+
+
+
+            <style>
+                @@media (max-width: 768px) {
+                    .dxbl-grid {
+                        width: 768px; /* Force minimum width */
+                    }
+                }
+
+                .alt-item {
+                    background-color: rgba(243, 244, 245, 1) !important;
+                }
+
+                    .alt-item > td {
+                        --dxbl-grid-bg: rgba(243, 244, 245, 1) !important;
+                        background-color: rgba(243, 244, 245, 1) !important;
+                    }
+            </style>
+
+
+          @*   <DxGridCommandColumn Caption="" Width="5%">
+
+                <CellDisplayTemplate >
+                    <a class="oi oi-pencil" @onclick="@(() => MyGrid.StartEditRowAsync(context.VisibleIndex))" style="text-decoration: none;" href="javascript:void(0);"></a>
+
+                </CellDisplayTemplate>
+            </DxGridCommandColumn>
+
+            <DxGridCommandColumn Caption="Del" Width="5%">
+                <CellDisplayTemplate>
+                    <a class="oi oi-x" @onclick="@(() => MyGrid.ShowDataItemDeleteConfirmation(context.DataItem))" style="text-decoration: none;" href="javascript:void(0);"></a>
+
+                </CellDisplayTemplate>
+            </DxGridCommandColumn>
+            <DxGridCommandColumn Caption="View" Width="5%">
+                <CellDisplayTemplate>
+                    <a class="oi oi-eye" @onclick="@(() => MyGrid.ShowDataItemDeleteConfirmation(context.DataItem))" style="text-decoration: none;" href="javascript:void(0);"></a>
+
+                </CellDisplayTemplate>
+            </DxGridCommandColumn>
+            <DxGridCommandColumn Caption="Add" Width="5%">
+                <CellDisplayTemplate>
+                    <a class="oi oi-plus" @onclick="@(() => MyGrid.ShowDataItemDeleteConfirmation(context.DataItem))" style="text-decoration: none;" href="javascript:void(0);"></a>
+
+                </CellDisplayTemplate>
+            </DxGridCommandColumn>
+
+            <DxGridCommandColumn Caption="Agreement" Width="5%">
+                <CellDisplayTemplate>
+                    <a class="oi oi-document" @onclick="@(() => MyGrid.ShowDataItemDeleteConfirmation(context.DataItem))" style="text-decoration: none;" href="javascript:void(0);"></a>
+
+                </CellDisplayTemplate>
+            </DxGridCommandColumn>
+
+            <DxGridCommandColumn Width="5%">
+                <CellDisplayTemplate>
+                    <a class="oi oi-person" Caption="List" @onclick="@(() => MyGrid.ShowDataItemDeleteConfirmation(context.DataItem))" style="text-decoration: none;" href="javascript:void(0);"></a>
+
+                </CellDisplayTemplate>
+            </DxGridCommandColumn>
+ *@
+        </Columns>
+        
+      <TotalSummary>
+            <DxGridSummaryItem SummaryType="GridSummaryItemType.Count" FieldName="@nameof(companyModel.Growerid)" />
+               
+        </TotalSummary>
+
+
+</DxGrid>
+</div>
+<DxDialogProvider />
+
+<DxPopup @bind-Visible="@isDialogVisible"
+         HeaderText="Confirmation"
+         ShowCloseButton="true"
+         CssClass="validation-dialog">
+    <Content>
+        Are you sure you want to change the status for Item ID: <strong>@selectedGrowerId</strong>?
+        <div>
+        <DxButton RenderStyle="ButtonRenderStyle.Primary" Click="@OnConfirmYes">Yes</DxButton>
+        <DxButton RenderStyle="ButtonRenderStyle.Secondary" Click="@OnConfirmNo">No</DxButton>
+        </div>
+    </Content>
+   
+</DxPopup>
+
+
+<DxPopup @bind-Visible="@DeleteDialog"
+         HeaderText="Confirmation"
+         ShowCloseButton="true"
+         CssClass="validation-dialog">
+    <Content>
+        Are you sure you want to delete the  Grower ID: <strong>@selectedGrowerId</strong>?
+        <div>
+            <DxButton RenderStyle="ButtonRenderStyle.Primary" Click="@OnConfirmYesDelete">Yes</DxButton>
+            <DxButton RenderStyle="ButtonRenderStyle.Secondary" Click="@OnConfirmNoDelete">No</DxButton>
+        </div>
+    </Content>
+
+</DxPopup>
+
+
+
+
+
+@if (ShowEmptyFieldDialog)
+{
+    <DxPopup @bind-Visible="@ShowEmptyFieldDialog"
+             HeaderText="Validation Error"
+             ShowCloseButton="true"
+             CssClass="validation-dialog">
+        <Content>
+            <p>@DialogMessage</p>
+            <DxButton Text="OK" Click="@(() => ShowEmptyFieldDialog = false)" />
+        </Content>
+    </DxPopup>
+}
+<style>
+    .custom-popup-style {
+        background-color: #fdfdfd;
+        border: 2px solid #0078d4;
+        border-radius: 12px;
+        padding: 10px;
+        font-family: 'Segoe UI', sans-serif;
+    }
+
+        .custom-popup-style .dxbs-popup-header {
+            background-color: #0078d4;
+            color: white;
+            font-weight: bold;
+            border-bottom: none;
+        }
+
+        .custom-popup-style .dxbs-popup-content {
+            font-size: 15px;
+            padding: 15px;
+        }
+</style>
+@if (ShowEmptyFieldDialogError)
+{
+    <DxPopup @bind-Visible="@ShowEmptyFieldDialogError"
+             HeaderText="Confirmation Message"
+             ShowCloseButton="true"
+             CssClass="custom-popup-style">
+
+
+
+        <Content>
+            <p><strong>Success </strong>@DialogMessage</p>
+            <DxButton Text="OK" RenderStyle="ButtonRenderStyle.Primary" Click="@(() => ShowEmptyFieldDialogError = false)" />
+        </Content>
+    </DxPopup>
+}
+
+
+
+
+
+
+
+
+
+
+
+@code {
+   
+    ListSearchMode SearchMode { get; set; } = ListSearchMode.AutoSearch;
+    ListSearchFilterCondition SearchFilterCondition { get; set; } = ListSearchFilterCondition.Contains;
+    ListSearchTextParseMode SearchTextParseMode { get; set; } = ListSearchTextParseMode.GroupWordsByAnd;
+    List<CompanyModel> GetmasterGroup = new List<CompanyModel>();
+    List<CompanyModel> GetgrowerList = new List<CompanyModel>();
+
+    private CompanyModel EditModel = new();
+    private string DialogMessage { get; set; } = "";
+    private bool ShowEmptyFieldDialogError { get; set; }
+    private string ChallanGroup { get; set; } = "";
+
+    private bool ShowEmptyFieldDialog { get; set; }
+
+
+    private void DeleteGrower(int growerId)
+    {
+        selectedGrowerId = growerId;
+        DeleteDialog = true;
+
+
+    }
+    private void ViewGrower(int growerId)
+    {
+        companyModel.Growerid = growerId;
+
+
+        NavigationManager.NavigateTo($"/ViewGrower/{growerId}");
+
+    }
+
+
+    private void AddGrowerAgreement(int growerId)
+    {
+        companyModel.Growerid = growerId;
+
+
+        NavigationManager.NavigateTo($"/EditGrowerAgreement/{growerId}");
+
+    }
+
+
+
+
+
+
+    private void ViewSubGrower(int growerId)
+    {
+        companyModel.Growerid = growerId;
+
+
+        NavigationManager.NavigateTo($"/ViewSubGrower/{growerId}");
+
+    }
+
+
+    private void AddGrower(int growerId)
+    {
+        companyModel.Growerid = growerId;
+
+
+        NavigationManager.NavigateTo($"/AddGrower");
+
+    }
+
+
+    private async Task EditItem(object dataItem)
+    {
+        if (dataItem is CompanyModel companyModel)
+        {
+            selectedGrowerId = companyModel.Itemid;
+            EditModel = await EmployeeService.GetItemName(companyModel.Itemid);
+          //  await JS.InvokeVoidAsync("alert", companyModel.SubAccid);
+
+            StateHasChanged();
+        }
+    }
+
+    // private async void EditGrower(int growerId)
+    // {
+    //     // selectedGrowerId=companyModel.Mid ;
+
+    //     // companyModel = await EmployeeService.GetMasterName(companyModel.Mid);
+
+
+
+    // }
+    protected async Task OnConfirmYes()
+    {
+
+
+        companyModel.Itemid = selectedGrowerId;
+        await EmployeeService.UpdateItemStatus(selectedGrowerId, companyModel);
+
+
+        banks = await EmployeeService.GetallItemGroup();
+
+
+        StateHasChanged();
+        isDialogVisible = false;
+
+    }
+
+    protected async Task OnConfirmYesDelete()
+    {
+
+
+        companyModel.Itemid = selectedGrowerId;
+
+        var result = await EmployeeService.DeleteItemGroup(selectedGrowerId, companyModel);
+        if (result != null && result.RetFlag.Trim() == "TRUE" && !string.IsNullOrEmpty(result.RetMessage))
+        {
+            banks = await EmployeeService.GetallItemGroup();
+            DialogMessage = result.RetMessage;
+            ShowEmptyFieldDialogError = true;
+
+
+            StateHasChanged();
+            DeleteDialog = false; // Close the delete confirmation dialog
+            return;
+        }
+
+
+
+        if (result != null && result.RetFlag.Trim() == "FALSE")
+        {
+
+            DialogMessage = result.RetMessage ?? "Failed to delete Item group.";
+            ShowEmptyFieldDialog = true;
+            DeleteDialog = false;
+            return;
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        StateHasChanged();
+        isDialogVisible = false;
+
+    }
+
+
+    private void OnConfirmNoDelete()
+    {
+        DeleteDialog = false;
+    }
+
+
+
+
+
+
+    private void ViewSubList(int growerId)
+    {
+        companyModel.Growerid = growerId;
+
+
+        NavigationManager.NavigateTo($"/ViewSubGrower/{growerId}");
+
+    }
+    private async Task GoBack()
+    {
+        await JS.InvokeVoidAsync("history.back");
+    }
+
+
+
+    private void OnConfirmNo()
+    {
+        isDialogVisible = false;
+    }
+
+    string GetRowCssClass(object dataItem, int visibleIndex)
+    {
+        return visibleIndex % 2 == 0 ? "even-row" : "odd-row";
+    }
+
+    private bool DeleteDialog = false;
+    private bool isDialogVisible = false;
+    private int selectedGrowerId;
+    private void ShowConfirmDialog(int GrowerId)
+    {
+        selectedGrowerId = GrowerId;
+        isDialogVisible = true;
+
+
+    }
+    private void GoToAddGrowerPage()
+    {
+        NavigationManager.NavigateTo("/AddGrower");
+    }
+
+
+
+
+
+
+    void ChangeSearchMode(string key)
+    {
+        // CurrentSearchTextParseModeDisplayText = key;
+        // CurrentSearchTextParseMode = SearchTextParseModes[key];
+    }
+
+    public void ShowDetails(int employeeId)
+    {
+
+    }
+    public void ShowDetails1(string ename)
+    {
+
+    }
+    public void ShowDetails2(string dept)
+    {
+
+    }
+    // private string activeBreakpoint { get; set; }
+
+    // // private List<Order> orders { get; set; }
+
+    // private bool enableAdaptiveUIMode { get; set; }
+    // private RowDirection renderingMode { get; set; }
+    CompanyModel companyModel = new CompanyModel();
+    IGrid MyGrid { get; set; }
+    List<CompanyModel> Growers = new List<CompanyModel>();
+    List<CompanyModel> banks = new List<CompanyModel>();
+    List<CompanyModel> GetGstList = new List<CompanyModel>();
+    List<CompanyModel> GetUomList = new List<CompanyModel>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        GetgrowerList = await EmployeeService.GetallPurchaseCat();
+
+
+ 
+        Growers = await EmployeeService.GetallMasterSubGroup();
+        GetGstList = await EmployeeService.GetallPurchasegst();
+        GetUomList = await EmployeeService.GetallPurchaseuom();
+          banks = await EmployeeService.GetallItemGroup();
+
+
+
+      //  Growers = await EmployeeService.GetallMasterGroup();
+    }
+    // SfGrid<CompanyModel> Grid;
+
+    // FilterSettings filterSettings = new FilterSettings { Type = FilterType.Excel };
+
+
+    private async Task EditHandler(Employee employee)
+    {
+        // await Grid.SelectRowAsync(companyModel.chid);
+        // await Grid.StartEditAsync();
+    }
+
+
+    private async Task DeleteHandler(Employee employee)
+    {
+
+    }
+    protected async Task SaveUnit()
+    {
+
+        if (string.IsNullOrWhiteSpace(EditModel.PurchGrp))
+        {
+            DialogMessage = "Please Select  valid Purchase group";
+            ShowEmptyFieldDialog = true;
+            return;
+
+        }
+        if (string.IsNullOrWhiteSpace(EditModel.PurchaseItemName))
+        {
+            DialogMessage = "Please Select  valid Item Name";
+            ShowEmptyFieldDialog = true;
+            return;
+
+        }
+        if (string.IsNullOrWhiteSpace(EditModel.ItemUom))
+        {
+            DialogMessage = "Please Select valid Uom Name";
+            ShowEmptyFieldDialog = true;
+            return;
+
+        }
+
+        if (string.IsNullOrWhiteSpace(EditModel.ItemGst))
+        {
+            DialogMessage = "Please Select valid GST slab";
+            ShowEmptyFieldDialog = true;
+            return;
+
+        }
+
+        if (string.IsNullOrWhiteSpace(EditModel.ItemHsn))
+        {
+            EditModel.ItemHsn = "NA";
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+        var result = await EmployeeService.AddItemGroup(EditModel);
+        if (result != null && result.RetFlag.Trim() == "TRUE" && !string.IsNullOrEmpty(result.RetMessage))
+        {
+            DialogMessage = result.RetMessage;
+            ShowEmptyFieldDialogError = true;
+
+
+            companyModel = new CompanyModel();
+            banks = await EmployeeService.GetallItemGroup();
+
+            StateHasChanged();
+            return;
+        }
+
+
+        if (result != null && result.RetFlag.Trim() == "FALSE")
+        {
+
+            DialogMessage = result.RetMessage ?? "Failed to add Master Group.";
+            ShowEmptyFieldDialog = true;
+
+            return;
+        }
+
+
+
+    }
+
+
+
+    protected async Task UpdateItemGroup()
+    {
+
+        EditModel.Itemid = selectedGrowerId;
+      
+        if (string.IsNullOrWhiteSpace(EditModel.PurchGrp))
+        {
+            DialogMessage = "Please Select  valid Purchase group";
+            ShowEmptyFieldDialog = true;
+            return;
+
+        }
+        if (string.IsNullOrWhiteSpace(EditModel.PurchaseItemName))
+        {
+            DialogMessage = "Please Select  valid Item Name";
+            ShowEmptyFieldDialog = true;
+            return;
+
+        }
+        if (string.IsNullOrWhiteSpace(EditModel.ItemUom))
+        {
+            DialogMessage = "Please Select valid Uom Name";
+            ShowEmptyFieldDialog = true;
+            return;
+
+        }
+
+        if (string.IsNullOrWhiteSpace(EditModel.ItemGst))
+        {
+            DialogMessage = "Please Select valid GST slab";
+            ShowEmptyFieldDialog = true;
+            return;
+
+        }
+
+        if (string.IsNullOrWhiteSpace(EditModel.ItemHsn))
+        {
+            EditModel.ItemHsn = "NA";
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        var result = await EmployeeService.UpdateItemGroup(EditModel);
+        if (result != null && result.RetFlag.Trim() == "TRUE" && !string.IsNullOrEmpty(result.RetMessage))
+        {
+            DialogMessage = result.RetMessage;
+            ShowEmptyFieldDialogError = true;
+
+
+            companyModel = new CompanyModel();
+            banks = await EmployeeService.GetallItemGroup();
+
+            StateHasChanged();
+            return;
+        }
+
+
+        if (result != null && result.RetFlag.Trim() == "FALSE")
+        {
+
+            DialogMessage = result.RetMessage ?? "Failed to add Master Group.";
+            ShowEmptyFieldDialog = true;
+
+            return;
+        }
+
+
+
+    }
+
+
+
+    void Grid_CustomizeElement(GridCustomizeElementEventArgs e)
+    {
+        if (e.ElementType == GridElementType.DataRow && e.VisibleIndex % 2 == 1)
+        {
+            e.CssClass = "alt-item";
+        }
+        if (e.ElementType == GridElementType.HeaderCell)
+        {
+            e.Style = "background-color: var(--DS-color-surface-neutral-default-selected)";
+            e.CssClass = "header-bold";
+        }
+
+
+    }
+
+
+    public class Order
+    {
+        public int? OrderID { get; set; }
+        public string CustomerID { get; set; }
+        public DateTime? OrderDate { get; set; }
+        public double? Freight { get; set; }
+    }
+}

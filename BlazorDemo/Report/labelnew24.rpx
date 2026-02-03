@@ -1,0 +1,40 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<ActiveReportsLayout Version="3.3" PrintWidth="11664" DocumentName="ActiveReports Document" ScriptLang="VB.NET" MasterReport="0" CompatibilityMode="CrossPlatform">
+  <StyleSheet>
+    <Style Name="Normal" Value="font-family: Arial; font-style: normal; text-decoration: none; font-weight: normal; font-size: 10pt; color: Black; text-align: left; vertical-align: top; ddo-char-set: 186" />
+    <Style Name="Heading1" Value="font-family: Arial; font-size: 16pt; font-style: normal; font-weight: bold" />
+    <Style Name="Heading2" Value="font-family: Times New Roman; font-size: 14pt; font-style: italic; font-weight: bold" />
+    <Style Name="Heading3" Value="font-family: Arial; font-size: 13pt; font-style: normal; font-weight: bold" />
+  </StyleSheet>
+  <Sections>
+    <Section Type="Detail" Name="Detail" Height="1897.68" ColumnCount="2" ColumnDirection="1" ColumnSpacing="144" BackColor="16777215" CanGrow="0">
+      <Control Type="AR.Field" Name="TextBox1" DataField="TID" Left="1247.04" Top="167.04" Width="839.5199" Height="195.84" Text="TextBox1" Style="font-family: Microsoft Sans Serif; font-size: 8.25pt; font-weight: bold; text-align: left; ddo-char-set: 1" />
+      <Control Type="AR.Field" Name="TextBox2" Left="256.32" Top="167.04" Width="614.88" Height="195.84" Text="Lot No" Style="font-family: Microsoft Sans Serif; font-size: 8.25pt; ddo-char-set: 0" />
+      <Control Type="AR.Field" Name="TextBox3" DataField="sname" Left="1261.44" Top="695.5202" Width="4049.28" Height="195.84" Text="TextBox3" Style="font-family: Microsoft Sans Serif; font-size: 8.25pt; font-weight: bold; text-align: left; ddo-char-set: 1" />
+      <Control Type="AR.Field" Name="TextBox4" DataField="gname" Left="1247.04" Top="410.4002" Width="4004.641" Height="195.84" Text="TextBox4" Style="font-family: Microsoft Sans Serif; font-size: 8.25pt; font-weight: bold; text-align: left; ddo-char-set: 1" SummaryDistinct="gname" />
+      <Control Type="AR.Field" Name="TextBox5" Left="256.32" Top="413.2802" Width="614.88" Height="195.84" Text="Grower" Style="font-family: Microsoft Sans Serif; font-size: 8.25pt; ddo-char-set: 0" />
+      <Control Type="AR.Field" Name="TextBox6" Left="270.72" Top="681.1202" Width="750.2401" Height="195.84" Text="Sub Gr" Style="font-family: Microsoft Sans Serif; font-size: 8.25pt; ddo-char-set: 0" />
+      <Control Type="AR.Field" Name="TextBox7" DataField="qty" Left="1232.64" Top="961.9202" Width="4004.641" Height="195.84" Text="TextBox3" Style="font-family: Microsoft Sans Serif; font-size: 8.25pt; font-weight: normal; text-align: left; ddo-char-set: 0" />
+      <Control Type="AR.Field" Name="TextBox8" Left="256.32" Top="964.8002" Width="614.88" Height="195.84" Text="Qty" Style="font-family: Microsoft Sans Serif; font-size: 8.25pt; ddo-char-set: 0" />
+      <Control Type="AR.Field" Name="TextBox9" Left="256.32" Top="1224" Width="614.88" Height="195.84" Text="Variety" Style="font-family: Microsoft Sans Serif; font-size: 8.25pt; ddo-char-set: 0" />
+      <Control Type="AR.Field" Name="TextBox10" DataField="pql" Left="1247.04" Top="1221.12" Width="4004.641" Height="195.84" Text="TextBox3" Style="font-family: Microsoft Sans Serif; font-size: 8.25pt; font-weight: normal; text-align: left; ddo-char-set: 0" />
+    </Section>
+  </Sections>
+  <ReportComponentTray />
+  <DataSources>
+    <OleDbDataSource ConnectF="WRtLJoMB0GGOVYi5NYSzSfHmozEsoaG2DiAUZOs5cnS9s/JkwU2h9qDWVGiPzhrIuRgnsDNZaLOQakZ9zq7a9PiHj0anyrF0y79uIUK4QQmMgZoUipv3pJq9p6BwG1e75GSKvhWQy/lOQ4s6Zlp80KHMqnLUbD2Qu/TRosbqMcM0weqSQpyD3w==" SQL="select * from dtransactive" CommandTimeout="0" />
+  </DataSources>
+  <Script><![CDATA[Sub Detail_Format
+	
+End Sub
+
+
+Sub ActiveReport_ReportStart
+	
+End Sub
+
+
+]]></Script>
+  <PageSettings LeftMargin="619" RightMargin="0" TopMargin="518" BottomMargin="288" PaperSize="9" PaperWidth="11906" PaperHeight="16838" PaperName="" />
+  <Parameters />
+</ActiveReportsLayout>

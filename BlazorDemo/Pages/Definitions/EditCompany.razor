@@ -1,0 +1,601 @@
+﻿@page "/Editcompany"
+
+@inject EmployeeAdoNetService EmployeeService
+@using Syncfusion.Blazor
+
+@using Syncfusion.Blazor.DropDowns
+@inject IJSRuntime JSRuntime
+@using BlazorDemo.Services;
+@using BlazorDemo;
+@inject IJSRuntime JS
+
+<style>
+    .bold-label {
+        font-weight: bold;
+    }
+
+    /* Slightly darker but still subtle placeholder */
+    .input-placeholder-dim::placeholder {
+        color: rgba(130, 130, 130, 0.3) !important; /* dim gray, 30% opacity */
+        opacity: 1 !important;
+    }
+
+    /* Dark gray border on focus, no shadow */
+    .input-focus-dark:focus {
+        border-color: #343a40; /* dark gray */
+        box-shadow: none !important;
+        outline: none;
+    }
+
+    .table-responsive {
+        overflow-x: auto;
+        width: 100%;
+    }
+
+    .table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.875rem; /* optional small font */
+    }
+
+        .table th, .table td {
+            padding: 0.5rem;
+            text-align: left;
+        }
+
+    .zebra-table tbody tr:nth-child(odd) {
+        background-color: white;
+    }
+
+    .zebra-table tbody tr:nth-child(even) {
+        background-color: #f9f9f9;
+    }
+
+
+
+
+    /* Custom small font */
+    .small-font {
+        font-size: 0.82rem;
+    }
+
+    .control-wrapper {
+        max-width: 250px;
+        margin: 0 auto;
+        padding: 50px 0px 0px;
+    }
+
+    .example-label {
+        font-size: 14px;
+        margin-bottom: 6px;
+        /* Standardize form control styles for horizontal alignment */
+        input .form-control, .e-input-group, .e-control-wrapper, .e-autocomplete, .e-input
+
+    {
+        min-height: 38px; /* Bootstrap default */
+        line-height: 1.5;
+        font-size: 14px;
+        font-family: 'Source Sans Pro', sans-serif;
+        padding: 6px 12px;
+        box-sizing: border-box;
+    }
+
+    /* Optional: Align content inside Syncfusion AutoComplete */
+    .e-autocomplete .e-input {
+        padding: 6px 12px !important;
+    }
+
+    /* Remove extra bottom spacing in SfAutoComplete wrapper */
+    .e-autocomplete.e-control-wrapper {
+        margin-bottom: 0 !important;
+    }
+
+    /* Align labels consistently */
+    label.form-label {
+        font-size: 14px;
+        margin-bottom: 4px;
+        font-family: 'Source Sans Pro', sans-serif;
+    }
+
+    /* Remove extra vertical margin if any Syncfusion adds it */
+    .e-control-wrapper {
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
+    }
+
+</style>
+
+
+
+
+<div class="row g-4">
+    <!-- Left Form (Single Column) -->
+    <h6><strong>Company Details</strong></h6>
+
+ 
+
+
+    <div class="d-flex justify-content-end gap-1">
+        <!-- gap-3 = 1rem (~16px) spacing -->
+        <button class="btn btn-primary "
+                style="padding: 4px 6px;"
+                @onclick="UpdateCompany">
+           Save
+        </button>
+       
+
+        <button @onclick="GoBack" class="btn btn-primary">
+            <i class="fa fa-arrow-left"></i>
+        </button>
+    
+    </div>
+
+
+      @*   <button class="btn btn-primary btn-sm" style="background-color: dark darkslategray; border-color: darkslategray" @onclick="UpdateCompany">Save</button>
+ *@
+
+      @*   <button class="btn btn-info btn-sm" style="padding: 4px 6px; margin-right:  0.9em;"
+               
+                @onclick="UpdateCompany">
+            Save
+           
+        </button>
+
+        <button class="btn btn-info btn-sm" style="padding: 4px 6px; margin-right:  0.9em;"
+                @onclick="UpdateCompany">
+            Save
+
+        </button> *@
+
+</div>
+
+     
+
+
+  
+
+<div>
+    <div class="row g-4 p-3">
+   
+   
+    <div class="col-12 col-md-6">
+        <EditForm Model="@companyModel"  >
+            
+          <DataAnnotationsValidator />
+           
+            <div class="card shadow-sm">
+                <div class="card-header text-white" style="background-color: darkslategray";>
+                    <h6 class="mb-0">Company basic Details</h6>
+                </div>
+                <div class="card-body">
+                    <div class="col-sm-12">
+                        <label for="txtCompanyCode">Company Id <span class="redtext">*</span></label>
+                        <input type="text" class="form-control input-placeholder-dim input-focus-dark" @bind="@companyModel.Id" readonly="@IsReadOnly" id="txtCompanyCode" name="txtCompanyCode" onkeypress="return alphaOnly(event);"  placeholder="Company Code" />
+                       
+                    </div>
+                    <div class="col-sm-12">
+                        <label for="txtCompanyCode">Name of Company <span class="redtext">*</span></label>
+                        <input type="text"  style="font-size: 14px; font-family: 'Source Sans Pro', sans-serif;" class="form-control input-placeholder-dim input-focus-dark" @bind="@companyModel.Name" id="txtCompanyCode" name="txtCompanyCode" onkeypress="return alphaOnly(event);"  placeholder="Company Name" />
+                    </div>
+                    <div class="col-sm-12">
+                        <label for="txtCompanyCode">GST No <span class="redtext"></span></label>
+                        <input type="text" style="font-size: 14px; font-family: 'Source Sans Pro', sans-serif;" class="form-control input-placeholder-dim input-focus-dark" @bind="@companyModel.Gst" id="txtCompanyCode"  name="txtCompanyCode"  onkeypress="return alphaOnly(event);"  placeholder="GST No"  />
+                    </div>
+                    <div class="col-sm-12">
+                        <label for="txtCompanyCode">Fssai No <span class="redtext"></span></label>
+                        <input type="text" style="font-size: 14px; font-family: 'Source Sans Pro', sans-serif;" class="form-control input-placeholder-dim input-focus-dark" @bind="@companyModel.Regno" id="txtCompanyCode" name="txtCompanyCode" onkeypress="return alphaOnly(event);" placeholder="Fssai No" />
+                    </div>
+                   
+                    <div class="row g-2">
+                        <div class="col-sm-6">
+                            <label for="txtCompanyCode">Pan no<span class="redtext"></span></label>
+                            <input type="text" style="font-size: 14px; font-family: 'Source Sans Pro', sans-serif;"  class="form-control input-placeholder-dim input-focus-dark" @bind="@companyModel.Pan" id="txtCompanyCode" name="txtCompanyCode" onkeypress="return alphaOnly(event);" placeholder="Pan No" />
+                        </div>
+                        <div class="col-sm-6">
+                            <label for="txtCompanyCode">Website<span class="redtext"></span></label>
+                            <input type="text" style="font-size: 14px; font-family: 'Source Sans Pro', sans-serif;" class="form-control input-placeholder-dim input-focus-dark" @bind="@companyModel.Website" id="txtCompanyCode" name="txtCompanyCode"  onkeypress="return alphaOnly(event);"  placeholder="Website"  />
+                        </div>
+                    
+                    </div>
+                </div>
+
+
+
+               
+                
+            </div>
+        </EditForm>
+   
+     
+    </div>
+    <!-- Right Form (Two Columns) -->
+  
+    <div class="col-12 col-md-6">
+        <EditForm Model="@companyModel">
+            <DataAnnotationsValidator />
+             <ValidationSummary />
+            <div class="card shadow-sm">
+                <div class="card-header text-white" style="background-color: darkslategray" ;>
+                    <h6 class="mb-0">Other Details</h6>
+                </div>
+               
+                
+                <div class="card-body">
+                   
+
+             
+                <div class="col-sm-12">
+                    <label for="txtCompanyCode">Address <span class="redtext"></span></label>
+                        <InputTextArea type="text" style="font-size: 14px; font-family: 'Source Sans Pro', sans-serif;" class="form-control input-placeholder-dim input-focus-dark" id="txtCompanyCode" name="txtCompanyCode" onkeypress="return alphaOnly(event);" placeholder="Enter company Code" @bind-Value="companyModel.Caddress" />
+                        @* <ValidationMessage For="@(() => @companyModel.Caddress)" /> *@
+
+                    </div>
+
+                   
+
+
+
+
+
+                    <div class="row g-2">
+                        <div class="col-sm-6">
+                            <label for="txtCompanyCode">City<span class="redtext"></span></label>
+                            <input type="text" style="font-size: 14px; font-family: 'Source Sans Pro', sans-serif;" class="form-control input-placeholder-dim input-focus-dark" @bind="@companyModel.City" id="txtCompanyCode" name="txtCompanyCode" onkeypress="return alphaOnly(event);"  placeholder="Enter City Name" />
+                        </div>
+                        <div class="col-sm-6">
+                            <label for="txtCompanyCode">State<span class="redtext"></span></label>
+                            <input type="text" style="font-size: 14px; font-family: 'Source Sans Pro', sans-serif;" class="form-control input-placeholder-dim input-focus-dark" @bind="@companyModel.State"  id="txtCompanyCode" name="txtCompanyCode" onkeypress="return alphaOnly(event);"  placeholder="Enter State Name" />
+                        </div>
+
+
+                        <div class="row g-2">
+                            <div class="col-sm-6">
+                                <label for="txtCompanyCode">Pincode<span class="redtext"></span></label>
+                                <input type="text" style="font-size: 14px; font-family: 'Source Sans Pro', sans-serif;"  class="form-control input-placeholder-dim input-focus-dark" @bind="@companyModel.Pincode" id="txtCompanyCode" name="txtCompanyCode" onkeypress="return alphaOnly(event);" placeholder="Enter PinCode" />
+                            </div>
+                            <div class="col-sm-6">
+                                <label for="txtCompanyCode">Phone I<span class="redtext"></span></label>
+                                <input type="text" style="font-size: 14px; font-family: 'Source Sans Pro', sans-serif;" class="form-control input-placeholder-dim input-focus-dark" @bind="@companyModel.Phone" id="txtCompanyCode" name="txtCompanyCode" onkeypress="return alphaOnly(event);" placeholder="Enter Phone no" />
+                            </div>
+
+                        </div>
+                        <div class="row g-2">
+                            <div class="col-sm-6">
+                                <label for="txtCompanyCode">Phone II<span class="redtext"></span></label>
+                                <input type="text" style="font-size: 14px; font-family: 'Source Sans Pro', sans-serif;" class="form-control input-placeholder-dim input-focus-dark" @bind="@companyModel.Mobile" id="txtCompanyCode" name="txtCompanyCode" onkeypress="return alphaOnly(event);" placeholder="Enter Mobile no" />
+                            </div>
+                            <div class="col-sm-6">
+                                <label for="txtCompanyCode">Email<span class="redtext"></span></label>
+                                <input type="text" style="font-size: 14px; font-family: 'Source Sans Pro', sans-serif;" class="form-control input-placeholder-dim input-focus-dark" @bind="@companyModel.Email" id="txtCompanyCode" name="txtCompanyCode"  onkeypress="return alphaOnly(event);"  placeholder="Enter Email Id"  />
+                            </div>
+
+                        </div>
+
+
+
+
+
+                     
+                   
+                    
+                    
+                    </div>
+                </div>
+               
+            </div>
+        </EditForm>
+    </div>
+</div>
+</div>
+
+
+
+
+@code {
+    private bool IsReadOnly { get; set; } = true;
+    private bool ShowAlert = false;
+    private bool ShowInputError = false;
+   // private FormModel formModel = new();
+    //private List<FormModel> rows = new();
+    private int editIndex = -1;
+      private String alertmessage = "";
+    private CompanyModel SelectedEmployee { get; set; } = new CompanyModel();
+                private CompanyModel editingBank = null!; // row being edited
+                private CompanyModel editingBackup = null!; // optional: backup to cancel
+}
+
+
+
+
+@code {
+
+
+    [Inject] NavigationManager Navigation { get; set; } = null!;
+
+    private string? previousUrl;
+
+    // protected override void OnInitialized()
+    // {
+    //     // Store current URL before navigation
+        
+    // }
+
+    private async Task GoBack()
+    {
+        await JSRuntime.InvokeVoidAsync("history.back");
+    }
+    ListSearchMode SearchMode { get; set; } = ListSearchMode.AutoSearch;
+    ListSearchFilterCondition SearchFilterCondition { get; set; } = ListSearchFilterCondition.Contains;
+    ListSearchTextParseMode SearchTextParseMode { get; set; } = ListSearchTextParseMode.GroupWordsByAnd;
+    void EditBank(CompanyModel banklist)
+    {
+        editingBackup = new CompanyModel
+            {
+                Bid = banklist.Bid,
+                Bname = banklist.Bname,
+                Accno = banklist.Accno,
+                Branch = banklist.Branch,
+                Ifsc = banklist.Ifsc,
+                Accname = banklist.Accname
+            };
+        editingBank = banklist;
+    }
+    protected async Task SaveEdit(CompanyModel companyModel)
+    {
+
+        if (string.IsNullOrWhiteSpace(editingBank.Bname))
+        {
+            await JS.InvokeVoidAsync("alert", "Bank Name Required.");
+
+
+            return;
+        }
+
+
+        if (string.IsNullOrWhiteSpace(editingBank.Accno))
+        {
+            await JS.InvokeVoidAsync("alert", "Account No Required.");
+
+
+
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(editingBank.Accname))
+        {
+            await JS.InvokeVoidAsync("alert", "Account Name Required.");
+
+
+
+            return;
+
+        }
+        if (string.IsNullOrWhiteSpace(editingBank.Branch))
+        {
+            await JS.InvokeVoidAsync("alert", "Branch Name Required.");
+
+
+
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(editingBank.Ifsc))
+        {
+            await JS.InvokeVoidAsync("alert", "Ifsc Code Required.");
+
+
+
+            return;
+        }
+
+        await EmployeeService.updatebank(id,companyModel);
+        IsReadOnly = true;
+        banks = await EmployeeService.GetBanks();
+        await JS.InvokeVoidAsync("alert", "Bank Saved successfully.");
+
+        StateHasChanged();
+
+
+        editingBank = null!;
+    }
+    void CancelEdit()
+    {
+        if (editingBank is not null && editingBackup is not null)
+        {
+            editingBank.Bname = editingBackup.Bname;
+            editingBank.Branch = editingBackup.Branch;
+            editingBank.Ifsc = editingBackup.Ifsc;
+            editingBank.Accname = editingBackup.Accname;
+        }
+        editingBank = null!;
+    }
+    protected async Task DeleteBank(CompanyModel companyModel)
+    {
+        bool confirmed = await JS.InvokeAsync<bool>("confirm", $"Are you sure you want to delete item with ID {id}?");
+        if (confirmed)
+        {
+
+
+            await EmployeeService.DeleteBank(id, companyModel);
+            IsReadOnly = true;
+            banks = await EmployeeService.GetBanks();
+            await JS.InvokeVoidAsync("alert", "Bank Deleted successfully.");
+
+            StateHasChanged();
+
+
+            editingBank = null!;
+        }
+
+
+    }
+
+
+
+
+
+
+
+
+
+   
+
+    public class GameFields
+    {
+        public string Id { get; set; } = "";
+        public string Text { get; set; } = "";
+    }
+    public List<GameFields> Games = new List<GameFields>()
+    {
+        new GameFields() { Id = "Game1", Text = "State Bank of India" },
+        new GameFields() { Id = "Game2", Text = "J&K Bank" },
+        new GameFields() { Id = "Game3", Text = "HDFC bank" },
+        new GameFields() { Id = "Game4", Text = "ICICI Bank" },
+        new GameFields() { Id = "Game5", Text = "Indus Ind Bank" },
+        new GameFields() { Id = "Game6", Text = "Punjab National Bank" },
+        new GameFields() { Id = "Game7", Text = "Axis Bank" },
+        new GameFields() { Id = "Game8", Text = "Canara Bank" },
+        new GameFields() { Id = "Game9", Text = "Kotak Mahindra Bank" },
+        new GameFields() { Id = "Game10", Text = "IDBI Bank" }
+    };
+
+
+ 
+    [Parameter]
+    public int companyId { get; set; } = 1;
+    CompanyModel companyModel = new CompanyModel();
+
+
+    List<CompanyModel> banks = new List<CompanyModel>();
+
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        companyModel = await EmployeeService.GetCompanyByIdAsync(companyId);
+
+        banks = await EmployeeService.GetBanks();
+
+        previousUrl = Navigation.Uri;
+    }
+
+
+
+
+    private void MakeReadOnly()
+    {
+        IsReadOnly = false;
+    }
+
+    public int id { get; set; } = 1;
+
+    private string Caddress = "";
+
+    protected async Task UpdateCompany()
+    {
+
+        if (string.IsNullOrWhiteSpace(companyModel.Caddress))
+        {
+            ShowAlert = true;
+            ShowInputError = true;
+
+            await Task.Delay(3000);
+            ShowAlert = false;
+            StateHasChanged();
+            return;
+        }
+        
+        
+        if (string.IsNullOrWhiteSpace(companyModel.Name))
+        {
+            ShowAlert = true;
+            ShowInputError = true;
+
+            await Task.Delay(3000);
+            ShowAlert = false;
+            StateHasChanged();
+            return;
+        }
+        
+        
+        
+        await EmployeeService.EditCompany(id, companyModel);
+        IsReadOnly = true;
+        await JS.InvokeVoidAsync("alert", "Company updated successfully.");
+
+        // // Optional: auto-hide the alert after a few seconds
+        // await Task.Delay(3000);
+        // ShowAlert = false;
+        // StateHasChanged();
+    }
+
+    protected async Task SaveBank()
+    {
+
+        if (string.IsNullOrWhiteSpace(companyModel.Bname))
+        {
+            await JS.InvokeVoidAsync("alert", "Bank Name Required.");
+
+
+            return;
+        }
+
+
+        if (string.IsNullOrWhiteSpace(companyModel.Accno))
+        {
+            await JS.InvokeVoidAsync("alert", "Account No Required.");
+
+
+           
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(companyModel.Accname))
+        {
+            await JS.InvokeVoidAsync("alert", "Account Name Required.");
+
+
+
+            return;
+           
+        }
+        if (string.IsNullOrWhiteSpace(companyModel.Branch))
+        {
+            await JS.InvokeVoidAsync("alert", "Branch Name Required.");
+
+
+
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(companyModel.Ifsc))
+        {
+            await JS.InvokeVoidAsync("alert", "Ifsc Code Required.");
+
+
+
+            return;
+        }
+
+        await EmployeeService.AddBank(companyModel);
+        IsReadOnly = true;
+        banks = await EmployeeService.GetBanks();
+        await JS.InvokeVoidAsync("alert", "Bank Added successfully.");
+
+         StateHasChanged();
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+}
+
+
+
+

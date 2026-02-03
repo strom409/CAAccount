@@ -1,0 +1,57 @@
+/*BeginHide*/::deep .grid-toolbar-new,
+::deep .grid-toolbar-delete,
+::deep .grid-toolbar-edit,
+::deep .grid-toolbar-column-chooser,
+::deep .grid-toolbar-export {
+    background-size: contain;
+    mask-repeat: no-repeat;
+    -webkit-mask-repeat: no-repeat;
+    background-position: center center;
+    background-color: currentColor;
+    height: 16px;
+    width: 16px;
+    opacity: 0.7;
+}
+
+::deep .grid-toolbar-new {
+    -webkit-mask-image: url("images/icons/grid-toolbar-new.svg");
+    mask-image: url("images/icons/grid-toolbar-new.svg");
+}
+
+::deep .grid-toolbar-delete {
+    -webkit-mask-image: url("images/icons/grid-toolbar-delete.svg");
+    mask-image: url("images/icons/grid-toolbar-delete.svg");
+}
+
+::deep .grid-toolbar-edit {
+    -webkit-mask-image: url("images/icons/grid-toolbar-edit.svg");
+    mask-image: url("images/icons/grid-toolbar-edit.svg");
+}
+
+::deep .grid-toolbar-column-chooser {
+    -webkit-mask-image: url("images/icons/column-chooser.svg");
+    mask-image: url("images/icons/column-chooser.svg");
+}
+
+::deep .grid-toolbar-export {
+    -webkit-mask-image: url("images/icons/export.svg");
+    mask-image: url("images/icons/export.svg");
+}
+
+::deep .search-icon {
+    background-color: currentColor;
+    width: 16px;
+    height: 16px;
+    mask-image: url("images/icons/search.svg");
+    -webkit-mask-image: url("images/icons/search.svg");
+    opacity: 0.6;
+}
+/*EndHide*/
+
+/*BeginHide*/::deep /*EndHide*/.search-item {
+    width: 10rem;
+}
+/*BeginHide*/ .grid-container {
+    display: contents;
+}
+/*EndHide*/

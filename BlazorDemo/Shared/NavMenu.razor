@@ -1,0 +1,468 @@
+@inject DemoConfiguration Configuration
+@inject NavigationManager NavigationManager
+@inject ProtectedLocalStorage ProtectedLocalStore
+@inject IJSRuntime JS
+@inject EmployeeAdoNetService EmployeeService
+@inject UserSessionService UserSessionService
+@using DevExpress.Blazor
+@inject NavigationManager Navigation
+
+<div class="modern-sidebar">
+    <DxTreeView CssClass="modern-tree">
+        <Nodes>
+            <!-- Dashboard -->
+            <DxTreeViewNode Text="Dashboard" 
+                           NavigateUrl="/dashboard"
+                           IconCssClass="fas fa-home"
+                           CssClass="@GetActiveClass("/dashboard")" />
+
+            <!-- Basic Definitions -->
+            @if (AllowedPages.Any(p => !string.IsNullOrWhiteSpace(p) && p.Trim().Equals("Masters", StringComparison.OrdinalIgnoreCase)))
+            {
+                <DxTreeViewNode Text="Basic Definitions" IconCssClass="fas fa-cog">
+                    <Nodes>
+                        <DxTreeViewNode Text="Company Definition" NavigateUrl="Company"
+                                       IconCssClass="fas fa-building"
+                                       CssClass="@GetActiveClass("Company")" />
+                        <DxTreeViewNode Text="Unit Codes" NavigateUrl="UnitDef"
+                                       IconCssClass="fas fa-code"
+                                       CssClass="@GetActiveClass("UnitDef")" />
+                        <DxTreeViewNode Text="Buildings" NavigateUrl="building"
+                                       IconCssClass="fas fa-warehouse"
+                                       CssClass="@GetActiveClass("building")" />
+                        <DxTreeViewNode Text="Product Type" NavigateUrl="ProductName"
+                                       IconCssClass="fas fa-box"
+                                       CssClass="@GetActiveClass("ProductName")" />
+                        <DxTreeViewNode Text="Service Types" NavigateUrl="ServiceTypes"
+                                       IconCssClass="fas fa-concierge-bell"
+                                       CssClass="@GetActiveClass("ServiceTypes")" />
+                        <DxTreeViewNode Text="Package Types" NavigateUrl="Packages"
+                                       IconCssClass="fas fa-boxes"
+                                       CssClass="@GetActiveClass("Packages")" />
+                        <DxTreeViewNode Text="Chamber Master" NavigateUrl="Chambers"
+                                       IconCssClass="fas fa-temperature-low"
+                                       CssClass="@GetActiveClass("Chambers")" />
+                        <DxTreeViewNode Text="Product Quality" NavigateUrl="ProductQuality"
+                                       IconCssClass="fas fa-star"
+                                       CssClass="@GetActiveClass("ProductQuality")" />
+                        <DxTreeViewNode Text="Crate Types" NavigateUrl="CrateTypes"
+                                       IconCssClass="fas fa-layer-group"
+                                       CssClass="@GetActiveClass("CrateTypes")" />
+                        <DxTreeViewNode Text="Crate Flags" NavigateUrl="CrateFlags"
+                                       IconCssClass="fas fa-flag"
+                                       CssClass="@GetActiveClass("CrateFlags")" />
+                        <DxTreeViewNode Text="Vehicle Definition" NavigateUrl="Vehinfo"
+                                       IconCssClass="fas fa-truck"
+                                       CssClass="@GetActiveClass("Vehinfo")" />
+                    </Nodes>
+                </DxTreeViewNode>
+            }
+
+            <!-- Grower Management -->
+            @if (AllowedPages.Any(p => !string.IsNullOrWhiteSpace(p) && p.Trim().Equals("Grower Group", StringComparison.OrdinalIgnoreCase)))
+            {
+                <DxTreeViewNode Text="Grower Management" IconCssClass="fas fa-users">
+                    <Nodes>
+                        <DxTreeViewNode Text="Grower Group" NavigateUrl="GrowerRef"
+                                       IconCssClass="fas fa-user-friends"
+                                       CssClass="@GetActiveClass("GrowerRef")" />
+                        <DxTreeViewNode Text="Reports" NavigateUrl="GrowerReport"
+                                       IconCssClass="fas fa-file-alt"
+                                       CssClass="@GetActiveClass("GrowerReport")" />
+                    </Nodes>
+                </DxTreeViewNode>
+            }
+
+            <!-- Crate Management -->
+            @if (AllowedPages.Any(p => !string.IsNullOrWhiteSpace(p) && p.Trim().Equals("Crates", StringComparison.OrdinalIgnoreCase)))
+            {
+                <DxTreeViewNode Text="Crate Management" IconCssClass="fas fa-boxes">
+                    <Nodes>
+                        <DxTreeViewNode Text="Crate Transactions" NavigateUrl="CrateMain"
+                                       IconCssClass="fas fa-exchange-alt"
+                                       CssClass="@GetActiveClass("CrateMain")" />
+                        <DxTreeViewNode Text="Crate Summary" NavigateUrl="CrateSummary"
+                                       IconCssClass="fas fa-list"
+                                       CssClass="@GetActiveClass("CrateSummary")" />
+                        <DxTreeViewNode Text="Reports" NavigateUrl="Crateanalysis"
+                                       IconCssClass="fas fa-chart-bar"
+                                       CssClass="@GetActiveClass("Crateanalysis")" />
+                    </Nodes>
+                </DxTreeViewNode>
+            }
+
+            <!-- Transactions In -->
+            @if (AllowedPages.Any(p => !string.IsNullOrWhiteSpace(p) && p.Trim().Equals("Transactions In", StringComparison.OrdinalIgnoreCase)))
+            {
+                <DxTreeViewNode Text="Transactions In" IconCssClass="fas fa-arrow-down">
+                    <Nodes>
+                        @if (AllowedPages.Any(p => !string.IsNullOrWhiteSpace(p) && p.Trim().Equals("Allocation", StringComparison.OrdinalIgnoreCase)))
+                        {
+                            <DxTreeViewNode Text="Chamber Allocation" NavigateUrl="ChamberDB"
+                                           IconCssClass="fas fa-snowflake"
+                                           CssClass="@GetActiveClass("ChamberDB")" />
+                        }
+                        @if (AllowedPages.Any(p => !string.IsNullOrWhiteSpace(p) && p.Trim().Equals("Preinward", StringComparison.OrdinalIgnoreCase)))
+                        {
+                            <DxTreeViewNode Text="Preinward" NavigateUrl="PreInwardMain"
+                                           IconCssClass="fas fa-clipboard-list"
+                                           CssClass="@GetActiveClass("PreInwardMain")" />
+                        }
+                        @if (AllowedPages.Any(p => !string.IsNullOrWhiteSpace(p) && p.Trim().Equals("Quality", StringComparison.OrdinalIgnoreCase)))
+                        {
+                            <DxTreeViewNode Text="Quality" NavigateUrl="QualityMain"
+                                           IconCssClass="fas fa-check-circle"
+                                           CssClass="@GetActiveClass("QualityMain")" />
+                        }
+                        @if (AllowedPages.Any(p => !string.IsNullOrWhiteSpace(p) && p.Trim().Equals("Dock", StringComparison.OrdinalIgnoreCase)))
+                        {
+                            <DxTreeViewNode Text="Dockyard" NavigateUrl="DockyardMain"
+                                           IconCssClass="fas fa-anchor"
+                                           CssClass="@GetActiveClass("DockyardMain")" />
+                        }
+                        @if (AllowedPages.Any(p => !string.IsNullOrWhiteSpace(p) && p.Trim().Equals("Location", StringComparison.OrdinalIgnoreCase)))
+                        {
+                            <DxTreeViewNode Text="Chamber Location" NavigateUrl="LocationMain"
+                                           IconCssClass="fas fa-map-marker-alt"
+                                           CssClass="@GetActiveClass("LocationMain")" />
+                        }
+                    </Nodes>
+                </DxTreeViewNode>
+            }
+
+            <!-- View Chambers -->
+            @if (AllowedPages.Any(p => !string.IsNullOrWhiteSpace(p) && p.Trim().Equals("View Chambers", StringComparison.OrdinalIgnoreCase)))
+            {
+                <DxTreeViewNode Text="View Chambers" 
+                               NavigateUrl="ChamberView"
+                               IconCssClass="fas fa-eye"
+                               CssClass="@GetActiveClass("ChamberView")" />
+            }
+
+            <!-- Transactions Out -->
+            @if (AllowedPages.Any(p => !string.IsNullOrWhiteSpace(p) && p.Trim().Equals("Transactions Out", StringComparison.OrdinalIgnoreCase)))
+            {
+                <DxTreeViewNode Text="Transactions Out" IconCssClass="fas fa-arrow-up">
+                    <Nodes>
+                        @if (AllowedPages.Any(p => !string.IsNullOrWhiteSpace(p) && p.Trim().Equals("Calendar", StringComparison.OrdinalIgnoreCase)))
+                        {
+                            <DxTreeViewNode Text="Calendar" NavigateUrl="calenderslot"
+                                           IconCssClass="fas fa-calendar-alt"
+                                           CssClass="@GetActiveClass("calenderslot")" />
+                        }
+                        @if (AllowedPages.Any(p => !string.IsNullOrWhiteSpace(p) && p.Trim().Equals("Demand Order", StringComparison.OrdinalIgnoreCase)))
+                        {
+                            <DxTreeViewNode Text="Demand Order" NavigateUrl="DemandMain"
+                                           IconCssClass="fas fa-shopping-cart"
+                                           CssClass="@GetActiveClass("DemandMain")" />
+                        }
+                        @if (AllowedPages.Any(p => !string.IsNullOrWhiteSpace(p) && p.Trim().Equals("Store Out", StringComparison.OrdinalIgnoreCase)))
+                        {
+                            <DxTreeViewNode Text="Store Out" NavigateUrl="StoreOutMain"
+                                           IconCssClass="fas fa-dolly"
+                                           CssClass="@GetActiveClass("StoreOutMain")" />
+                        }
+                        @if (AllowedPages.Any(p => !string.IsNullOrWhiteSpace(p) && p.Trim().Equals("Packing Draft", StringComparison.OrdinalIgnoreCase)))
+                        {
+                            <DxTreeViewNode Text="Packing Draft" NavigateUrl="DraftMain"
+                                           IconCssClass="fas fa-file-invoice"
+                                           CssClass="@GetActiveClass("DraftMain")" />
+                        }
+                        @if (AllowedPages.Any(p => !string.IsNullOrWhiteSpace(p) && p.Trim().Equals("Packing Order", StringComparison.OrdinalIgnoreCase)))
+                        {
+                            <DxTreeViewNode Text="Packing Order" NavigateUrl="PackingOrderMain"
+                                           IconCssClass="fas fa-box-open"
+                                           CssClass="@GetActiveClass("PackingOrderMain")" />
+                        }
+                        @if (AllowedPages.Any(p => !string.IsNullOrWhiteSpace(p) && p.Trim().Equals("Dispatch", StringComparison.OrdinalIgnoreCase)))
+                        {
+                            <DxTreeViewNode Text="Dispatch" NavigateUrl="Dispatch"
+                                           IconCssClass="fas fa-shipping-fast"
+                                           CssClass="@GetActiveClass("Dispatch")" />
+                        }
+                        @if (AllowedPages.Any(p => !string.IsNullOrWhiteSpace(p) && p.Trim().Equals("Final OutWard", StringComparison.OrdinalIgnoreCase)))
+                        {
+                            <DxTreeViewNode Text="Final OutWard" NavigateUrl="GatePassMain"
+                                           IconCssClass="fas fa-door-open"
+                                           CssClass="@GetActiveClass("GatePassMain")" />
+                        }
+                    </Nodes>
+                </DxTreeViewNode>
+            }
+
+            <!-- Transaction In Reports -->
+            @if (AllowedPages.Any(p => !string.IsNullOrWhiteSpace(p) && p.Trim().Equals("Transaction In Reports", StringComparison.OrdinalIgnoreCase)))
+            {
+                <DxTreeViewNode Text="Transaction In Reports" IconCssClass="fas fa-chart-line">
+                    <Nodes>
+                        <DxTreeViewNode Text="Preinward Report" NavigateUrl="PreinwardReports"
+                                       IconCssClass="fas fa-file-pdf"
+                                       CssClass="@GetActiveClass("PreinwardReports")" />
+                        <DxTreeViewNode Text="Inward Report" NavigateUrl="InwardReport"
+                                       IconCssClass="fas fa-file-pdf"
+                                       CssClass="@GetActiveClass("InwardReport")" />
+                        <DxTreeViewNode Text="Quality Report" NavigateUrl="QualityReport"
+                                       IconCssClass="fas fa-file-pdf"
+                                       CssClass="@GetActiveClass("QualityReport")" />
+                        <DxTreeViewNode Text="Stock Aggregate" NavigateUrl="StockAggregate"
+                                       IconCssClass="fas fa-file-pdf"
+                                       CssClass="@GetActiveClass("StockAggregate")" />
+                        <DxTreeViewNode Text="Inward Ledger" NavigateUrl="InwardLedger"
+                                       IconCssClass="fas fa-file-pdf"
+                                       CssClass="@GetActiveClass("InwardLedger")" />
+                    </Nodes>
+                </DxTreeViewNode>
+            }
+
+            <!-- Transaction Out Reports -->
+            @if (AllowedPages.Any(p => !string.IsNullOrWhiteSpace(p) && p.Trim().Equals("Transaction Out Reports", StringComparison.OrdinalIgnoreCase)))
+            {
+                <DxTreeViewNode Text="Transaction Out Reports" IconCssClass="fas fa-chart-pie">
+                    <Nodes>
+                        <DxTreeViewNode Text="Stock Report" NavigateUrl="LotStockReport"
+                                        IconCssClass="fas fa-file-pdf"
+                                        CssClass="@GetActiveClass("PackingDraftLedger")" />
+
+
+                        <DxTreeViewNode Text="Packing Draft Ledger" NavigateUrl="PackingDraftLedger"
+                                       IconCssClass="fas fa-file-pdf"
+                                       CssClass="@GetActiveClass("PackingDraftLedger")" />
+                        <DxTreeViewNode Text="Packing Draft Stock" NavigateUrl="PackingDraftReport"
+                                       IconCssClass="fas fa-file-pdf"
+                                       CssClass="@GetActiveClass("PackingDraftReport")" />
+
+                        <DxTreeViewNode Text="Final Outward Reports" NavigateUrl="GatePassReport"
+                                        IconCssClass="fas fa-file-pdf"
+                                        CssClass="@GetActiveClass("PackingDraftReport")" /> 
+                    </Nodes> 
+                </DxTreeViewNode>
+            }
+
+            <!-- Store Billing -->
+            @if (AllowedPages.Any(p => !string.IsNullOrWhiteSpace(p) && p.Trim().Equals("Store Billing", StringComparison.OrdinalIgnoreCase)))
+            {
+                <DxTreeViewNode Text="Store Billing" IconCssClass="fas fa-file-invoice-dollar">
+                    <Nodes>
+                        <DxTreeViewNode Text="Store CA Bill" NavigateUrl="StoreBillingMain"
+                                       IconCssClass="fas fa-receipt"
+                                       CssClass="@GetActiveClass("StoreBillingMain")" />
+                        <DxTreeViewNode Text="Grading Packing Bill" NavigateUrl="gradingBillingMain"
+                                       IconCssClass="fas fa-receipt"
+                                       CssClass="@GetActiveClass("gradingBillingMain")" />
+                        <DxTreeViewNode Text="Billing Report" NavigateUrl="QualityReport"
+                                       IconCssClass="fas fa-file-pdf"
+                                       CssClass="@GetActiveClass("QualityReport")" />
+                    </Nodes>
+                </DxTreeViewNode>
+            }
+
+            <!-- Trading and Transfers -->
+            @if (AllowedPages.Any(p => !string.IsNullOrWhiteSpace(p) && p.Trim().Equals("Trading and Transfers", StringComparison.OrdinalIgnoreCase)))
+            {
+                <DxTreeViewNode Text="Trading & Transfers" IconCssClass="fas fa-random">
+                    <Nodes>
+                        <DxTreeViewNode Text="Raw Crate" NavigateUrl="RawCrateMain"
+                                       IconCssClass="fas fa-pallet"
+                                       CssClass="@GetActiveClass("RawCrateMain")" />
+                    </Nodes>
+                </DxTreeViewNode>
+            }
+
+            <!-- User Management -->
+            @if (AllowedPages.Any(p => !string.IsNullOrWhiteSpace(p) && p.Trim().Equals("Users", StringComparison.OrdinalIgnoreCase)))
+            {
+                <DxTreeViewNode Text="User Management" IconCssClass="fas fa-users-cog">
+                    <Nodes>
+                        <DxTreeViewNode Text="Users" NavigateUrl="Users"
+                                       IconCssClass="fas fa-user"
+                                       CssClass="@GetActiveClass("Users")" />
+                        <DxTreeViewNode Text="User Group" NavigateUrl="UserRights"
+                                       IconCssClass="fas fa-users"
+                                       CssClass="@GetActiveClass("UserRights")" />
+                        <DxTreeViewNode Text="User Rights" NavigateUrl="privileges"
+                                       IconCssClass="fas fa-user-shield"
+                                       CssClass="@GetActiveClass("privileges")" />
+                    </Nodes>
+                </DxTreeViewNode>
+            }
+
+            <!-- Accounting Masters (Admin Only) -->
+            @if (UserSessionService.Usernamel?.ToLower() == "aabid")
+            {
+                <DxTreeViewNode Text="Accounting Masters" IconCssClass="fas fa-calculator">
+                    <Nodes>
+                        <DxTreeViewNode Text="Master Group" NavigateUrl="AccountMaster"
+                                       IconCssClass="fas fa-folder"
+                                       CssClass="@GetActiveClass("AccountMaster")" />
+                        <DxTreeViewNode Text="Master SubGroup" NavigateUrl="AccountSubMaster"
+                                       IconCssClass="fas fa-folder-open"
+                                       CssClass="@GetActiveClass("AccountSubMaster")" />
+                        <DxTreeViewNode Text="Account SubGroups" NavigateUrl="AccountSubGroup"
+                                       IconCssClass="fas fa-sitemap"
+                                       CssClass="@GetActiveClass("AccountSubGroup")" />
+                        <DxTreeViewNode Text="Voucher Types" NavigateUrl="VoucherTypes"
+                                       IconCssClass="fas fa-money-check"
+                                       CssClass="@GetActiveClass("VoucherTypes")" />
+                        <DxTreeViewNode Text="General Accounts" NavigateUrl="AccountRef"
+                                       IconCssClass="fas fa-book"
+                                       CssClass="@GetActiveClass("AccountRef")" />
+                        <DxTreeViewNode Text="Account Transactions" NavigateUrl="AccountTransactions"
+                                       IconCssClass="fas fa-exchange-alt"
+                                       CssClass="@GetActiveClass("AccountTransactions")" />
+                    </Nodes>
+                </DxTreeViewNode>
+
+                <!-- Inventory Management (Admin Only) -->
+                <DxTreeViewNode Text="Inventory Management" IconCssClass="fas fa-warehouse">
+                    <Nodes>
+                        <DxTreeViewNode Text="Purchase Group" NavigateUrl="PurchaseGroup"
+                                       IconCssClass="fas fa-layer-group"
+                                       CssClass="@GetActiveClass("PurchaseGroup")" />
+                        <DxTreeViewNode Text="Purchase Items" NavigateUrl="PurchaseItem"
+                                       IconCssClass="fas fa-shopping-bag"
+                                       CssClass="@GetActiveClass("PurchaseItem")" />
+                        <DxTreeViewNode Text="Purchase Order" NavigateUrl="PurchaseOrderRef"
+                                       IconCssClass="fas fa-file-contract"
+                                       CssClass="@GetActiveClass("PurchaseOrderRef")" />
+                        <DxTreeViewNode Text="Purchase Receive" NavigateUrl="VoucherTypes"
+                                       IconCssClass="fas fa-truck-loading"
+                                       CssClass="@GetActiveClass("VoucherTypes")" />
+                        <DxTreeViewNode Text="Purchase Reports" NavigateUrl="AccountRef"
+                                       IconCssClass="fas fa-file-pdf"
+                                       CssClass="@GetActiveClass("AccountRef")" />
+                    </Nodes>
+                </DxTreeViewNode>
+            }
+        </Nodes>
+    </DxTreeView>
+</div>
+
+@code {
+    List<string> AllowedPages = new();
+    private bool _isLoading = true;
+    private List<string> _allowedPages = new();
+
+    DxTreeView treeView { set => treeViews.Add(value); }
+    List<DxTreeView> treeViews = new();
+
+    public IEnumerable<DemoGroup> Groups { get => Configuration.Groups; }
+
+    [Parameter] public DemoSearchResult SearchResult { get; set; }
+    [Parameter] public string ActivePage { get; set; }
+
+    private string GetActiveClass(string path)
+    {
+        return Navigation.Uri.Contains(path, StringComparison.OrdinalIgnoreCase) ? "active" : string.Empty;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        NavigationManager.LocationChanged += OnLocationChanged;
+        UserSessionService.OnUserDataChanged += HandleUserDataChanged;
+
+        try
+        {
+            await UserSessionService.LoadUserFromStorageAsync();
+            string ugroup = UserSessionService.GlobalUserGroup;
+            AllowedPages = await EmployeeService.GetAllowedPagesAsync(ugroup);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error in initialization: {ex.Message}");
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleUserDataChanged()
+    {
+        await InvokeAsync(async () =>
+        {
+            await LoadUserData();
+            StateHasChanged();
+        });
+    }
+
+    private async Task LoadUserData()
+    {
+        _isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            if (UserSessionService.IsAuthenticated && !string.IsNullOrEmpty(UserSessionService.GlobalUserGroup))
+            {
+                _allowedPages = await EmployeeService.GetAllowedPagesAsync(UserSessionService.GlobalUserGroup);
+            }
+            else
+            {
+                _allowedPages = new List<string>();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading allowed pages: {ex.Message}");
+            _allowedPages = new List<string>();
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        UpdateSelection();
+        base.OnAfterRender(firstRender);
+        
+        if (firstRender)
+        {
+            Console.WriteLine("First render completed");
+            StateHasChanged();
+        }
+    }
+
+    void UpdateSelection()
+    {
+        foreach (var treeView in treeViews)
+        {
+            treeView.ClearSelection();
+            treeView.SelectNode(n => IsSelectedNode(n, ActivePage));
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        UpdateSelection();
+        base.OnParametersSet();
+    }
+
+    void OnLocationChanged(object sender, LocationChangedEventArgs args)
+    {
+        UpdateSelection();
+    }
+
+    bool IsSelectedNode(ITreeViewNodeInfo node, string currentUri)
+    {
+        return IsSelectedNode(node.NavigateUrl, currentUri);
+    }
+
+    bool IsSelectedNode(string navigateUrl, string currentUrl)
+    {
+        if (string.IsNullOrEmpty(navigateUrl)) return false;
+
+        return currentUrl.EndsWith($"/{navigateUrl}", StringComparison.OrdinalIgnoreCase) ||
+               (currentUrl == NavigationManager.BaseUri && navigateUrl == "./") ||
+               currentUrl.Equals(navigateUrl, StringComparison.OrdinalIgnoreCase) ||
+               currentUrl.EndsWith(navigateUrl.Split('#')[0], StringComparison.OrdinalIgnoreCase);
+    }
+
+    public void Dispose()
+    {
+        UserSessionService.OnUserDataChanged -= HandleUserDataChanged;
+        NavigationManager.LocationChanged -= OnLocationChanged;
+    }
+}

@@ -1,0 +1,1945 @@
+﻿@page "/PreinwardReports"
+
+@using DevExpress.XtraReports.UI
+@using DevExpress.Blazor.Reporting
+@using Microsoft.AspNetCore.Components.Web
+@using System.IO
+@inject EmployeeAdoNetService EmployeeService
+@using System.Text.RegularExpressions;
+@using BlazorDemo.Services;
+@using BlazorDemo;
+@inject IJSRuntime JS
+@inject NavigationManager NavigationManager
+<link href="_content/DevExpress.Blazor.Themes/blazing-berry.bs5.min.css" rel="stylesheet" />
+<link rel="stylesheet" href="_content/DevExpress.Blazor.Reporting.Viewer/css/dx-blazor-reporting-components.bs5.css">
+<PageTitle>Preinward  Reports</PageTitle>
+
+
+<div class="page-header">
+    <h5><strong>PREINWARD REPORTS </strong></h5>
+    <button @onclick="GoBack" class="btn btn-primary">
+                    <i class="fa fa-arrow-left"></i>
+                </button>
+</div> 
+<br />
+
+   <div class="card p-3 mb-4" style="border: 1px solid lightgray; background-color: #f5f5f5;">
+    <div class="row g-3 align-items-end">
+        <!-- Date From -->
+        <div class="col-sm-2">
+            <label for="date1" class="form-label">Dated From</label>
+            <DxDateEdit @bind-Date="EditModel.PreinwardDate"
+                       CssClass="cw-320"
+                       style="height: 30px;" InputId="date1" />
+        </div>
+
+        <!-- Date To -->
+        <div class="col-sm-2">
+            <label for="date2" class="form-label">Dated To</label>
+            <DxDateEdit @bind-Date="EditModel.PreinwardDateTo"
+                       CssClass="cw-320"
+                       style="height: 30px;" InputId="date2" />
+        </div>
+
+        <!-- Grower Group Name -->
+        <div class="col-md-2">
+            <label for="growerGroup" class="form-label">Grower Group Name</label>
+            <DxComboBox @key="GrowerGroupKey" 
+                       Data="@GetgrowerList"
+                       SearchMode="@SearchMode"
+                       SearchFilterCondition="@SearchFilterCondition"
+                       SearchTextParseMode="@SearchTextParseMode"
+                       ValueChanged="@(async (string? newValue) => await OnGrowerGroupChanged(newValue))"
+                       TextFieldName="GrowerName"
+                       ValueFieldName="GrowerName"
+                       CssClass="cw-480"
+                       Value="@EditModel.GrowerGroupName"
+                       InputId="growerGroup" 
+                      NullText="Grower Group"
+                       ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+        </div>
+
+        <!-- Grower Name -->
+        <div class="col-md-2">
+            <label for="growerName" class="form-label">Grower Name</label>
+            <DxComboBox @key="GrowerNameKey" 
+                       Data="@GetSubGrowerGroup"
+                       SearchMode="@SearchMode"
+                       SearchFilterCondition="@SearchFilterCondition"
+                       SearchTextParseMode="@SearchTextParseMode"
+                       Value="@EditModel.GrowerName"
+                       ValueChanged="@(async (string? newValue) => await OnSubgrowerChanged(newValue))"
+                       TextFieldName="GrowerName"
+                       ValueFieldName="GrowerName"
+                       CssClass="cw-480"
+                       InputId="growerName"
+                         NullText="Grower Name"
+                       ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+        </div>
+
+        <!-- Product Name -->
+        <div class="col-sm-2">
+            <label for="productName" class="form-label">Product Name</label>
+            <DxComboBox Data="@Growers"
+                       SearchMode="@SearchMode"
+                       SearchFilterCondition="@SearchFilterCondition"
+                       SearchTextParseMode="@SearchTextParseMode"
+                       Value="EditModel.Prodname"
+                       TextFieldName="Itemname"
+                       ValueFieldName="Itemname"
+                       placeholder="No"
+                       CssClass="custom-input-height"
+                       InputId="productName"
+                         NullText="Product Name"
+                       ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+        </div>
+
+        <!-- UOM -->
+        <div class="col-sm-2">
+            <label for="uom" class="form-label">UOM</label>
+            <select id="uom" class="form-select form-select-sm w-100"
+                   style="height: 30px;" @bind="EditModel.PreInwardUom" required>
+                <option disabled selected value="">Select</option>
+                <option value="Crate">Crate</option>
+                <option value="Petti">Petti</option>
+            </select>
+        </div>
+
+        <!-- Vehicle No -->
+        <div class="col-md-2">
+            <label for="vehicleNo" class="form-label">Vehicle No</label>
+            <DxComboBox Data="@GetVehlist"
+                       SearchMode="@SearchMode"
+                       ListRenderMode="ListRenderMode.Virtual"
+                       SearchFilterCondition="@SearchFilterCondition"
+                       SearchTextParseMode="@SearchTextParseMode"
+                       @bind-Value="EditModel.Vehno"
+                       TextFieldName="Vehno"
+                       ValueFieldName="Vehno"
+                       CssClass="cw-480"
+                       InputId="vehicleNo" 
+NullText="Vehicle No"   
+                       ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+        </div>
+
+        <!-- Common Search -->
+        <div class="col-md-2">
+                    <label class="form-label">Common Search</label>
+                    <input type="text" min="0" id="remarks"
+                               style="font-size: 14px; height: 30px; font-family: 'Source Sans Pro', sans-serif;"
+                               class="form-control input-placeholder-dim input-focus-dark"
+                               @bind="EditModel.CommonSearch"
+                               placeholder="Common search" />
+                </div>
+        <!-- Report Type -->
+        <div class="col-sm-2">
+            <label for="reportType" class="form-label">Report Type</label>
+            <select id="reportType" class="form-select form-select-sm w-100"
+                   style="height: 30px;" @bind="EditModel.PreInwardUom" required>
+                <option disabled selected value="">Select</option>
+                <option value="Grower">Grower</option>
+                <option value="Date">Date</option>
+                <option value="Summary">Summary</option>
+
+            </select>
+        </div>
+
+        <div class="col-sm-2">
+            <label for="reportType" class="form-label">Status</label>
+            <select id="reportType" class="form-select form-select-sm w-100"
+                    style="height: 30px;" @bind="EditModel.PreInwardStatus" required>
+                <option disabled selected value="">Select</option>
+                <option value="ALL">ALL</option>
+                <option value="Completed">Completed</option>
+                <option value="Pending">Pending</option>
+
+            </select>
+        </div>
+
+        <!-- Action Buttons - Now properly aligned -->
+        <div class="col-sm-2">
+            <label class="form-label" style="visibility: hidden;">Actions</label>
+            <div class="d-flex gap-2">
+                <button @onclick="SearchCrates" 
+                        class="btn btn-primary btn-sm flex-fill" 
+                        style="height: 30px; white-space: nowrap;">
+                    <i class="fa fa-search"></i> Search
+                </button>
+                <button @onclick="ClearFilter" 
+                        class="btn btn-secondary btn-sm flex-fill" 
+                        style="height: 30px; white-space: nowrap;">
+                    Clear
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+  
+
+                
+               @*  <div class="col-md-2">
+                    <label for="crateQty" class="form-label">Crate Qty</label>
+                    <InputNumber id="crateQty" min="0" placeholder="Del Address"
+                                 style="font-size: 14px; height: 30px; font-family: 'Source Sans Pro', sans-serif;"
+                                 class="form-control input-placeholder-dim input-focus-dark"
+                                 @bind-Value="EditModel.CrissueQty" />
+                </div>
+
+                <div class="col-md-3">
+                    <label for="remarks" class="form-label">Remarks</label>
+                    <InputText id="remarks"
+                               style="font-size: 14px; height: 30px; font-family: 'Source Sans Pro', sans-serif;"
+                               class="form-control input-placeholder-dim input-focus-dark"
+                               @bind-Value="EditModel.CrissueRemarks"
+                               placeholder="Remarks" />
+                </div> *@
+
+
+
+
+@if (showReport)
+{
+    <div style="overflow-x:auto; width:100%;">
+        <DxReportViewer @ref="reportViewer" Zoom="0.9" Report="@Report">
+        </DxReportViewer>
+    </div>
+}
+        }
+         
+ 
+
+            <style>
+                @@media (max-width: 768px) {
+                    .dxbl-grid {
+                        width: 768px; /* Force minimum width */
+                    }
+                }
+
+                .alt-item {
+                    background-color: rgba(243, 244, 245, 1) !important;
+                }
+
+                    .alt-item > td {
+                        --dxbl-grid-bg: rgba(243, 244, 245, 1) !important;
+                        background-color: rgba(243, 244, 245, 1) !important;
+                    }
+           
+            
+            
+            
+            </style>
+
+
+    
+
+
+<style>
+    .centered-field {
+        display: flex;
+        flex-direction: column;
+        align-items: center; /* centers children horizontally */
+    }
+
+        .centered-field label {
+            text-align: center; /* centers the label’s text */
+            width: 100%; /* ensure the label fills the container */
+            margin-bottom: .5rem;
+        }
+
+        .centered-field input {
+            width: 200px; /* or whatever width you like */
+        }
+
+    /* Slightly darker but still subtle placeholder */
+    .input-placeholder-dim::placeholder {
+        color: rgba(130, 130, 130, 0.3) !important; /* dim gray, 30% opacity */
+        opacity: 1 !important;
+    }
+
+    /* Dark gray border on focus, no shadow */
+    .input-focus-dark:focus {
+        border-color: #343a40; /* dark gray */
+        box-shadow: none !important;
+        outline: none;
+    }
+
+    .table-responsive {
+        overflow-x: auto;
+        width: 100%;
+    }
+
+    .table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.875rem; /* optional small font */
+    }
+
+        .table th, .table td {
+            padding: 0.5rem;
+            text-align: left;
+        }
+
+    .zebra-table tbody tr:nth-child(odd) {
+        background-color: white;
+    }
+
+    .zebra-table tbody tr:nth-child(even) {
+        background-color: #f9f9f9;
+    }
+
+
+
+
+    /* Custom small font */
+    .small-font {
+        font-size: 0.82rem;
+    }
+
+    .control-wrapper {
+        max-width: 250px;
+        margin: 0 auto;
+        padding: 50px 0px 0px;
+    }
+
+    .example-label {
+        font-size: 14px;
+        margin-bottom: 6px;
+        /* Standardize form control styles for horizontal alignment */
+        input .form-control, .e-input-group, .e-control-wrapper, .e-autocomplete, .e-input
+
+    {
+        min-height: 38px; /* Bootstrap default */
+        line-height: 1.5;
+        font-size: 14px;
+        font-family: 'Source Sans Pro', sans-serif;
+        padding: 6px 12px;
+        box-sizing: border-box;
+    }
+
+    /* Optional: Align content inside Syncfusion AutoComplete */
+    .e-autocomplete .e-input {
+        padding: 6px 12px !important;
+    }
+
+    /* Remove extra bottom spacing in SfAutoComplete wrapper */
+    .e-autocomplete.e-control-wrapper {
+        margin-bottom: 0 !important;
+    }
+
+    /* Align labels consistently */
+    label.form-label {
+        font-size: 14px;
+        margin-bottom: 4px;
+        font-family: 'Source Sans Pro', sans-serif;
+    }
+
+    /* Remove extra vertical margin if any Syncfusion adds it */
+    .e-control-wrapper {
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
+    }
+
+</style>
+
+
+<style>
+    .alt-item {
+        background-color: rgba(243, 244, 245, 1) !important;
+    }
+
+        .alt-item > td {
+            --dxbl-grid-bg: rgba(243, 244, 245, 1) !important;
+            background-color: rgba(243, 244, 245, 1) !important;
+        }
+</style>
+
+<DxDialogProvider />
+
+<DxPopup @bind-Visible="@isDialogVisible"
+         HeaderText="Confirmation"
+         ShowCloseButton="true"
+         CssClass="validation-dialog">
+    <Content>
+        Are you sure you want to change the status for Item ID: <strong>@selectedGrowerId</strong>?
+        <div>
+        <DxButton RenderStyle="ButtonRenderStyle.Primary" Click="@OnConfirmYes">Yes</DxButton>
+        <DxButton RenderStyle="ButtonRenderStyle.Secondary" Click="@OnConfirmNo">No</DxButton>
+        </div>
+    </Content>
+   
+</DxPopup>
+
+
+<DxPopup @bind-Visible="@DeleteDialog"
+         HeaderText="Confirmation"
+         ShowCloseButton="true"
+         CssClass="validation-dialog">
+    <Content>
+        Are you sure you want to delete the  Item Id: <strong>@selectedGrowerId</strong>?
+        <div>
+            <DxButton RenderStyle="ButtonRenderStyle.Primary" Click="@OnConfirmYesDelete">Yes</DxButton>
+            <DxButton RenderStyle="ButtonRenderStyle.Secondary" Click="@OnConfirmNoDelete">No</DxButton>
+        </div>
+    </Content>
+
+</DxPopup>
+
+
+
+<DxPopup @bind-Visible="@PostDialog"
+         HeaderText="Confirmation"
+         ShowCloseButton="true"
+         CssClass="validation-dialog">
+    <Content>
+        Are you sure you want to Post the  Order Id: <strong>@selectedGrowerId</strong>?
+        <div>
+            <DxButton RenderStyle="ButtonRenderStyle.Primary" Click="@OnConfirmYesPost">Yes</DxButton>
+            <DxButton RenderStyle="ButtonRenderStyle.Secondary" Click="@OnConfirmNoDelete">No</DxButton>
+        </div>
+    </Content>
+
+</DxPopup>
+
+
+
+
+<DxPopup @bind-Visible="@UnPostDialog"
+         HeaderText="Confirmation"
+         ShowCloseButton="true"
+         CssClass="validation-dialog">
+    <Content>
+        Are you sure you want to UnPost the  Order Id: <strong>@selectedGrowerId</strong>?
+        <div>
+            <DxButton RenderStyle="ButtonRenderStyle.Primary" Click="@OnConfirmYesUnpost">Yes</DxButton>
+            <DxButton RenderStyle="ButtonRenderStyle.Secondary" Click="@OnConfirmNoDelete">No</DxButton>
+        </div>
+    </Content>
+
+</DxPopup>
+
+
+
+
+
+
+
+
+
+
+
+<DxPopup @bind-Visible="@PurDialog"
+         HeaderText="Confirmation"
+         ShowCloseButton="true"
+         CssClass="validation-dialog">
+    <Content>
+        Are you sure you want to generate new Purchase order?
+        <div>
+            <DxButton RenderStyle="ButtonRenderStyle.Primary" Click="@OnConfirmYesGenerate">Yes</DxButton>
+            <DxButton RenderStyle="ButtonRenderStyle.Secondary" Click="@OnConfirmNoGenerate">No</DxButton>
+        </div>
+    </Content>
+
+</DxPopup>
+
+
+
+
+
+
+@if (ShowEmptyFieldDialog)
+{
+    <DxPopup @bind-Visible="@ShowEmptyFieldDialog"
+             HeaderText="Validation Error"
+             ShowCloseButton="true"
+             CssClass="validation-dialog">
+        <Content>
+            <p>@DialogMessage</p>
+            <DxButton Text="OK" Click="@(() => ShowEmptyFieldDialog = false)" />
+        </Content>
+    </DxPopup>
+}
+<style>
+    .custom-popup-style {
+        background-color: #fdfdfd;
+        border: 2px solid #0078d4;
+        border-radius: 12px;
+        padding: 10px;
+        font-family: 'Segoe UI', sans-serif;
+    }
+
+        .custom-popup-style .dxbs-popup-header {
+            background-color: #0078d4;
+            color: white;
+            font-weight: bold;
+            border-bottom: none;
+        }
+
+        .custom-popup-style .dxbs-popup-content {
+            font-size: 15px;
+            padding: 15px;
+        }
+</style>
+@if (ShowEmptyFieldDialogError)
+{
+    <DxPopup @bind-Visible="@ShowEmptyFieldDialogError"
+             HeaderText="Confirmation Message"
+             ShowCloseButton="true"
+             CssClass="custom-popup-style">
+
+
+
+        <Content>
+            <p><strong>Success </strong>@DialogMessage</p>
+            <DxButton Text="OK" RenderStyle="ButtonRenderStyle.Primary" Click="@(() => ShowEmptyFieldDialogError = false)" />
+        </Content>
+    </DxPopup>
+}
+
+
+
+
+
+
+
+
+
+
+
+@code {
+
+    ListSearchMode SearchMode { get; set; } = ListSearchMode.AutoSearch;
+    ListSearchFilterCondition SearchFilterCondition { get; set; } = ListSearchFilterCondition.Contains;
+    ListSearchTextParseMode SearchTextParseMode { get; set; } = ListSearchTextParseMode.GroupWordsByAnd;
+    List<CompanyModel> GetmasterGroup = new List<CompanyModel>();
+    List<CompanyModel> GetgrowerList = new List<CompanyModel>();
+    List<CompanyModel> Purchaseorders = new List<CompanyModel>();
+
+    List<CompanyModel> GetVehlist = new List<CompanyModel>();
+
+    List<CompanyModel> GetDailyCrates = new List<CompanyModel>();
+    string AvailGrower ="";
+
+    bool showReport = false;
+
+
+    List<CompanyModel> GetCrateMark = new List<CompanyModel>();
+    List<CompanyModel> GetChallanGroup = new List<CompanyModel>();
+
+    List<CompanyModel> CrateAnalysis = new List<CompanyModel>();
+    List<CompanyModel> GetSubGrowerGroup = new List<CompanyModel>();
+
+
+    DxReportViewer? reportViewer;
+    XtraReport? Report;
+    private async void ShowReport()
+    {
+
+
+        GetDailyCrates = await EmployeeService.generatePreinwardReport(EditModel);
+
+        Report = XtraReport.FromFile(Path.Combine(Directory.GetCurrentDirectory(),
+             @"Reports\PreinwardReport.repx"));
+
+        showReport = true;
+    }
+
+
+
+
+
+
+
+
+
+
+    private decimal AvailableGrower = 0;
+    private decimal AvailableSubGrower = 0;
+
+    private CompanyModel EditModel = new();
+    private string DialogMessage { get; set; } = "";
+    private bool ShowEmptyFieldDialogError { get; set; }
+    private string ChallanGroup { get; set; } = "";
+    string GrowerGroupKey = Guid.NewGuid().ToString();
+    string GrowerNameKey = Guid.NewGuid().ToString();
+    string ChallanKey = Guid.NewGuid().ToString();
+
+    private bool ShowEmptyFieldDialog { get; set; }
+    private bool ShowCrateAnalysis { get; set; } = false;
+
+    private void DeleteGrower(int growerId)
+    {
+        selectedGrowerId = growerId;
+        DeleteDialog = true;
+
+
+    }
+    private void ViewGrower(int growerId)
+    {
+        companyModel.Growerid = growerId;
+
+
+        NavigationManager.NavigateTo($"/ViewGrower/{growerId}");
+
+    }
+    private async Task OnCountryChanged(string? newCountryId)
+    {
+        string selectedPurchase = "";
+        selectedPurchase = newCountryId;
+
+
+
+
+        EditModel.PurchGrp = selectedPurchase;
+        GetItemGroup = await EmployeeService.GetItemNameByGroup(selectedPurchase);
+        GetVehlist = await EmployeeService.GetallVeh();
+
+
+    }
+
+
+    private async Task OnGrowerGroupChanged(string? newCountryId)
+    {
+        string selectedPurchase = "";
+        selectedPurchase = newCountryId;
+        GetSubGrowerGroup.Clear();
+        EditModel.GrowerName = String.Empty;
+        StateHasChanged();
+
+
+        if (!string.IsNullOrWhiteSpace(selectedPurchase))
+
+        {
+
+            GetSubGrowerGroup = await EmployeeService.GetSubGrowerByGroup(selectedPurchase);
+            AvailGrower =selectedPurchase;
+            EditModel.GrowerGroupName = AvailGrower;
+            // string selectedflag=EditModel.CrissueFlag;
+            // GetCrateAnalysis = await EmployeeService.CheckCratesPartyOut(selectedPurchase,selectedflag);
+            // AvailableGrower = companyModel.CrateAvailable ?? 0;
+
+            // ShowCrateAnalysis = true;
+        }
+    }
+
+
+
+
+    private async Task OnSubgrowerChanged(string? newCountryId)
+    {
+        string selectedPurchase = newCountryId;
+
+
+        string SelectedSubgrower = AvailGrower;
+        GetChallanGroup.Clear();
+        EditModel.ChallanName = String.Empty;
+        StateHasChanged();
+
+        // await JS.InvokeVoidAsync("alert",selectedPurchase);
+        //          await JS.InvokeVoidAsync("alert",AvailGrower);
+
+        if (!string.IsNullOrWhiteSpace(selectedPurchase) && !string.IsNullOrWhiteSpace(SelectedSubgrower))
+        {
+            EditModel.GrowerName = selectedPurchase;
+
+
+            GetChallanGroup = await EmployeeService.GetChallanByGroup(selectedPurchase, SelectedSubgrower);
+            //    string selectedflag=EditModel.CrissueFlag;
+
+            // GetCrateAnalysis = await EmployeeService.CheckCratesPartysubOut(selectedPurchase, SelectedSubgrower,selectedflag);
+            // selectedSubgrower = selectedPurchase;
+            // AvailableSubGrower =   companyModel.CrateAvailable ?? 0;
+
+            // ShowCrateAnalysis = true;
+        }
+        else
+        {
+            // Optionally reset related values
+            ShowCrateAnalysis = false;
+            AvailableSubGrower = 0;
+        }
+
+    }
+
+    protected async Task GeneratePreview()
+    {
+
+
+        DateTime DateFrom = EditModel.CrateDatefrom ?? DateTime.Now;
+        DateTime Dateto = EditModel.CrateDateto ?? DateTime.Now;
+        if (string.IsNullOrWhiteSpace(EditModel.GrowerGroupName))
+        {
+            companyModel.Partyid = 0;
+        }
+        else
+        {
+            var partyId = GetNumberBeforeHyphen(EditModel.GrowerGroupName);
+            companyModel.Partyid = partyId.HasValue ? partyId.Value : 0;
+        }
+
+
+
+        if (string.IsNullOrWhiteSpace(EditModel.GrowerName))
+        {
+            companyModel.Growerid = 0;
+        }
+        else
+        {
+            var subPartyId = GetNumberBeforeHyphen(EditModel.GrowerName);
+            companyModel.Growerid = subPartyId.HasValue ? subPartyId.Value : 0;
+        }
+
+        if (string.IsNullOrWhiteSpace(EditModel.ChallanName))
+        {
+            companyModel.ChallanId = 0;
+        }
+        else
+        {
+            var Challanid = GetNumberBeforeHyphen(EditModel.ChallanName);
+            companyModel.ChallanId = Challanid.HasValue ? Challanid.Value : 0;
+        }
+
+        if (string.IsNullOrWhiteSpace(EditModel.CrissueMark))
+        {
+            companyModel.CrissueMark = "PAX2";
+        }
+        if (string.IsNullOrWhiteSpace(EditModel.CrissueFlag))
+        {
+            companyModel.CrissueFlag = "PAX2";
+        }
+
+        if (string.IsNullOrWhiteSpace(EditModel.vehname))
+        {
+            companyModel.vehname = "PAX2";
+        }
+
+        GetDailyCrates=await EmployeeService.generateCrateReport(EditModel);
+
+        Report = XtraReport.FromFile(Path.Combine(Directory.GetCurrentDirectory(),
+          @"Reports\CrateTransaction.repx"));
+
+
+
+        showReport = true;
+
+    }
+
+
+
+    protected async Task GeneratePreviewbyid(int growerId)
+    {
+
+
+        // if  (EditModel.CrissueId <= 0)
+        // {
+        //     DialogMessage = "Please enter a valid idno greater than 0.";
+        //     ShowEmptyFieldDialog = true;
+        //     return;
+        // }
+        selectedGrowerId = growerId;
+        //  selectedGrowerId = EditModel.CrissueId;
+
+        await EmployeeService.GenerateCratePreview(selectedGrowerId,EditModel);
+
+        Report = XtraReport.FromFile(Path.Combine(Directory.GetCurrentDirectory(),
+          @"Reports\CrateSlip.repx"));
+
+
+
+        showReport = true;
+
+    }
+
+
+
+
+
+
+    private void AddGrowerAgreement(int growerId)
+    {
+        companyModel.Growerid = growerId;
+
+
+        NavigationManager.NavigateTo($"/EditGrowerAgreement/{growerId}");
+
+    }
+
+
+
+
+
+
+    private void ViewSubGrower(int growerId)
+    {
+        companyModel.Growerid = growerId;
+
+
+        NavigationManager.NavigateTo($"/ViewSubGrower/{growerId}");
+
+    }
+
+
+    void OnCrissueMarkChanged(string newValue)
+    {
+        // Check if the new value is not already in the data source
+        EditModel.CrissueMark = newValue;
+
+        // Check if the value exists already
+        if (!string.IsNullOrWhiteSpace(newValue) &&
+            !GetCrateMark.Any(x => x.CrissueMark.Equals(newValue, StringComparison.OrdinalIgnoreCase)))
+        {
+            GetCrateMark.Add(new CompanyModel { CrissueMark = newValue });
+        }
+    }
+
+
+    private void AddGrower(int growerId)
+    {
+        companyModel.Growerid = growerId;
+
+
+        NavigationManager.NavigateTo($"/AddGrower");
+
+    }
+
+
+    private async Task EditItem(object dataItem)
+    {
+        if (dataItem is CompanyModel companyModel)
+        {
+            selectedGrowerId = companyModel.CrissueId;
+
+            GetgrowerList = await EmployeeService.GetallGrowerlist();
+
+            // Growerselect=EditModel.GrowerGroupName;
+            // selectedSubgrower = EditModel.GrowerGroupName;
+            // await JS.InvokeVoidAsync("alert",EditModel.GrowerGroupName);
+            EditModel = await EmployeeService.GetCrateIssueDet(selectedGrowerId);
+
+            GetSubGrowerGroup = await EmployeeService.GetSubGrowerByGroup(EditModel.GrowerGroupName);
+            GetChallanGroup = await EmployeeService.GetChallanByGroup(EditModel.GrowerName,EditModel.GrowerGroupName);
+            actualidqty = EditModel.CrissueQty ?? 0;
+
+            //  EditModel.GrowerName = GetSubGrowerGroup.FirstOrDefault();
+            // selectedSubgrower= EditModel.GrowerName;
+            // await JS.InvokeVoidAsync("alert",EditModel.GrowerGroupName);
+            // await JS.InvokeVoidAsync("alert",  EditModel.GrowerName);
+
+            // selectedPurchaseGroup = EditModel.PurchGrp;
+            // GetItemGroup = await EmployeeService.GetItemNameByGroup(selectedPurchaseGroup);
+
+            StateHasChanged();
+        }
+    }
+
+    // private async void EditGrower(int growerId)
+    // {
+    //     // selectedGrowerId=companyModel.Mid ;
+
+    //     // companyModel = await EmployeeService.GetMasterName(companyModel.Mid);
+
+
+
+    // }
+    protected async Task OnConfirmYes()
+    {
+
+
+        companyModel.Itemid = selectedGrowerId;
+        await EmployeeService.UpdateItemStatus(selectedGrowerId, companyModel);
+
+
+        banks = await EmployeeService.GetallItemGroup();
+
+
+        StateHasChanged();
+        isDialogVisible = false;
+
+    }
+
+    protected async Task OnConfirmYesPost()
+    {
+        if (EditModel.PurchaseOrderId <= 0)
+        {
+            DialogMessage = "Please enter a valid Order No";
+            ShowEmptyFieldDialog = true;
+            return;
+        }
+        selectedGrowerId = EditModel.PurchaseOrderId;
+
+
+        selectedItemid = EditModel.PurchaseOrderItemId;
+
+        //  await JS.InvokeVoidAsync("alert", selectedGrowerId);
+        // await JS.InvokeVoidAsync("alert", selectedItemid);
+
+        var result = await EmployeeService.PostPurchaseOrder(EditModel);
+        if (result != null && result.RetFlag.Trim() == "TRUE" && !string.IsNullOrEmpty(result.RetMessage))
+        {
+            GetOrderDetails = await EmployeeService.GetPurchaseOrder(selectedGrowerId);
+
+            DialogMessage = result.RetMessage;
+            ShowEmptyFieldDialogError = true;
+
+
+            StateHasChanged();
+            PostDialog = false; // Close the delete confirmation dialog
+            return;
+        }
+
+
+
+        if (result != null && result.RetFlag.Trim() == "FALSE")
+        {
+
+            DialogMessage = result.RetMessage ?? "Failed to delete Item group.";
+            ShowEmptyFieldDialog = true;
+            PostDialog = false;
+            return;
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        StateHasChanged();
+        isDialogVisible = false;
+
+
+    }
+    protected async Task OnConfirmYesUnpost()
+    {
+        if (EditModel.PurchaseOrderId <= 0)
+        {
+            DialogMessage = "Please enter a valid Order No";
+            ShowEmptyFieldDialog = true;
+            return;
+        }
+        selectedGrowerId = EditModel.PurchaseOrderId;
+
+
+        selectedItemid = EditModel.PurchaseOrderItemId;
+
+        //  await JS.InvokeVoidAsync("alert", selectedGrowerId);
+        // await JS.InvokeVoidAsync("alert", selectedItemid);
+
+        var result = await EmployeeService.UnPostPurchaseOrder(EditModel);
+        if (result != null && result.RetFlag.Trim() == "TRUE" && !string.IsNullOrEmpty(result.RetMessage))
+        {
+            GetOrderDetails = await EmployeeService.GetPurchaseOrder(selectedGrowerId);
+
+            DialogMessage = result.RetMessage;
+            ShowEmptyFieldDialogError = true;
+
+
+            StateHasChanged();
+            UnPostDialog = false; // Close the delete confirmation dialog
+            return;
+        }
+
+
+
+        if (result != null && result.RetFlag.Trim() == "FALSE")
+        {
+
+            DialogMessage = result.RetMessage ?? "Failed to Unpost.";
+            ShowEmptyFieldDialog = true;
+            UnPostDialog = false;
+            return;
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        StateHasChanged();
+        isDialogVisible = false;
+    }
+    protected async Task OnConfirmYesDelete()
+    {
+        // if (EditModel.CrissueId <= 0)
+        // {
+        //     DialogMessage = "Please enter a valid Id No";
+        //     ShowEmptyFieldDialog = true;
+        //     return;
+        // }
+
+
+
+
+        // await JS.InvokeVoidAsync("alert", selectedGrowerId);
+        // await JS.InvokeVoidAsync("alert", selectedItemid);
+
+        var result = await EmployeeService.DeleteCrateIssue(selectedGrowerId,EditModel);
+        if (result != null && result.RetFlag.Trim() == "TRUE" && !string.IsNullOrEmpty(result.RetMessage))
+        {
+
+            GetDailyCrates=await EmployeeService.GetDailyCratesProcEmpty();
+
+            DialogMessage = result.RetMessage;
+            ShowEmptyFieldDialogError = true;
+
+
+            StateHasChanged();
+            DeleteDialog = false; // Close the delete confirmation dialog
+            return;
+        }
+
+
+
+        if (result != null && result.RetFlag.Trim() == "FALSE")
+        {
+
+            DialogMessage = result.RetMessage ?? "Failed to delete Item group.";
+            ShowEmptyFieldDialog = true;
+            DeleteDialog = false;
+            return;
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        StateHasChanged();
+        isDialogVisible = false;
+
+    }
+
+    protected async Task OnConfirmYesGenerate()
+    {
+
+
+
+        var result = await EmployeeService.GeneratePurchaseOrder(EditModel);
+        if (result != null && result.RetFlag.Trim() == "TRUE" && !string.IsNullOrEmpty(result.RetMessage))
+        {
+            companyModel = await EmployeeService.GetPurchaseOrderNo();
+
+            Purchaseorders = await EmployeeService.GetPurchaseorders();
+
+            EditModel.PurchaseOrderId= companyModel.PurchaseOrderId;
+
+            DialogMessage = result.RetMessage;
+            ShowEmptyFieldDialogError = true;
+
+
+            StateHasChanged();
+            PurDialog = false; // Close the delete confirmation dialog
+            return;
+        }
+
+
+
+        if (result != null && result.RetFlag.Trim() == "FALSE")
+        {
+
+            DialogMessage = result.RetMessage ?? "Failed to Create Purchase Order.";
+            ShowEmptyFieldDialog = true;
+            PurDialog = false;
+            return;
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        StateHasChanged();
+        isDialogVisible = false;
+
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    private void OnConfirmNoDelete()
+    {
+        DeleteDialog = false;
+    }
+
+
+
+
+
+
+    private void ViewSubList(int growerId)
+    {
+        companyModel.Growerid = growerId;
+
+
+        NavigationManager.NavigateTo($"/ViewSubGrower/{growerId}");
+
+    }
+    private async Task GoBack()
+    {
+        await JS.InvokeVoidAsync("history.back");
+    }
+    private void OnConfirmNoGenerate()
+    {
+        isDialogVisible = false;
+    }
+
+
+    private void OnConfirmNo()
+    {
+        isDialogVisible = false;
+    }
+
+    string GetRowCssClass(object dataItem, int visibleIndex)
+    {
+        return visibleIndex % 2 == 0 ? "even-row" : "odd-row";
+    }
+
+    private bool DeleteDialog = false;
+    private bool PurDialog = false;
+    private bool UnPostDialog = false;
+    private bool PostDialog = false;
+    private bool isDialogVisible = false;
+    private int selectedGrowerId;
+    private int selectedItemid;
+    private string selectetGrowerGroup = null;
+    private string selectedSubgrower = null;
+    private decimal actualidqty = 0;
+    private string Growerselect = null;
+    private string selectedPurchaseGroup = null;
+    private void ShowConfirmDialog(int GrowerId)
+    {
+        selectedGrowerId = GrowerId;
+        isDialogVisible = true;
+
+
+    }
+    private void GoToAddGrowerPage()
+    {
+        NavigationManager.NavigateTo("/AddGrower");
+    }
+
+
+
+
+
+
+    void ChangeSearchMode(string key)
+    {
+        // CurrentSearchTextParseModeDisplayText = key;
+        // CurrentSearchTextParseMode = SearchTextParseModes[key];
+    }
+
+    public void ShowDetails(int employeeId)
+    {
+
+    }
+    public void ShowDetails1(string ename)
+    {
+
+    }
+    public void ShowDetails2(string dept)
+    {
+
+    }
+    // private string activeBreakpoint { get; set; }
+
+    // // private List<Order> orders { get; set; }
+
+    // private bool enableAdaptiveUIMode { get; set; }
+    // private RowDirection renderingMode { get; set; }
+    CompanyModel companyModel = new CompanyModel();
+    IGrid MyGrid { get; set; }
+    List<CompanyModel> Growers = new List<CompanyModel>();
+    List<CompanyModel> banks = new List<CompanyModel>();
+    List<CompanyModel> GetGstList = new List<CompanyModel>();
+    List<CompanyModel> GetUomList = new List<CompanyModel>();
+    List<CompanyModel> GetItemGroup = new List<CompanyModel>();
+    List<CompanyModel> GetOrderDetails = new List<CompanyModel>();
+    List<CompanyModel> GetCrateAnalysis = new List<CompanyModel>();
+    List<CompanyModel> Cflaglist = new List<CompanyModel>();
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        GetgrowerList = await EmployeeService.GetallGrowerlist();
+        Growers = await EmployeeService.GetItemname();
+        GetVehlist = await EmployeeService.GetallVeh();
+        Cflaglist = await EmployeeService.GetallCrateflagall();
+        // Growers = await EmployeeService.GetallMasterSubGroup();
+        // GetGstList = await EmployeeService.GetallPurchasegst();
+        // GetUomList = await EmployeeService.GetallPurchaseuom();
+        // banks = await EmployeeService.GetallPurchaseGroup();
+        Purchaseorders = await EmployeeService.GetCrateordersEmpty();
+        GetCrateMark=await EmployeeService.GetallCrateMarks();
+
+        // GetDailyCrates=await EmployeeService.GetDailyCratesProcOut();
+
+        //  Growers = await EmployeeService.GetallMasterGroup();
+    }
+    // SfGrid<CompanyModel> Grid;
+
+    // FilterSettings filterSettings = new FilterSettings { Type = FilterType.Excel };
+
+
+    private async Task EditHandler(Employee employee)
+    {
+        // await Grid.SelectRowAsync(companyModel.chid);
+        // await Grid.StartEditAsync();
+    }
+
+
+    private async Task DeleteHandler(Employee employee)
+    {
+
+    }
+
+    protected async Task ViewOrder()
+    {
+        if (EditModel.PurchaseOrderId <= 0)
+        {
+            DialogMessage = "Please enter  valid Order No";
+            ShowEmptyFieldDialog = true;
+            return;
+        }
+        selectedGrowerId = EditModel.PurchaseOrderId;
+        GetOrderDetails = await EmployeeService.GetPurchaseOrder(selectedGrowerId);
+
+        companyModel = await EmployeeService.GetOrderhead(selectedGrowerId);
+        EditModel.PurchaseOrderDated=companyModel.PurchaseOrderDated;
+        EditModel.AccountName = companyModel.AccountName;
+        EditModel.PurchaseOrderBillto = companyModel.PurchaseOrderBillto;
+        EditModel.PurchaseOrderDel = companyModel.PurchaseOrderDel;
+        EditModel.PurchaseOrderRemarks = companyModel.PurchaseOrderRemarks;
+
+
+
+
+
+
+        StateHasChanged();
+        return;
+
+
+
+    }
+    protected async Task SaveItem()
+    {
+
+        if (string.IsNullOrWhiteSpace(EditModel.PurchGrp))
+        {
+            DialogMessage = "Please Select  valid Purchase Group";
+            ShowEmptyFieldDialog = true;
+            return;
+
+        }
+
+        if (string.IsNullOrWhiteSpace(EditModel.PurchaseItemName))
+        {
+            DialogMessage = "Please Select  valid Item Group";
+            ShowEmptyFieldDialog = true;
+            return;
+
+        }
+        if (string.IsNullOrWhiteSpace(EditModel.PurchaseOrderItemDescrip))
+        {
+            EditModel.PurchaseOrderItemDescrip = "";
+
+
+        }
+
+
+        if (!EditModel.PurchaseOrderqty.HasValue || EditModel.PurchaseOrderqty <= 0)
+        {
+            DialogMessage = "Please enter a valid quantity greater than 0.";
+            ShowEmptyFieldDialog = true;
+            return;
+        }
+        if (EditModel.PurchaseOrderId <= 0)
+        {
+            DialogMessage = "Please enter a valid Order No";
+            ShowEmptyFieldDialog = true;
+            return;
+        }
+
+        var result = await EmployeeService.AddPurchaseOrderItem(EditModel);
+        if (result != null && result.RetFlag.Trim() == "TRUE" && !string.IsNullOrEmpty(result.RetMessage))
+        {
+            DialogMessage = result.RetMessage;
+            ShowEmptyFieldDialogError = true;
+
+
+            companyModel = new CompanyModel();
+            selectedGrowerId = EditModel.PurchaseOrderId;
+            GetOrderDetails = await EmployeeService.GetPurchaseOrder(selectedGrowerId);
+
+            StateHasChanged();
+            return;
+        }
+
+
+        if (result != null && result.RetFlag.Trim() == "FALSE")
+        {
+
+            DialogMessage = result.RetMessage ?? "Failed to add order item.";
+            ShowEmptyFieldDialog = true;
+
+            return;
+        }
+
+
+
+
+    }
+
+
+    protected async Task UpdateItem()
+    {
+
+        selectedItemid= EditModel.PurchaseOrderItemId;   
+        //   await JS.InvokeVoidAsync("alert", selectedItemid);
+        if (string.IsNullOrWhiteSpace(EditModel.PurchGrp))
+        {
+            DialogMessage = "Please Select  valid Purchase Group";
+            ShowEmptyFieldDialog = true;
+            return;
+
+        }
+
+        if (string.IsNullOrWhiteSpace(EditModel.PurchaseItemName))
+        {
+            DialogMessage = "Please Select  valid Item Group";
+            ShowEmptyFieldDialog = true;
+            return;
+
+        }
+        if (string.IsNullOrWhiteSpace(EditModel.PurchaseOrderItemDescrip))
+        {
+            EditModel.PurchaseOrderItemDescrip = "";
+
+
+        }
+
+
+        if (!EditModel.PurchaseOrderqty.HasValue || EditModel.PurchaseOrderqty <= 0)
+        {
+            DialogMessage = "Please enter a valid quantity greater than 0.";
+            ShowEmptyFieldDialog = true;
+            return;
+        }
+        if (EditModel.PurchaseOrderId <= 0)
+        {
+            DialogMessage = "Please enter a valid Order No";
+            ShowEmptyFieldDialog = true;
+            return;
+        }
+
+        var result = await EmployeeService.UpdatePurchaseOrderItem(EditModel);
+        if (result != null && result.RetFlag.Trim() == "TRUE" && !string.IsNullOrEmpty(result.RetMessage))
+        {
+            DialogMessage = result.RetMessage;
+            ShowEmptyFieldDialogError = true;
+
+
+            companyModel = new CompanyModel();
+            selectedGrowerId = EditModel.PurchaseOrderId;
+            GetOrderDetails = await EmployeeService.GetPurchaseOrder(selectedGrowerId);
+
+            StateHasChanged();
+            return;
+        }
+
+
+        if (result != null && result.RetFlag.Trim() == "FALSE")
+        {
+
+            DialogMessage = result.RetMessage ?? "Failed to add order item.";
+            ShowEmptyFieldDialog = true;
+
+            return;
+        }
+
+
+
+
+    }
+
+
+
+
+    private int? GetNumberBeforeHyphen(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+            return null;
+
+        var match = Regex.Match(input, @"^0*(\d+)-");
+        if (!match.Success)
+            return null;
+
+        if (int.TryParse(match.Groups[1].Value, out int result))
+            return result;
+
+        return null;
+    }
+
+
+
+    protected async Task  SearchCrates()
+
+
+    {
+        DateTime DateFrom = EditModel.PreinwardDate ?? DateTime.Now;
+        DateTime Dateto = EditModel.PreinwardDateTo ?? DateTime.Now;
+        if (string.IsNullOrWhiteSpace(EditModel.GrowerGroupName))
+        {
+            companyModel.Partyid = 0;
+        }
+        else
+        {
+            var partyId = GetNumberBeforeHyphen(EditModel.GrowerGroupName);
+            companyModel.Partyid = partyId.HasValue ? partyId.Value : 0;
+        }
+
+
+
+        if (string.IsNullOrWhiteSpace(EditModel.GrowerName))
+        {
+            companyModel.Growerid = 0;
+        }
+        else
+        {
+            var subPartyId = GetNumberBeforeHyphen(EditModel.GrowerName);
+            companyModel.Growerid = subPartyId.HasValue ? subPartyId.Value : 0;
+        }
+
+
+        if (string.IsNullOrWhiteSpace(EditModel.Itemname))
+        {
+            companyModel.CrissueFlag = "PAX2";
+        }
+
+
+
+
+
+
+
+        if (string.IsNullOrWhiteSpace(EditModel.PreInwardUom))
+        {
+            companyModel.CrissueFlag = "PAX2";
+        }
+
+
+
+        if (string.IsNullOrWhiteSpace(EditModel.vehname))
+        {
+            companyModel.vehname = "PAX2";
+        }
+
+        EditModel.Partyid = companyModel.Partyid;
+        EditModel.Growerid = companyModel.Growerid;
+
+        GetDailyCrates = await EmployeeService.generatePreinwardReport(EditModel);
+
+        Report = XtraReport.FromFile(Path.Combine(Directory.GetCurrentDirectory(),
+              @"Reports\PreinwardReport.repx"));
+
+        showReport = true;
+
+    }
+
+
+    private bool isProcessing = false;
+
+    async Task SaveUnit()
+    {
+        if (isProcessing) return;
+        isProcessing = true;
+
+        try 
+
+
+        {
+
+
+            EditModel.GrowerGroupName = AvailGrower;
+
+            if (string.IsNullOrWhiteSpace(EditModel.GrowerGroupName))
+            {
+                DialogMessage = "Please Select  valid Grower Group Name";
+                ShowEmptyFieldDialog = true;
+                return;
+
+            }
+
+
+            if (string.IsNullOrWhiteSpace(EditModel.GrowerName))
+            {
+                DialogMessage = "Please Select  valid Grower  Name";
+                ShowEmptyFieldDialog = true;
+                return;
+
+            }
+
+            if (string.IsNullOrWhiteSpace(EditModel.ChallanName))
+            {
+                DialogMessage = "Please Select  valid Challan  Name";
+                ShowEmptyFieldDialog = true;
+                return;
+
+            }
+
+            if (string.IsNullOrWhiteSpace(EditModel.CrissueMark))
+            {
+                DialogMessage = "Please Select  valid Crate  Mark";
+                ShowEmptyFieldDialog = true;
+                return;
+
+            }
+
+            if (string.IsNullOrWhiteSpace(EditModel.Vehno))
+            {
+                DialogMessage = "Please Select  valid Vehicle No";
+                ShowEmptyFieldDialog = true;
+                return;
+
+            }
+
+
+
+            if (string.IsNullOrWhiteSpace(EditModel.CrissueFlag))
+            {
+                DialogMessage = "Please Select  valid Transaction Flag";
+                ShowEmptyFieldDialog = true;
+                return;
+
+            }
+            if (string.IsNullOrWhiteSpace(EditModel.CrissueRemarks))
+            {
+                EditModel.CrissueRemarks = "";
+
+            }
+
+            if (!EditModel.CrissueQty.HasValue || EditModel.CrissueQty <= 0)
+            {
+                DialogMessage = "Please enter a valid quantity greater than 0.";
+                ShowEmptyFieldDialog = true;
+                return;
+            }
+            string selectedflag=EditModel.CrissueFlag;
+            selectetGrowerGroup=EditModel.GrowerGroupName;
+            GetCrateAnalysis = await EmployeeService.CheckCratesPartyOut(selectetGrowerGroup,selectedflag);
+
+            decimal GrowerAvail = GetCrateAnalysis.FirstOrDefault()?.CrateAvailable ?? 0;
+
+
+
+
+            if (EditModel.CrissueQty > GrowerAvail)
+            {
+                DialogMessage = $"Entered quantity cannot exceed available grower group quantity ({GrowerAvail}).";
+                ShowEmptyFieldDialog = true;
+                return;
+            }
+
+
+            selectedSubgrower=EditModel.GrowerName;
+            GetCrateAnalysis = await EmployeeService.CheckCratesPartysubOut(selectedSubgrower,selectetGrowerGroup,selectedflag);
+
+
+
+            decimal SubGrowerAvail = GetCrateAnalysis.FirstOrDefault()?.CrateAvailable ?? 0;
+
+
+
+
+
+
+
+
+
+
+
+            //SubGrowerAvail = GetCrateAnalysis.FirstOrDefault()?.CrateAgreement ?? 0-GetCrateAnalysis.FirstOrDefault()?.CrateAvailable ?? 0;
+
+
+
+            if (EditModel.CrissueQty > SubGrowerAvail)
+            {
+                DialogMessage = $"Entered quantity cannot exceed balance quantity ({SubGrowerAvail}).";
+                ShowEmptyFieldDialog = true;
+                return;
+            }
+
+
+
+
+            var result = await EmployeeService.addCrateOut(EditModel);
+            if (result != null && result.RetFlag.Trim() == "TRUE" && !string.IsNullOrEmpty(result.RetMessage))
+            {
+                DialogMessage = result.RetMessage;
+                ShowEmptyFieldDialogError = true;
+
+                ShowCrateAnalysis = false;
+
+
+                GetDailyCrates=await EmployeeService.GetDailyCratesProcOut();
+
+                //      //  
+                //      // // GetCrateMark=await EmployeeService.GetallCrateMarks();
+                //      //      companyModel = await EmployeeService.GetCrateOrderNo();
+                //GrowerGroupKey = Guid.NewGuid().ToString();
+
+                EditModel.GrowerGroupName = String.Empty;
+                EditModel.ChallanName = String.Empty;
+                // EditModel.CrissueMark = String.Empty;
+                EditModel.CrissueRemarks = "";
+                EditModel.CrissueQty = 0;
+                EditModel.CrissueMark = String.Empty;
+                EditModel.Vehno = String.Empty;
+                EditModel.GrowerName = String.Empty;
+                selectedSubgrower= String.Empty;
+                Purchaseorders = await EmployeeService.GetCrateorders();
+                companyModel = await EmployeeService.GetCrateOrderNo();
+
+            }
+
+
+            if (result != null && result.RetFlag.Trim() == "FALSE")
+            {
+
+                DialogMessage = result.RetMessage ?? "Failed to add Master Group.";
+                ShowEmptyFieldDialog = true;
+
+                return;
+            }
+
+
+
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+
+
+
+
+
+
+
+
+    protected async Task PostOrder()
+    {
+        if (EditModel.PurchaseOrderId <= 0)
+        {
+            DialogMessage = "Please enter a valid Order No";
+            ShowEmptyFieldDialog = true;
+            return;
+        }
+        selectedGrowerId = EditModel.PurchaseOrderId;
+        companyModel = await EmployeeService.CheckPurchaseOrder(selectedGrowerId);
+
+
+        string Orderstat = companyModel.PurchaseOrderStatus;
+
+        if (Orderstat== "POST")
+        {
+            DialogMessage = "Order is already Posted";
+            ShowEmptyFieldDialog = true;
+            return;
+        }
+
+        if (Orderstat == "UNPOST")
+        {
+
+            PostDialog = true;
+            return;
+        }
+
+
+    }
+    protected async Task UnpostOrder()
+    {
+        if (EditModel.PurchaseOrderId <= 0)
+        {
+            DialogMessage = "Please enter a valid Order No";
+            ShowEmptyFieldDialog = true;
+            return;
+        }
+        selectedGrowerId = EditModel.PurchaseOrderId;
+        companyModel = await EmployeeService.CheckPurchaseOrder(selectedGrowerId);
+
+
+        string Orderstat = companyModel.PurchaseOrderStatus;
+
+        if (Orderstat == "UNPOST")
+        {
+            DialogMessage = "Order is not Posted";
+            ShowEmptyFieldDialog = true;
+            return;
+        }
+
+        if (Orderstat == "POST")
+        {
+
+            UnPostDialog = true;
+            return;
+        }
+
+
+    }
+
+    protected async Task ClearFilter()
+    {
+
+        showReport = false;
+  //       EditModel.Vehno = String.Empty;
+  //  EditModel.Vehntype = String.Empty;
+  // EditModel.VehContact = String.Empty;
+  //  EditModel.VehDriver = String.Empty;
+  
+  //           EditModel.GrowerGroupName = String.Empty;
+  //           EditModel.ChallanName = String.Empty;
+  //           // EditModel.CrissueMark = String.Empty;
+  //           EditModel.CrissueRemarks = "";
+  //           EditModel.CrissueQty = 0;
+  //           EditModel.CrissueMark = String.Empty;
+  //           EditModel.Vehno = String.Empty;
+  //           EditModel.GrowerName = String.Empty;
+  //           selectedSubgrower= String.Empty;
+
+      }
+
+
+
+    protected async Task UpdateCrateIssue()
+    {
+
+      //  EditModel.GrowerGroupName = AvailGrower;
+
+        selectedGrowerId = EditModel.CrissueId;
+        if (string.IsNullOrWhiteSpace(EditModel.GrowerGroupName))
+        {
+            DialogMessage = "Please Select  valid Grower Group Name";
+            ShowEmptyFieldDialog = true;
+            return;
+
+        }
+
+        if  (EditModel.CrissueId <= 0)
+        {
+            DialogMessage = "Please enter a valid idno greater than 0.";
+            ShowEmptyFieldDialog = true;
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(EditModel.GrowerName))
+        {
+            DialogMessage = "Please Select  valid Grower  Name";
+            ShowEmptyFieldDialog = true;
+            return;
+
+        }
+
+        if (string.IsNullOrWhiteSpace(EditModel.ChallanName))
+        {
+            DialogMessage = "Please Select  valid Challan  Name";
+            ShowEmptyFieldDialog = true;
+            return;
+
+        }
+
+        if (string.IsNullOrWhiteSpace(EditModel.CrissueMark))
+        {
+            DialogMessage = "Please Select  valid Crate  Mark";
+            ShowEmptyFieldDialog = true;
+            return;
+
+        }
+
+        if (string.IsNullOrWhiteSpace(EditModel.Vehno))
+        {
+            DialogMessage = "Please Select  valid Vehicle No";
+            ShowEmptyFieldDialog = true;
+            return;
+
+        }
+        if (string.IsNullOrWhiteSpace(EditModel.CrissueRemarks))
+        {
+            EditModel.CrissueRemarks = "";
+
+        }
+
+        if (!EditModel.CrissueQty.HasValue || EditModel.CrissueQty <= 0)
+        {
+            DialogMessage = "Please enter a valid quantity greater than 0.";
+            ShowEmptyFieldDialog = true;
+            return;
+        }
+         string selectedflag=EditModel.CrissueFlag;
+        selectetGrowerGroup=EditModel.GrowerGroupName;
+        GetCrateAnalysis = await EmployeeService.CheckCratesPartyOut(selectetGrowerGroup,selectedflag);
+        decimal GrowerAvail =  GetCrateAnalysis.FirstOrDefault()?.CrateAvailable ?? 0;
+           // // await JS.InvokeVoidAsync("alert",GrowerAvail);
+              // // await JS.InvokeVoidAsync("alert",actualidqty);
+        GrowerAvail = GrowerAvail + actualidqty;
+     
+           // // await JS.InvokeVoidAsync("alert",GrowerAvail);
+        if (EditModel.CrissueQty > GrowerAvail)
+        {
+            DialogMessage = $"Entered quantity cannot exceed balance grower group quantity ({GrowerAvail}).";
+            ShowEmptyFieldDialog = true;
+            return;
+        }
+
+       
+        selectedSubgrower=EditModel.GrowerName;
+        GetCrateAnalysis = await EmployeeService.CheckCratesPartysubOut(selectedSubgrower,selectetGrowerGroup,selectedflag);
+
+        decimal SubGrowerAvail = GetCrateAnalysis.FirstOrDefault()?.CrateAvailable ?? 0;
+
+        SubGrowerAvail = SubGrowerAvail + actualidqty;
+
+
+        if (EditModel.CrissueQty > SubGrowerAvail)
+        {
+            DialogMessage = $"Entered quantity cannot exceed balance grower quantity ({SubGrowerAvail}).";
+            ShowEmptyFieldDialog = true;
+            return;
+        }
+
+       
+        var result = await EmployeeService.UpdateCrateIssueout(EditModel);
+        if (result != null && result.RetFlag.Trim() == "TRUE" && !string.IsNullOrEmpty(result.RetMessage))
+        {
+            DialogMessage = result.RetMessage;
+            ShowEmptyFieldDialogError = true;
+
+            ShowCrateAnalysis = false;
+
+
+
+            GetDailyCrates=await EmployeeService.GetDailyCratesProcOut();
+
+            //      //  
+            //      // // GetCrateMark=await EmployeeService.GetallCrateMarks();
+            //      //      companyModel = await EmployeeService.GetCrateOrderNo();
+            //GrowerGroupKey = Guid.NewGuid().ToString();
+        
+            EditModel.GrowerGroupName = String.Empty;
+            EditModel.ChallanName = String.Empty;
+           // EditModel.CrissueMark = String.Empty;
+            EditModel.CrissueRemarks = "";
+             EditModel.CrissueQty = 0;
+             EditModel.CrissueMark = String.Empty;
+             EditModel.Vehno = String.Empty;
+               EditModel.GrowerName = String.Empty;
+               selectedSubgrower= String.Empty;
+               Purchaseorders = await EmployeeService.GetCrateorders();
+               companyModel = await EmployeeService.GetCrateOrderNo();
+            StateHasChanged();
+            return;
+        }
+
+
+        if (result != null && result.RetFlag.Trim() == "FALSE")
+        {
+
+            DialogMessage = result.RetMessage ?? "Failed to add crate Out.";
+            ShowEmptyFieldDialog = true;
+
+            return;
+        }
+
+
+
+
+        
+
+
+
+
+
+
+    }
+
+
+
+    void Grid_CustomizeElement(GridCustomizeElementEventArgs e)
+    {
+        if (e.ElementType == GridElementType.DataRow && e.VisibleIndex % 2 == 1)
+        {
+            e.CssClass = "alt-item";
+        }
+        if (e.ElementType == GridElementType.HeaderCell)
+        {
+            e.Style = "background-color: var(--DS-color-surface-neutral-default-selected)";
+            e.CssClass = "header-bold";
+        }
+
+
+    }
+
+
+    public class Order
+    {
+        public int? OrderID { get; set; }
+        public string CustomerID { get; set; }
+        public DateTime? OrderDate { get; set; }
+        public double? Freight { get; set; }
+    }
+}

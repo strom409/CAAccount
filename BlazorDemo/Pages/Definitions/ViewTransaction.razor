@@ -1,0 +1,1248 @@
+﻿@page "/ViewTransaction/{TransactionId:int}"
+
+
+@inject EmployeeAdoNetService EmployeeService
+@using Syncfusion.Blazor
+
+@using Syncfusion.Blazor.DropDowns
+@inject NavigationManager NavigationManager
+
+@using BlazorDemo.Services;
+@using BlazorDemo;
+@inject IJSRuntime JS
+
+<style>
+    .custom-messagebox {
+        border: 2px solid #0078D4; /* Blue border */
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2); /* Optional shadow */
+    }
+
+    label {
+        font-weight: 600;
+    }
+    /* Slightly darker but still subtle placeholder */
+    .input-placeholder-dim::placeholder {
+        color: rgba(130, 130, 130, 0.3) !important; /* dim gray, 30% opacity */
+        opacity: 1 !important;
+    }
+
+    /* Dark gray border on focus, no shadow */
+    .input-focus-dark:focus {
+        border-color: #343a40; /* dark gray */
+        box-shadow: none !important;
+        outline: none;
+    }
+
+    .table-responsive {
+        overflow-x: auto;
+        width: 100%;
+    }
+
+    .table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.875rem; /* optional small font */
+    }
+
+        .table th, .table td {
+            padding: 0.5rem;
+            text-align: left;
+        }
+
+    .zebra-table tbody tr:nth-child(odd) {
+        background-color: white;
+    }
+
+    .zebra-table tbody tr:nth-child(even) {
+        background-color: #f9f9f9;
+    }
+
+    .page-header {
+        background-color: #1e1e2f; /* Dark background */
+        color: white; /* Makes all text inside white */
+        padding: 15px 20px;
+        border-bottom: 1px solid #444;
+    }
+
+        .page-header h2 {
+            margin: 0;
+            font-weight: 600;
+            color: white; /* Optional, to ensure specificity */
+            font-size: 1rem;
+        }
+
+
+    /* Custom small font */
+    .small-font {
+        font-size: 0.82rem;
+    }
+
+    .control-wrapper {
+        max-width: 250px;
+        margin: 0 auto;
+        padding: 50px 0px 0px;
+    }
+
+    .example-label {
+        font-size: 14px;
+        margin-bottom: 6px;
+        /* Standardize form control styles for horizontal alignment */
+        input .form-control, .e-input-group, .e-control-wrapper, .e-autocomplete, .e-input
+
+    {
+        min-height: 38px; /* Bootstrap default */
+        line-height: 1.5;
+        font-size: 14px;
+        font-family: 'Source Sans Pro', sans-serif;
+        padding: 6px 12px;
+        box-sizing: border-box;
+    }
+
+    /* Optional: Align content inside Syncfusion AutoComplete */
+    .e-autocomplete .e-input {
+        padding: 6px 12px !important;
+    }
+
+    /* Remove extra bottom spacing in SfAutoComplete wrapper */
+    .e-autocomplete.e-control-wrapper {
+        margin-bottom: 0 !important;
+    }
+
+    /* Align labels consistently */
+    label.form-label {
+        font-size: 14px;
+        margin-bottom: 4px;
+        font-family: 'Source Sans Pro', sans-serif;
+    }
+
+    /* Remove extra vertical margin if any Syncfusion adds it */
+    .e-control-wrapper {
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
+    }
+
+</style>
+
+@if (ShowAlert)
+{
+    <div class="alert alert-danger alert-dismissible fade show position-fixed top-0 end-0 m-4 shadow"
+         role="alert" style="z-index: 1050; min-width: 250px;">
+        <alertmessage>Hello dear</alertmessage>
+
+        <button type="button" class="btn-close" @onclick="() => ShowAlert = false"></button>
+    </div>
+}
+
+@* <div class="target-container" @onclick="@OpenConfirmDialogAsync">
+    <p class="target-caption">CLICK TO SHOW A MESSAGE BOX WINDOW</p>
+    <p>RESULT: @(result is not null ? result.ToString() : "No result")</p>
+</div> *@
+<DxDialogProvider />
+
+
+<div class="row g-4">
+    <!-- Left Form (Single Column) -->
+    <div class="d-flex justify-content-between align-items-center p-3 bg-light border-bottom">
+
+        <div>
+            <DxButton @onclick="GoToAddGrowerPage">Transactions</DxButton>
+
+
+        </div>
+      
+    </div>
+
+    <div class="d-flex justify-content-end gap-1">
+        <!-- gap-3 = 1rem (~16px) spacing -->
+
+        <button @onclick="GoBack" class="btn btn-primary">
+            <i class="fa fa-arrow-left"></i>
+        </button>
+
+    </div>
+
+
+
+    <div class="page-header">
+        <h2>Account Transactions</h2>
+    </div>
+    <div class="col-12 col-md-6">
+        <EditForm Model="@companyModel">
+
+            <DataAnnotationsValidator />
+
+            <div class="card shadow-sm">
+               
+                <div class="card-body">
+
+                    <div class="col-sm-12">
+
+                        <label for="txtCompanyCode" class="mb-2">
+                            Transaction Date<span class="redtext">*</span>
+                        </label>
+
+                        <DxDateEdit  @bind-Date="companyModel.TransactionDated"
+                                    CssClass="cw-320" Enabled="false"
+                                    InputId="deOverview" 
+                                    />
+                    
+                    
+                    </div>
+
+                    <div class="col-sm-12">
+                        
+                            <label for="txtCompanyCode" class="mb-2">
+                                Credit Account Name<span class="redtext"></span>
+                            </label>
+
+
+
+                        <DxComboBox  Data="@GetgrowerList"
+                                    Enabled="false"
+                                    SearchMode="@SearchMode"
+                                    SearchFilterCondition="@SearchFilterCondition"
+                                    SearchTextParseMode="@SearchTextParseMode"
+                                    @bind-Value="companyModel.TransactionCredit"
+                                    TextFieldName="TransactionName"
+                                    ValueFieldName="TransactionName"
+                                    CssClass="cw-480"
+                                  
+                                    InputId="cbFiltering" Placeholder="Credit Account" />
+
+
+
+                    </div>
+                   
+                   <br />
+
+                 
+                    <div class="col-sm-12">
+
+                        <label for="txtCompanyCode" class="mb-2">
+                            Debit Accoount Name<span class="redtext"></span>
+                        </label>
+
+
+
+                        <DxComboBox  Data="@GetgrowerList"
+                                    SearchMode="@SearchMode"
+                                    SearchFilterCondition="@SearchFilterCondition"
+                                    SearchTextParseMode="@SearchTextParseMode"
+                                    @bind-Value="companyModel.TransactionDebit"
+                                    TextFieldName="TransactionName"
+                                    ValueFieldName="TransactionName"
+                                    CssClass="cw-480"
+                                    Enabled="false"
+                                    InputId="cbFiltering" Placeholder="Debit Account" />
+
+
+
+                    </div>
+
+                    <br />
+
+                  
+                    @*   <div class="col-sm-12">
+                        <label for="txtCompanyCode" style="margin-bottom: 10px; display: inline-block;">
+                            Name of Grower <span class="redtext">*</span>
+                        </label> <InputText style="font-size: 14px; font-family: 'Source Sans Pro', sans-serif;" class="form-control input-placeholder-dim input-focus-dark" @bind-Value="@companyModel.GrowerName" id="txtCompanyCode" name="txtCompanyCode" onkeypress="return alphaOnly(event);" placeholder="Grower Name" />
+                    </div> *@
+
+                    <div class="col-sm-12">
+
+                        <label for="txtCompanyCode" class="mb-2">
+                           Transaction Type<span class="redtext"></span>
+                        </label>
+
+
+
+                        <DxComboBox  Data="@GetgrowerListVr"
+                                    SearchMode="@SearchMode"
+                                    SearchFilterCondition="@SearchFilterCondition"
+                                    SearchTextParseMode="@SearchTextParseMode"
+                                    @bind-Value="companyModel.TransactionType"
+                                    TextFieldName="TransactionType"
+                                    ValueFieldName="TransactionType"
+                                    CssClass="cw-480"
+                                    Enabled="false"
+                                    InputId="cbFiltering" Placeholder="Transaction Type" />
+
+
+
+                    </div>
+                    <br />
+                    <div class="col-sm-12">
+
+                        <label for="txtCompanyCode" class="mb-2">
+                            Payment Type<span class="redtext"></span>
+                        </label>
+
+
+                        <DxComboBox   Data="@IndianStates"
+                                    TextFieldName="@nameof(IndianState.Name)"
+                                    ValueFieldName="@nameof(IndianState.Name)"
+                                    CssClass="cw-480"
+                                    @bind-Value="selectedOptionId"
+                                    InputId="cbValueField"
+                                    Enabled="false"
+                                    SearchMode="@SearchMode"
+                                    SearchFilterCondition="@SearchFilterCondition"
+                                    SearchTextParseMode="@SearchTextParseMode"
+                                    Placeholder="Payment Type" />
+
+
+
+
+                    </div>
+                    <br />
+
+                    <div class="col-sm-12">
+
+                        <label for="txtCompanyCode" class="mb-2">
+                            Cheque No/DD/P.no<span class="redtext">*</span>
+                        </label>
+
+
+                        <InputText disabled="true" style="font-size: 14px; font-family: 'Source Sans Pro', sans-serif;" class="form-control input-placeholder-dim input-focus-dark" @bind-Value="@companyModel.TransactionChequeno" id="txtCompanyCode" name="txtCompanyCode" onkeypress="return alphaOnly(event);" placeholder="Cheque No" />
+                    </div>
+
+                    
+                    
+
+            </div>
+            </div>
+
+        </EditForm>
+    </div>
+
+    <!-- Right Form (Two Columns) -->
+    <div class="col-12 col-md-6">
+        <EditForm Model="@companyModel">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+            <div class="card shadow-sm">
+                
+
+                <div class="card-body">
+
+
+
+                    <div class="col-sm-12">
+                      
+                        <label for="txtCompanyCode" class="mb-2">
+                           Reference No<span class="redtext">*</span>
+                        </label>
+
+                        
+                        <InputText disabled="true" style="font-size: 14px; font-family: 'Source Sans Pro', sans-serif;" class="form-control input-placeholder-dim input-focus-dark" @bind-Value="@companyModel.TransactionRefno" id="txtCompanyCode" name="txtCompanyCode" onkeypress="return alphaOnly(event);" placeholder="Reference No" />
+                    </div>
+
+                    <div class="col-sm-12">
+                        
+                        <label for="txtCompanyCode" class="mb-2">
+                           Amount*<span class="redtext">*</span>
+                        </label>
+
+                        
+                        
+                      
+
+
+
+
+                        <InputNumber  disabled="true" min="0" TValue="decimal?" id="lastName" step="0.1"
+                                     format="F2" placeholder="Amount" style="font-size: 14px;height:30px; 'Source Sans Pro', sans-serif;" class="form-control input-placeholder-dim input-focus-dark" @bind-Value="companyModel.TransactionAmount" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+                    </div>
+
+
+                    <div class="col-sm-12">
+                        
+                        <label for="txtCompanyCode" class="mb-2">
+                           Remarks<span class="redtext">*</span>
+                        </label>
+
+                        <InputTextArea disabled="true" style="font-size: 14px; font-family: 'Source Sans Pro', sans-serif;" class="form-control input-placeholder-dim input-focus-dark" id="txtCompanyCode" name="txtCompanyCode" onkeypress="return alphaOnly(event);" placeholder="Remarks" @bind-Value="companyModel.TransactionRemarks" />
+                        @* <ValidationMessage For="@(() => @companyModel.Caddress)" /> *@
+
+                    </div>
+
+
+
+                  
+
+
+
+
+                    </div>
+                </div>
+
+           
+        </EditForm>
+
+    </div>
+</div>
+
+@* <div class="row g-4">
+<!-- Left Form (Single Column) -->
+<div class="d-flex justify-content-between align-items-center p-3 bg-light border-bottom">
+
+    <h6><strong>Challan Details</strong></h6>
+</div>
+
+   
+<div class="card p-3 mb-4">
+    <div class="row g-3">
+
+
+
+
+            <div class="col-sm-3">
+
+                <label for="lastName" class="form-label">Challan Name</label>
+                <InputText id="lastName" style="font-size: 14px; font-family: 'Source Sans Pro', sans-serif;" class="form-control input-placeholder-dim input-focus-dark" @bind-Value="companyModel.ChallanName" />
+            </div>
+
+
+
+            
+
+        <div class="col-sm-3">
+
+            <label for="lastName" class="form-label">Address</label>
+            <InputText id="lastName" style="width:300px;font-size: 14px; font-family: 'Source Sans Pro', sans-serif;" class="form-control input-placeholder-dim input-focus-dark" @bind-Value="companyModel.ChallanAddress"  />
+           
+        </div>
+
+
+        <div class="col-sm-2">
+
+            <label for="lastName" class="form-label">Village</label>
+            <InputText id="lastName" style="font-size: 14px; font-family: 'Source Sans Pro', sans-serif;" class="form-control input-placeholder-dim input-focus-dark" @bind-Value="companyModel.ChallanVillage" />
+        </div>
+        <div class="col-12 col-md-2">
+            <label for="email" class="form-label">City</label>
+            <InputText id="email" style="font-size: 14px; font-family: 'Source Sans Pro', sans-serif;" class="form-control input-placeholder-dim input-focus-dark" @bind-Value="companyModel.ChallanCity" />
+        </div>
+            <div class="col-12 col-md-2">
+                <label for="phone1" class="form-label">Phone No 1</label>
+                <InputText id="phone1" style="font-size: 14px; font-family: 'Source Sans Pro', sans-serif;"
+                            class="form-control input-placeholder-dim input-focus-dark"
+                            @bind-Value="companyModel.ChallanPhone1" />
+                <div class="form-check mt-1">
+                    <input type="checkbox" class="form-check-input" id="smsCheckbox1" />
+                    <label class="form-check-label" @onchange="isSms1" for="smsCheckbox1">&nbsp;SMS?</label>
+                </div>
+            </div>
+
+            <div class="col-12 col-md-2">
+                <label for="phone2" class="form-label">Phone No 2</label>
+                <InputText id="phone2" style="font-size: 14px; font-family: 'Source Sans Pro', sans-serif;"
+                            class="form-control input-placeholder-dim input-focus-dark"
+                            @bind-Value="companyModel.ChallanPhone2" />
+                <div class="form-check mt-1">
+                    <input type="checkbox" class="form-check-input" id="smsCheckbox2" />
+                    <label class="form-check-label"  @onchange="isSms2" for="smsCheckbox2">&nbsp;SMS?</label>
+                </div>
+            </div>
+        <div class="col-12 col-md-auto ms-md-auto">
+            <!-- ms-md-auto pushes to right -->
+            <DxButton class="btn btn-primary btn-sm" @onclick="SaveChallan">Save</DxButton>
+            <DxButton class="btn btn-primary btn-sm" @onclick="ViewChallanlist">View</DxButton>
+
+
+        </div>
+        </div>
+        </div>
+</div>
+
+
+<div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+    <table class="table table-bordered">
+        <thead class="table-light">
+            <tr>
+                <th>Challan Id</th>
+                <th>Challan Name</th>
+                    
+                <th>Address</th>
+                <th>Phone 1</th>
+                <th>Phone 2</th>
+
+                <th style="width: 150px;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+
+
+
+
+
+
+                    <tr>
+                        <td>@companyModel.ChallanId</td>
+                <td>@companyModel.ChallanName</td>
+                <td>@companyModel.ChallanAddress</td>
+                <td>@companyModel.ChallanPhone1</td>
+            <td>@companyModel.ChallanPhone2</td>
+                           
+                        <td>
+                            <button class="btn btn-sm btn-primary">Edit</button>
+                            <button class="btn btn-sm btn-danger ms-2" >
+                                Delete
+                            </button>
+
+                        </td>
+                    </tr>
+                   
+               
+
+        </tbody>
+    </table>
+</div>
+
+
+ *@
+@if (ShowEmptyFieldDialog)
+{
+    <DxPopup @bind-Visible="@ShowEmptyFieldDialog"
+             HeaderText="Validation Error"
+             ShowCloseButton="true"
+             CssClass="validation-dialog">
+        <Content>
+            <p>@DialogMessage</p>
+            <DxButton Text="OK" Click="@(() => ShowEmptyFieldDialog = false)" />
+        </Content>
+    </DxPopup>
+}
+<style>
+    .custom-popup-style {
+        background-color: #fdfdfd;
+        border: 2px solid #0078d4;
+        border-radius: 12px;
+        padding: 10px;
+        font-family: 'Segoe UI', sans-serif;
+    }
+
+        .custom-popup-style .dxbs-popup-header {
+            background-color: #0078d4;
+            color: white;
+            font-weight: bold;
+            border-bottom: none;
+        }
+
+        .custom-popup-style .dxbs-popup-content {
+            font-size: 15px;
+            padding: 15px;
+        }
+</style>
+@if (ShowEmptyFieldDialogError)
+{
+    <DxPopup @bind-Visible="@ShowEmptyFieldDialogError"
+             HeaderText="Confirmation Message"
+             ShowCloseButton="true"
+             CssClass="custom-popup-style">
+
+
+
+        <Content>
+            <p><strong>Success </strong>@DialogMessage</p>
+            <DxButton Text="OK"  RenderStyle="ButtonRenderStyle.Primary" Click="@(() => ShowEmptyFieldDialogError = false)" />
+        </Content>
+    </DxPopup>
+}
+
+
+
+
+
+
+
+
+<style>
+    .validation-dialog .dxbl-popup-content {
+        border: 2px solid #ff6a00;
+        border-radius: 8px;
+        padding: 20px;
+    }
+</style>
+
+
+
+
+
+
+
+
+
+
+
+
+
+@code {
+
+    public string Gender { get; set; } = "Male";
+    private bool IsReadOnly { get; set; } = true;
+    private bool ShowAlert = false;
+    private bool ShowInputError = false;
+    // private FormModel formModel = new();
+    //private List<FormModel> rows = new();
+    private int editIndex = -1;
+    private String alertmessage = "";
+    private CompanyModel SelectedEmployee { get; set; } = new CompanyModel();
+    private CompanyModel editingBank = null!; // row being edited
+    private CompanyModel editingBackup = null!; // optional: backup to cancel
+}
+
+
+
+
+
+
+@code {
+
+    private void GoToAddGrowerPage()
+    {
+        NavigationManager.NavigateTo("/AccountTransactions");
+    }
+
+    private string selectedStateCode;
+    private string selectedStateNumericCode;
+
+    public IndianState SelectedState { get; set; }
+    int? Value { get; set; }
+    private string selectedCode;
+    private string selectedName;
+    private string selectedOptionId;
+
+    private string selectedOptionText;
+
+    private async Task GoBack()
+    {
+        await JS.InvokeVoidAsync("history.back");
+    }
+
+
+
+    private void GetSelectedOption()
+    {
+        var selectedOption = IndianStates.FirstOrDefault(o => o.Code == selectedOptionId);
+        selectedOptionText = selectedOption?.Name ?? "Not selected";
+    }
+
+
+    private void OnStateChanged(ChangeEventArgs e)
+    {
+        selectedCode = e?.Value?.ToString();
+
+        var selected = IndianStates.FirstOrDefault(x => x.Code == selectedCode);
+        if (selected != null)
+        {
+            selectedName = selected.Name;
+        }
+
+
+    }
+
+    //  var state = IndianStates.FirstOrDefault(s => s.Code == newCode);
+
+    private bool isPartyAsGroup = false;
+    [Inject] IDialogService DialogService { get; set; }
+
+    string currentOption = "1";
+
+    private void UpdateValue(ChangeEventArgs e)
+    {
+        currentOption = e.Value.ToString();
+    }
+
+    private void OnPartyGroupChanged(ChangeEventArgs e)
+    {
+        isPartyAsGroup = e.Value is bool b && b;
+
+
+
+    }
+
+    private bool islockGrower = false;
+
+    private void OnLockGroupChanged(ChangeEventArgs e)
+    {
+        islockGrower = e.Value is bool b && b;
+
+
+
+    }
+
+
+    private bool Isflexi = false;
+    private bool isms1 = false;
+    private bool isms2 = false;
+
+    private void isSms1(ChangeEventArgs e)
+    {
+        isms1 = e.Value is bool b && b;
+
+
+
+    }
+
+
+    private void isSms2(ChangeEventArgs e)
+    {
+        isms2 = e.Value is bool b && b;
+
+
+
+    }
+   
+   
+
+    private void IsflexiChanged(ChangeEventArgs e)
+    {
+        Isflexi = e.Value is bool b && b;
+
+
+
+    }
+
+
+
+
+
+    private bool? result { get; set; } = null;
+    private bool ShowEmptyFieldDialogError { get; set; }
+
+    private bool ShowEmptyFieldDialog { get; set; }
+    private string DialogMessage { get; set; } = "";
+
+    private string Lockstatus { get; set; } = "";
+    private string flexistatus { get; set; } = "";
+
+    private void HandlePincodeInput(ChangeEventArgs e)
+    {
+        // Filter to only allow digits and limit to 6 characters
+        companyModel.AccountPincode = new string(e.Value?.ToString()?
+            .Where(char.IsDigit)
+            .Take(6)
+            .ToArray());
+    }
+
+    public string FilteredPhoneNumber
+    {
+        get => companyModel.AccountContact;
+        set => companyModel.AccountContact = string.IsNullOrEmpty(value) ? "" : new string(value.Where(char.IsDigit).ToArray());
+    }
+
+
+    public string FilterPincodeInput
+    {
+        get => companyModel.AccountPincode;
+        set => companyModel.AccountPincode = string.IsNullOrEmpty(value) ? "" : new string(value.Where(char.IsDigit).ToArray());
+    }
+
+
+
+
+    private async Task UpdateAccount()
+    {
+        var selectedOption = IndianStates.FirstOrDefault(o => o.Code == selectedOptionId);
+ selectedOptionText = selectedOption?.Name ?? "Not selected";
+
+
+  companyModel.TransactionPaymentType = selectedOptionText;
+ 
+
+            if (string.IsNullOrWhiteSpace(companyModel.TransactionCredit))
+            {
+
+                DialogMessage = "Please enter Credit Account Name";
+                ShowEmptyFieldDialog = true;
+                return;
+            }
+       
+        if (string.IsNullOrWhiteSpace(companyModel.TransactionDebit))
+            {
+
+                DialogMessage = "Please enter Debit  Account  name";
+                ShowEmptyFieldDialog = true;
+                return;
+            }
+      
+
+        if (string.IsNullOrWhiteSpace(companyModel.TransactionType))
+        {
+
+            DialogMessage = "Please enter  Transaction type";
+            ShowEmptyFieldDialog = true;
+            return;
+
+        }
+        if (string.IsNullOrWhiteSpace(companyModel.TransactionPaymentType))
+        {
+
+            companyModel.TransactionPaymentType = "";
+
+        }
+
+     if (companyModel.TransactionCredit== companyModel.TransactionDebit)
+        {
+            DialogMessage = "Credit and Debit Account cannot be the same.";
+            ShowEmptyFieldDialog = true;
+            return;
+        }
+
+    
+
+        if (string.IsNullOrWhiteSpace(companyModel.TransactionChequeno))
+ {
+
+     companyModel.TransactionChequeno = "";
+
+ }
+
+        
+        if (string.IsNullOrWhiteSpace(companyModel.TransactionChequeno))
+        {
+
+            companyModel.TransactionChequeno = "";
+
+        }
+
+        if (string.IsNullOrWhiteSpace(companyModel.TransactionRemarks))
+        {
+
+            companyModel.TransactionRemarks = "";
+
+        }
+
+
+
+
+
+        if (string.IsNullOrWhiteSpace(companyModel.TransactionRefno))
+        {
+            companyModel.TransactionRefno = "";
+
+        }
+
+
+
+       
+        if (!companyModel.TransactionAmount.HasValue || companyModel.TransactionAmount <= 0)
+        {
+            DialogMessage = "Please enter a valid Amount greater than 0.";
+            ShowEmptyFieldDialog = true;
+            return;
+        }
+
+
+     
+            var result = await EmployeeService.UpdateTransaction(companyModel);
+            if (result != null && result.RetFlag.Trim() == "TRUE" && !string.IsNullOrEmpty(result.RetMessage))
+            {
+                DialogMessage = result.RetMessage;
+                ShowEmptyFieldDialogError = true;
+
+                Isflexi = false;
+                islockGrower = false;
+                companyModel = new CompanyModel();
+
+                StateHasChanged();
+                return;
+            }
+
+
+
+            if (result != null && result.RetFlag.Trim() == "FALSE")
+            {
+
+                DialogMessage = result.RetMessage ?? "Failed to Update Transaction Id.";
+                ShowEmptyFieldDialog = true;
+
+                return;
+            }
+
+
+        
+
+
+
+     
+
+
+
+
+
+
+
+    }
+    private bool isChecked = false;
+    ListSearchMode SearchMode { get; set; } = ListSearchMode.AutoSearch;
+    ListSearchFilterCondition SearchFilterCondition { get; set; } = ListSearchFilterCondition.Contains;
+    ListSearchTextParseMode SearchTextParseMode { get; set; } = ListSearchTextParseMode.GroupWordsByAnd;
+    void EditBank(CompanyModel banklist)
+    {
+        editingBackup = new CompanyModel
+            {
+                Bid = banklist.Bid,
+                Bname = banklist.Bname,
+                Accno = banklist.Accno,
+                Branch = banklist.Branch,
+                Ifsc = banklist.Ifsc,
+                Accname = banklist.Accname
+            };
+        editingBank = banklist;
+    }
+
+ 
+
+    protected async Task SaveEdit(CompanyModel companyModel)
+    {
+
+        if (string.IsNullOrWhiteSpace(editingBank.Bname))
+        {
+            await JS.InvokeVoidAsync("alert", "Bank Name Required.");
+
+
+            return;
+        }
+
+
+        if (string.IsNullOrWhiteSpace(editingBank.Accno))
+        {
+            await JS.InvokeVoidAsync("alert", "Account No Required.");
+
+
+
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(editingBank.Accname))
+        {
+            await JS.InvokeVoidAsync("alert", "Account Name Required.");
+
+
+
+            return;
+
+        }
+        if (string.IsNullOrWhiteSpace(editingBank.Branch))
+        {
+            await JS.InvokeVoidAsync("alert", "Branch Name Required.");
+
+
+
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(editingBank.Ifsc))
+        {
+            await JS.InvokeVoidAsync("alert", "Ifsc Code Required.");
+
+
+
+            return;
+        }
+
+        await EmployeeService.updatebank(id, companyModel);
+        IsReadOnly = true;
+        banks = await EmployeeService.GetBanks();
+        await JS.InvokeVoidAsync("alert", "Bank Saved successfully.");
+
+        StateHasChanged();
+
+
+        editingBank = null!;
+    }
+    void CancelEdit()
+    {
+        if (editingBank is not null && editingBackup is not null)
+        {
+            editingBank.Bname = editingBackup.Bname;
+            editingBank.Branch = editingBackup.Branch;
+            editingBank.Ifsc = editingBackup.Ifsc;
+            editingBank.Accname = editingBackup.Accname;
+        }
+        editingBank = null!;
+    }
+    protected async Task DeleteBank(CompanyModel companyModel)
+    {
+        bool confirmed = await JS.InvokeAsync<bool>("confirm", $"Are you sure you want to delete item with ID {id}?");
+        if (confirmed)
+        {
+
+
+            await EmployeeService.DeleteBank(id, companyModel);
+            IsReadOnly = true;
+            banks = await EmployeeService.GetBanks();
+            await JS.InvokeVoidAsync("alert", "Bank Deleted successfully.");
+
+            StateHasChanged();
+
+
+            editingBank = null!;
+        }
+
+
+    }
+
+    private string _pincode = "";
+    public string Pincode
+    {
+        get => _pincode;
+        set => _pincode = new string(value?.Where(char.IsDigit).Take(6).ToArray());
+    }
+
+  
+
+
+
+
+
+
+    public class GameFields
+    {
+        public string Id { get; set; } = "";
+        public string Text { get; set; } = "";
+    }
+    public List<GameFields> Games = new List<GameFields>()
+    {
+        new GameFields() { Id = "Game1", Text = "State Bank of India" },
+        new GameFields() { Id = "Game2", Text = "J&K Bank" },
+        new GameFields() { Id = "Game3", Text = "HDFC bank" },
+        new GameFields() { Id = "Game4", Text = "ICICI Bank" },
+        new GameFields() { Id = "Game5", Text = "Indus Ind Bank" },
+        new GameFields() { Id = "Game6", Text = "Punjab National Bank" },
+        new GameFields() { Id = "Game7", Text = "Axis Bank" },
+        new GameFields() { Id = "Game8", Text = "Canara Bank" },
+        new GameFields() { Id = "Game9", Text = "Kotak Mahindra Bank" },
+        new GameFields() { Id = "Game10", Text = "IDBI Bank" }
+    };
+
+
+
+    [Parameter]
+    public int TransactionId { get; set; }
+    public int companyId { get; set; } = 1;
+    CompanyModel companyModel = new CompanyModel();
+    List<CompanyModel> ChallanList = new List<CompanyModel>();
+
+
+    List<CompanyModel> banks = new List<CompanyModel>();
+
+    List<CompanyModel> GetgrowerList = new List<CompanyModel>();
+
+     List<CompanyModel> GetgrowerListVr = new List<CompanyModel>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // companyModel = await EmployeeService.GetCompanyByIdAsync(companyId);
+        companyModel = new CompanyModel
+            {
+               AccountStatecode = "01", // Default to Maharashtra
+               AccountState = "Jammu and Kashmir"
+            };
+        GetgrowerList = await EmployeeService.GetallLedgerAccounts();
+
+       GetgrowerListVr = await EmployeeService.GetallVoucherTypes();
+
+       
+       
+        companyModel = await EmployeeService.GetTransactionIdAsync(TransactionId);
+    selectedOptionId=companyModel.TransactionPaymentType;
+    
+
+    }
+
+
+
+
+    private void MakeReadOnly()
+    {
+        IsReadOnly = false;
+    }
+
+    public int id { get; set; } = 1;
+
+    private string Caddress = "";
+
+    protected async Task UpdateCompany()
+    {
+
+        if (string.IsNullOrWhiteSpace(companyModel.Caddress))
+        {
+            ShowAlert = true;
+            ShowInputError = true;
+
+            await Task.Delay(3000);
+            ShowAlert = false;
+            StateHasChanged();
+            return;
+        }
+
+
+        if (string.IsNullOrWhiteSpace(companyModel.Name))
+        {
+            ShowAlert = true;
+            ShowInputError = true;
+
+            await Task.Delay(3000);
+            ShowAlert = false;
+            StateHasChanged();
+            return;
+        }
+
+
+
+        await EmployeeService.EditCompany(id, companyModel);
+        IsReadOnly = true;
+        await JS.InvokeVoidAsync("alert", "Company updated successfully.");
+
+        // // Optional: auto-hide the alert after a few seconds
+        // await Task.Delay(3000);
+        // ShowAlert = false;
+        // StateHasChanged();
+    }
+
+    private string ChallanGroup { get; set; } = ""; // Default to "1" (Active)
+    protected async Task ViewChallanlist()
+    {
+        if (string.IsNullOrWhiteSpace(companyModel.GrowerGroupSelectName))
+        {
+            DialogMessage = "Please Select valid Grower group";
+            ShowEmptyFieldDialog = true;
+            return;
+
+        }
+
+        ChallanGroup = companyModel.GrowerGroupSelectName;
+        // await JS.InvokeVoidAsync("alert", ChallanGroup);
+
+       // banks = await EmployeeService.GetallChallanlist(ChallanGroup);
+        await JS.InvokeVoidAsync("alert", banks);
+
+    }
+
+    protected async Task SaveChallan()
+    {
+
+        if (string.IsNullOrWhiteSpace(companyModel.GrowerGroupSelectName))
+        {
+            DialogMessage = "Please Select  valid Grower group";
+            ShowEmptyFieldDialog = true;
+            return;
+
+        }
+
+
+        if (string.IsNullOrWhiteSpace(companyModel.ChallanName))
+        {
+            DialogMessage = "Please enter  Challan name";
+            ShowEmptyFieldDialog = true;
+            return;
+
+          }
+
+
+
+        if (isms1)
+        {
+            companyModel.ChallanSMS1 = "1";
+        }
+        else
+        {
+            companyModel.ChallanSMS1 = "0";
+        }
+
+          if (isms2)
+        {
+            companyModel.ChallanSMS2 = "1";
+        }
+        else
+        {
+            companyModel.ChallanSMS2 = "0";
+        }
+
+
+
+
+
+
+
+
+      
+          var result = await EmployeeService.AddChallanGrower(companyModel);
+        if (result != null && result.RetFlag.Trim() == "TRUE" && !string.IsNullOrEmpty(result.RetMessage))
+        {
+            GetgrowerList = await EmployeeService.GetallChallanlist(companyModel.GrowerGroupSelectName);
+            DialogMessage = result.RetMessage;
+            ShowEmptyFieldDialogError = true;
+
+            isms1 = false;
+            isms2 = false;
+            companyModel = new CompanyModel();
+
+            StateHasChanged();
+            return;
+        }
+        
+
+        if (result != null && result.RetFlag.Trim() == "FALSE")
+        {
+
+            DialogMessage = result.RetMessage ?? "Failed to add Challan.";
+            ShowEmptyFieldDialog = true;
+
+            return;
+        }
+
+
+    }
+
+
+
+    public class IndianState
+    {
+        public string Code { get; set; }  // e.g., "27"
+        public string Name { get; set; }  // e.g., "Maharashtra"
+    }
+
+    public List<IndianState> IndianStates = new()
+{
+    new() { Code = "01", Name = "Cheque" },
+    new() { Code = "02", Name = "Cash" },
+    new() { Code = "03", Name = "NetBanking" },
+    new() { Code = "04", Name = "Mpay" },
+    new() { Code = "05", Name = "UPID" },
+    new() { Code = "05", Name = "Transfer" },
+
+    };
+}
+
+@* <script>
+    function isNumberKey(evt) {
+        var charCode = (evt.which) ? evt.which : evt.keyCode;
+        // Allow only digits (0–9)
+        if (charCode < 48 || charCode > 57) {
+            evt.preventDefault();
+            return false;
+        }
+        return true;
+    }
+</script>
+ *@
+
+
+
+

@@ -1,0 +1,45 @@
+﻿<?xml version="1.0" encoding="utf-8"?><Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <AppendTargetFrameworkToOutputPath>False</AppendTargetFrameworkToOutputPath>
+    <EnableDefaultItems>False</EnableDefaultItems>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <OutputType>Library</OutputType>
+    <RootNamespace>BlazorDemo.DemoData</RootNamespace>
+    <AssemblyName>BlazorDemo.DemoData</AssemblyName>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <OutputPath>..\..\Bin\NETCore\</OutputPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <OutputPath>..\..\Bin\NETCore\</OutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Models\DemoGroup.cs" />
+    <Compile Include="Models\DemoItemBase.cs" />
+    <Compile Include="Models\DemoModel.cs" />
+    <Compile Include="Models\DemoItem.cs" />
+    <Compile Include="Models\DemoPage.cs" />
+    <Compile Include="Models\DemoPageSection.cs" />
+    <Compile Include="Models\DemoCodeFile.cs" />
+    <Compile Include="Models\DemoProductInfo.cs" />
+    <Compile Include="Search\DemoSearchTokenProcessor.cs" />
+    <Compile Include="Search\DemoSearchEngine.cs" />
+    <Compile Include="Search\DemoSearchModel.cs" />
+    <Compile Include="Search\DemoSearchResult.cs" />
+    <Compile Include="Utils\DemoCodeProcessor.cs" />
+    <Compile Include="Utils\DemoUtils.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="demo-metadata.json" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="ClosedXML" Version="0.105.0" />
+    <PackageReference Include="DevExpress.Blazor.Reporting.Viewer" Version="24.2.6" />
+    <PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
+    <PackageReference Include="ReportViewerCore.NETCore" Version="15.1.26" />
+    <PackageReference Include="Syncfusion.Blazor" Version="29.2.4" />
+    <PackageReference Include="System.Linq.Dynamic.Core" Version="1.6.10" />
+  </ItemGroup>
+</Project>

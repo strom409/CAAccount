@@ -1,0 +1,97 @@
+﻿@page "/OutwardReport"
+@using DevExpress.Blazor.Reporting
+@inject EmployeeAdoNetService EmployeeService
+@using Syncfusion.Blazor
+@using DevExpress.Blazor.PdfViewer
+@rendermode InteractiveServer
+@using Syncfusion.Blazor.DropDowns
+@inject NavigationManager NavigationManager
+@inject ReportService ReportService
+@using DevExpress.XtraReports.UI
+@using BlazorDemo.Services;
+@using BlazorDemo;
+@using System.IO
+@using Microsoft.AspNetCore.Hosting
+@inject IWebHostEnvironment Env
+@using System.Data
+<link href="_content/DevExpress.Blazor.Themes/blazing-berry.bs5.min.css" rel="stylesheet" />
+<link rel="stylesheet" href="_content/DevExpress.Blazor.Reporting.Viewer/css/dx-blazor-reporting-components.bs5.css">
+<PageTitle>Repack Reports</PageTitle>
+@inject IJSRuntime JS
+
+
+    <div style="overflow-x:auto; width:100%;">
+    <DxReportViewer @ref="reportViewer"
+                    Report="@Report"
+                    Zoom="1.6"
+                     />
+
+    </div>
+
+
+
+
+
+
+
+
+@code {
+
+
+    CompanyModel companyModel = new CompanyModel();
+    IGrid MyGrid { get; set; }
+    List<CompanyModel> Growers = new List<CompanyModel>();
+    List<CompanyModel> GetgrowerList = new List<CompanyModel>();
+    bool showReport = false;
+
+    private bool? result { get; set; } = null;
+    private bool ShowEmptyFieldDialogError { get; set; }
+
+    private bool ShowEmptyFieldDialog { get; set; }
+    private string DialogMessage { get; set; } = "";
+
+    List<CompanyModel> Getstatuslist = new List<CompanyModel>();
+
+    ListSearchMode SearchMode { get; set; } = ListSearchMode.AutoSearch;
+    ListSearchFilterCondition SearchFilterCondition { get; set; } = ListSearchFilterCondition.Contains;
+    ListSearchTextParseMode SearchTextParseMode { get; set; } = ListSearchTextParseMode.GroupWordsByAnd;
+   
+    
+    protected override async Task OnInitializedAsync()
+    {
+         
+        Report = XtraReport.FromFile(Path.Combine(Directory.GetCurrentDirectory(),
+        @"Reports\OutwardReport.repx"));
+
+
+
+        showReport = true;
+
+
+    }
+
+
+
+
+
+
+    protected async Task GeneratePreview()
+    {
+
+      
+
+
+
+    }
+
+
+    private async Task GoBack()
+    {
+        await JS.InvokeVoidAsync("history.back");
+    }
+    DxReportViewer? reportViewer;
+    XtraReport? Report;
+  
+}
+
+

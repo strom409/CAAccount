@@ -1,0 +1,1463 @@
+﻿@page "/upsertAllotment/{chamberId:int}"
+@page "/upsertAllotment/{growerId:int}/{chamberId:int}"
+@using Microsoft.Data.SqlClient
+@using BlazorDemo.CustomAttributes
+@using BlazorDemo.Data
+@using BlazorDemo.Models
+@using DevExpress.Blazor.Internal
+@using DevExpress.Blazor.Legacy
+@using DevExpress.Data.Filtering
+@using Microsoft.EntityFrameworkCore
+@using DevExpress.Blazor
+@using System.ComponentModel.DataAnnotations
+@inject AppDbContext context
+@inject NavigationManager navigationManager
+
+<style>
+    input[disabled],
+    textarea[disabled],
+    select[disabled] {
+        background-color: #e9ecef !important; /* Bootstrap's light gray */
+        color: #6c757d !important; /* Muted text */
+        opacity: 1 !important;
+        cursor: not-allowed;
+    }
+
+
+
+    .priority-info {
+        background-color: var(--bs-info)
+    }
+
+    .priority-warning {
+        background-color: var(--bs-orange)
+    }
+
+    .status-icon {
+        width: 0.5rem;
+        height: 0.5rem;
+    }
+
+    .priority-danger {
+        background-color: var(--bs-red)
+    }
+
+    .status-icon-new {
+        background-color: var(--bs-cyan);
+    }
+
+    .status-icon-rejected {
+        background-color: var(--bs-red);
+    }
+
+    .status-icon-postponed {
+        background-color: var(--bs-gray-600);
+    }
+
+    .status-icon-fixed {
+        background-color: var(--bs-green);
+    }
+
+    .bug-icon {
+        width: 16px;
+        height: 17px;
+        background-image: url("images/icons/bug.svg");
+    }
+
+    .dxbl-grid {
+        height: auto;
+        border-radius: 5px;
+        margin-top: 40px;
+    }
+
+    span {
+        font-size: large;
+    }
+
+    td.dxbl-align-center {
+        font-size: larger !important;
+    }
+
+    span.dxbl-btn-caption {
+        font-size: 14px;
+    }
+
+    dxbl-grid-header-content.dxbl-grid-header-content {
+        text-align: center;
+    }
+
+    .dxbl-grid-search-box-container dxbl-input-editor {
+        border: 1px solid black !important;
+    }
+
+    button.dxbl-btn.dxbl-btn-outline-secondary.dxbl-btn-icon {
+        color: green;
+    }
+</style>
+
+<EditForm Model="@upsertAllotmentVM" Context="editCtx" style="margin-top:30px;">
+    <DataAnnotationsValidator />
+    <DxCard>
+        <DxCardHeader>
+            <h3 class="mb-0 text-primary">@((growerId.HasValue && chamberId.HasValue) ? "Edit Allotment" : "Add Allotment")</h3>
+        </DxCardHeader>
+
+        <DxCardBody>
+            <DxFormLayout ColCount="3">
+
+                @if (chamberId.HasValue)
+                {
+                    <DxFormLayoutItem Caption="Chamber ID">
+                        <DxSpinEdit @bind-Value="upsertAllotmentVM.ChamberId" Enabled="false" />
+                    </DxFormLayoutItem>
+                }
+
+                @if (growerId.HasValue)
+                {
+                    <DxFormLayoutItem Caption="Grower ID">
+                        <DxSpinEdit @bind-Value="upsertAllotmentVM.Id" Enabled="false" />
+                    </DxFormLayoutItem>
+                }
+
+                <DxFormLayoutItem Caption="Total Chamber Capacity">
+                    <DxSpinEdit @bind-Value="upsertAllotmentVM.TotalChamberCapacity" Enabled="false" />
+                </DxFormLayoutItem>
+
+                <DxFormLayoutItem Caption="Chamber Capacity Consumed">
+                    <DxSpinEdit @bind-Value="upsertAllotmentVM.ChamberCapacityConsumed" Enabled="false" />
+                </DxFormLayoutItem>
+
+                <DxFormLayoutItem Caption="Chamber Capacity Balanced">
+                    <DxSpinEdit @bind-Value="upsertAllotmentVM.ChamberCapacityBalanced" Enabled="false" />
+                </DxFormLayoutItem>
+
+                @if (growerId.HasValue)
+                {
+                    <DxFormLayoutItem Caption="Grower Consumed Capacity In Current Chamber">
+                        <DxSpinEdit @bind-Value="upsertAllotmentVM.GrowerConsumedCapacityInCurrentChamber" Enabled="false" />
+                    </DxFormLayoutItem>
+                }
+
+
+
+                <DxFormLayoutItem Caption="Grower Consumed Capacity In All Chambers ">
+                    <DxSpinEdit @bind-Value="upsertAllotmentVM.GrowerConsumedCapacityInAllChambers" Enabled="false" />
+                </DxFormLayoutItem>
+
+
+
+                <DxFormLayoutItem Caption="Agreement Allotment to Grower">
+                    <DxSpinEdit @bind-Value="upsertAllotmentVM.AgreementQuantityAllowed"
+                                Enabled="false" />
+
+                    @if (!string.IsNullOrEmpty(agreementQtyErrorMessage))
+                    {
+                        <div class="text-danger mt-1">@agreementQtyErrorMessage</div>
+                    }
+
+                </DxFormLayoutItem>
+
+                <DxFormLayoutItem Caption="Agreement Balance">
+                    <DxSpinEdit @bind-Value="upsertAllotmentVM.AgreementQuantityBalanced" Enabled="false" />
+                </DxFormLayoutItem>
+
+                <DxFormLayoutItem Caption="Series(P)">
+                    <DxSpinEdit @bind-Value="upsertAllotmentVM.Series" />
+                    <ValidationMessage For="@(() => upsertAllotmentVM.Series)" />
+                </DxFormLayoutItem>
+
+                @if (growerId.HasValue)
+                {
+
+                    <DxFormLayoutItem Caption="Grower Name">
+                        <DxTextBox @bind-Text="upsertAllotmentVM.Name"
+                                   Placeholder="Choose grower name from dropdown"
+                                   ShowClearButton="true"
+                                   Enabled="false" />
+
+
+                        @if (filteredNames.Any())
+                        {
+                            <ul class="list-group position-absolute z-3 mt-1" style="max-height:135px; overflow-y:auto; width:35%;">
+                                @foreach (var name in filteredNames)
+                                {
+                                    <li class="list-group-item list-group-item-action"
+                                        @onclick="() => SelectName(name)">
+                                        @name
+                                    </li>
+                                }
+                            </ul>
+                        }
+                    </DxFormLayoutItem>
+                }
+                else if (upsertAllotmentVM.ChamberCapacityBalanced == 0)
+                {
+                    <DxFormLayoutItem Caption="Grower Name">
+                        <DxTextBox @bind-Text="upsertAllotmentVM.Name"
+                                   Placeholder="Choose grower name from dropdown"
+                                   ShowClearButton="true"
+                                   Enabled="false" />
+
+
+                        @if (filteredNames.Any())
+                        {
+                            <ul class="list-group position-absolute z-3 mt-1" style="max-height:135px; overflow-y:auto; width:35%;">
+                                @foreach (var name in filteredNames)
+                                {
+                                    <li class="list-group-item list-group-item-action"
+                                        @onclick="() => SelectName(name)">
+                                        @name
+                                    </li>
+                                }
+                            </ul>
+                        }
+                    </DxFormLayoutItem>
+                }
+                else
+                {
+                    <DxFormLayoutItem Caption="Grower Name">
+                        <DxTextBox @bind-Text="upsertAllotmentVM.Name"
+                                   Placeholder="Choose grower name from dropdown"
+                                   ShowClearButton="true"
+                                   @oninput="FilterNames"
+                                   @onfocus="ShowAllNames"
+                                   @onblur="HideNameDropdown" />
+
+
+                        @if (filteredNames.Any())
+                        {
+                            <ul class="list-group position-absolute z-3 mt-1" style="max-height:115px; overflow-y:auto; width:29%;">
+                                @foreach (var name in filteredNames)
+                                {
+                                    <li class="list-group-item list-group-item-action"
+                                        @onclick="async () => {
+                                        await SelectName(name);
+                                        await CheckIfGrowerAlreadyInChamber();
+                                    }">
+                                        @name
+                                    </li>
+                                }
+                            </ul>
+                        }
+
+                        @if (!string.IsNullOrEmpty(nameErrorMessage))
+                        {
+                            <div class="text-danger mt-1">@nameErrorMessage</div>
+                        }
+                    </DxFormLayoutItem>
+
+
+
+                }
+
+
+
+                <DxFormLayoutItem Caption="Issue New Allotment To Grower">
+                    <DxSpinEdit @bind-Value="upsertAllotmentVM.NewAllotment"
+                                CssClass="@(isAllotmentInvalid ? "is-invalid" : "")"
+                                Placeholder="Enter Allotment to Grower"
+                                @oninput="ValidateAllotment"
+                                @onblur="HandleNewAllotmentBlur" />
+                    @if (!string.IsNullOrEmpty(newAllotmentErrorMessage))
+                    {
+                        <div class="text-danger mt-1">@newAllotmentErrorMessage</div>
+                    }
+                    @if (isAllotmentInvalid)
+                    {
+                        <div class="invalid-feedback">
+                            max possible : @upsertAllotmentVM.MaxAllotmentPossibleInCurrentChamber
+                        </div>
+                    }
+                </DxFormLayoutItem>
+
+                <DxFormLayoutItem Caption="IsActive">
+                    <DxCheckBox @bind-Checked="@upsertAllotmentVM.IsActive" />
+                </DxFormLayoutItem>
+            </DxFormLayout>
+
+            <div class="mt-4 d-flex gap-3">
+                <DxButton RenderStyle="ButtonRenderStyle.Success"
+                          Text="@(growerId.HasValue ? "Update Changes" : "Save Changes")"
+                          @onclick="HandleValidSubmit" />
+
+                <DxButton RenderStyle="ButtonRenderStyle.Danger"
+                          Click="NavigateToPreviousPage"
+                          Text="Back To Chambers" />
+
+                @if (!growerId.HasValue)
+                {
+                    <DxButton RenderStyle="ButtonRenderStyle.Warning"
+                              Click="@(() => ClearFields())"
+                              Text="Clear" />
+                }
+
+            </div>
+        </DxCardBody>
+    </DxCard>
+</EditForm>
+
+
+<div style="overflow-x:auto; width:100%;">
+
+    <DxGrid Data="@chamberDetails" CustomizeElement="Grid_CustomizeElement"
+            ShowGroupPanel="false" TextWrapEnabled="false" AutoExpandAllGroupRows="true"
+            FilterMenuButtonDisplayMode="GridFilterMenuButtonDisplayMode.Always" ShowSearchBox="true" ColumnResizeMode="GridColumnResizeMode.NextColumn"
+            AllowSelectRowByClick="true" @bind-SearchText="@GridSearchText" PageSize="15"
+            HighlightRowOnHover="true">
+        <Columns>
+            <DxGridDataColumn FieldName="@nameof(ChamberModelVM.ChamberId)" Caption="Chamber ID" TextAlignment="GridTextAlignment.Center">
+            </DxGridDataColumn>
+            <DxGridDataColumn FieldName="@nameof(ChamberModelVM.ChamberName)" Caption="Chamber Name" TextAlignment="GridTextAlignment.Center">
+            </DxGridDataColumn>
+            <DxGridDataColumn FieldName="@nameof(ChamberModelVM.GrowerId)" Caption="Grower Id" TextAlignment="GridTextAlignment.Center">
+            </DxGridDataColumn>
+            <DxGridDataColumn FieldName="@nameof(ChamberModelVM.GrowerName)" Caption="Grower Name" TextAlignment="GridTextAlignment.Center">
+            </DxGridDataColumn>
+            <DxGridDataColumn FieldName="@nameof(ChamberModelVM.QtyAllocated)" Caption="Qty Allocated" TextAlignment="GridTextAlignment.Center">
+            </DxGridDataColumn>
+            <DxGridDataColumn Caption="Action" TextAlignment="GridTextAlignment.Center">
+                <CellDisplayTemplate>
+                    <span @onclick="@(() => NavigateToView(((ChamberModelVM)context.DataItem).GrowerId))" class="me-2" style="cursor:pointer;" title="View">
+                        <i class="fa-sharp-duotone fa-solid fa-eye"></i>
+                    </span>
+                    @if (((ChamberModelVM)context.DataItem).isLocked == false)
+                    {
+                        <span @onclick="@(() => NavigateToAdd(((ChamberModelVM)context.DataItem).ChamberId))" class="me-2" style="cursor:pointer" title="Add">
+                            <i class="fa-solid fa-plus"></i>
+                        </span>
+                    }
+                    <span @onclick="@(() => NavigateToEdit(((ChamberModelVM)context.DataItem).GrowerId, ((ChamberModelVM)context.DataItem).ChamberId))" class="me-1" style="cursor:pointer" title="Edit">
+                        <i class="fa-solid fa-pen-to-square"></i>
+                    </span>
+                    <span @onclick="@(() => NavigateToDelete(((ChamberModelVM)context.DataItem).GrowerId, ((ChamberModelVM)context.DataItem).ChamberId))" class="" style="cursor:pointer" title="Delete">
+                        <i class="fa-solid fa-trash"></i>
+                    </span>
+                </CellDisplayTemplate>
+            </DxGridDataColumn>
+
+        </Columns>
+
+        <TotalSummary>
+            <DxGridSummaryItem FieldName="@nameof(ChamberModelVM.GrowerId)"
+                               SummaryType="GridSummaryItemType.Count"
+                               FooterColumnName="@nameof(ChamberModelVM.GrowerId)"
+                               DisplayText="Total Growers : {0}" />
+        </TotalSummary>
+
+    </DxGrid>
+</div>
+
+<!-- Delete Not Allowed Modal -->
+<div class="modal fade" id="deleteNotAllowedModal" tabindex="-1" aria-labelledby="deleteNotAllowedLabel" aria-hidden="true">
+    <div class="modal-dialog" style="margin-top:10vh;">
+        <div class="modal-content border-danger">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteNotAllowedLabel">Deletion Restricted</h5>
+                <button type="button" class="btn-close text-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-danger fw-bold">
+                @PopupMessage
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-danger" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Grower Details Modal on View Icon -->
+<div class="modal fade" id="growerDetailModal" tabindex="-1" aria-labelledby="growerDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-info">
+                <h5 class="modal-title">Grower Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body">
+                @if (allGrowerDetailsVM != null && allGrowerDetailsVM.Any())
+                {
+                    <!-- Table 1: Per-chamber details -->
+                    <table class="table table-bordered table-striped table-warning table-hover mb-4">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Grower Name</th>
+                                <th>Chamber ID</th>
+                                <th>Chamber Name</th>
+                                <th>Quantity</th>
+                                <th>Series</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var detail in allGrowerDetailsVM)
+                            {
+                                <tr>
+                                    <td>@detail.GrowerName</td>
+                                    <td>@detail.ChamberId</td>
+                                    <td>@detail.ChamberName</td>
+                                    <td>@detail.Quantity</td>
+                                    <td>@detail.Series</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+
+                    <!-- Table 2: Summary -->
+
+                    <table class="table table-bordered text-center mt-4">
+                        <thead class="table-light fw-bold">
+                            <tr>
+                                <th colspan="2">Grower Summary</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="table-warning">
+                                <td>Agreement Allotment</td>
+                                <td class="text-center">@allGrowerDetailsVM.FirstOrDefault()?.Agreement</td>
+                            </tr>
+                            <tr class="table-success">
+                                <td>Total Quantity Taken</td>
+                                <td class="text-center">@allGrowerDetailsVM.FirstOrDefault()?.TotalTaken</td>
+                            </tr>
+                            <tr class="table-info">
+                                <td>Quantity Available</td>
+                                <td class="text-center">@allGrowerDetailsVM.FirstOrDefault()?.TotalAvailable</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                }
+                else
+                {
+                    <p class="text-muted text-center">No details found for this grower.</p>
+                }
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@code {
+    public class UpsertAllotmentVM
+    {
+        public int Id { get; set; }
+        public int ChamberId { get; set; }
+        public int partyid { get; set; }
+        public int TotalChamberCapacity { get; set; }
+        public int ChamberCapacityConsumed { get; set; }
+        public int ChamberCapacityBalanced { get; set; }
+        public int GrowerConsumedCapacityInCurrentChamber { get; set; }
+        public int GrowerConsumedCapacityInAllChambers { get; set; }
+        public string Name { get; set; }
+        public int PreviousAllotment { get; set; }
+
+        [Required(ErrorMessage = "Series number is required.")]
+        [Range(1, int.MaxValue, ErrorMessage = "Enter a valid series number (must be greater than zero).")]
+        [UniqueSeriesNumber]
+        public int Series { get; set; }
+        public int? NewAllotment { get; set; }
+        public int? AgreementQuantityAllowed { get; set; }
+        public int AgreementQuantityBalanced { get; set; }
+        public int MaxAllotmentPossibleInCurrentChamber { get; set; }
+        public bool IsActive { get; set; }
+
+    }
+
+    public class ChamberModelVM
+    {
+        public int ChamberId { get; set; }
+        public string ChamberName { get; set; }
+        public int GrowerId { get; set; }
+        public string GrowerName { get; set; }
+        public int? QtyAllocated { get; set; }
+
+        public bool? isLocked { get; set; }
+    }
+
+    public class AllGrowerDetailsVM
+    {
+        public string GrowerName { get; set; }
+        public int Quantity { get; set; }
+        public int ChamberId { get; set; }
+        public string ChamberName { get; set; }
+        public int? Series { get; set; }
+        public int Agreement { get; set; }
+        public int TotalTaken { get; set; }
+        public int TotalAvailable { get; set; }
+    }
+
+    public List<AllGrowerDetailsVM> allGrowerDetailsVM { get; set; }
+
+    string GridSearchText = "";
+
+    public string PopupMessage = string.Empty;
+
+
+    private List<ChamberModelVM> chamberDetails = new();
+
+    public UpsertAllotmentVM upsertAllotmentVM = new();
+
+    [Parameter]
+    public int? growerId { get; set; }
+    [Parameter]
+    public int? chamberId { get; set; }
+
+    private string searchName = "";
+    private List<string> filteredNames = new();
+    private List<string> concatPartyNameAndPartyId = new();
+    private List<int> allPartyIds = new();
+
+    [Inject] IJSRuntime JSRuntime { get; set; }
+
+    private List<string> allNames = new();
+    private List<Party> growerList = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        upsertAllotmentVM = new UpsertAllotmentVM
+            {
+                ChamberId = chamberId ?? 0
+            };
+
+        using (SqlConnection conn = new SqlConnection("server=DESKTOP-3F92UR5\\SQLEXPRESS;database=NewStoreProject_DB;Trusted_Connection=true;TrustServerCertificate=true;MultipleActiveResultSets=true"))
+        {
+            await conn.OpenAsync();
+
+            // Load allocations for chamber
+            await GetAllocationsByChamberId(chamberId);
+
+            if (growerId.HasValue && chamberId.HasValue)
+            {
+                // --- Load allocation details for form ---
+                using (SqlCommand cmd = new SqlCommand(@"
+                SELECT a.Id, p.PartyName, a.Quantity, a.Series, a.FlagIsActive,
+                       ag.Allotment, c.MaxQuantity, c.QuantityConsumed, c.QuantityBalanced
+                FROM Allocation a
+                INNER JOIN party p ON a.partyid = p.partyid
+                LEFT JOIN Agreement ag ON p.partyid = ag.partyid
+                INNER JOIN chamber c ON a.chamberid = c.chamberid
+                WHERE a.partyid = @growerId AND a.chamberid = @chamberId AND a.FlagDeleted = 0", conn))
+                {
+                    cmd.Parameters.AddWithValue("@growerId", growerId.Value);
+                    cmd.Parameters.AddWithValue("@chamberId", chamberId.Value);
+
+                    using (SqlDataReader reader = await cmd.ExecuteReaderAsync())
+                    {
+                        if (await reader.ReadAsync())
+                        {
+                            upsertAllotmentVM.Id = growerId.Value;
+                            upsertAllotmentVM.Name = reader.IsDBNull(1) ? string.Empty : reader.GetString(1);
+                            upsertAllotmentVM.PreviousAllotment = reader.IsDBNull(2) ? 0 : reader.GetInt32(2);
+                            upsertAllotmentVM.Series = reader.IsDBNull(3) ? 0 : reader.GetInt32(3);
+                            upsertAllotmentVM.IsActive = !reader.IsDBNull(4) && reader.GetBoolean(4);
+                            upsertAllotmentVM.AgreementQuantityAllowed = reader.IsDBNull(5) ? 0 : reader.GetInt32(5);
+                            upsertAllotmentVM.TotalChamberCapacity = reader.IsDBNull(6) ? 0 : reader.GetInt32(6);
+                            upsertAllotmentVM.ChamberCapacityConsumed = reader.IsDBNull(7) ? 0 : reader.GetInt32(7);
+                            upsertAllotmentVM.ChamberCapacityBalanced = reader.IsDBNull(8) ? 0 : reader.GetInt32(8);
+                            upsertAllotmentVM.NewAllotment = upsertAllotmentVM.PreviousAllotment;
+                        }
+                    }
+                }
+
+                // --- Sum grower allocations in this chamber ---
+                using (SqlCommand cmd = new SqlCommand(@"
+                SELECT ISNULL(SUM(Quantity),0)
+                FROM Allocation
+                WHERE partyid = @growerId AND chamberid = @chamberId AND FlagDeleted = 0", conn))
+                {
+                    cmd.Parameters.AddWithValue("@growerId", growerId.Value);
+                    cmd.Parameters.AddWithValue("@chamberId", chamberId.Value);
+                    upsertAllotmentVM.GrowerConsumedCapacityInCurrentChamber = Convert.ToInt32(await cmd.ExecuteScalarAsync());
+                }
+
+                // --- Sum grower allocations in all chambers ---
+                using (SqlCommand cmd = new SqlCommand(@"
+                SELECT ISNULL(SUM(Quantity),0)
+                FROM Allocation
+                WHERE partyid = @growerId AND FlagDeleted = 0", conn))
+                {
+                    cmd.Parameters.AddWithValue("@growerId", growerId.Value);
+                    upsertAllotmentVM.GrowerConsumedCapacityInAllChambers = Convert.ToInt32(await cmd.ExecuteScalarAsync());
+                }
+
+                // Agreement Balance
+                upsertAllotmentVM.AgreementQuantityBalanced =
+                    (upsertAllotmentVM.AgreementQuantityAllowed ?? 0) - upsertAllotmentVM.GrowerConsumedCapacityInAllChambers;
+            }
+            else if (chamberId.HasValue)
+            {
+                // --- Add Mode ---
+                using (SqlCommand cmd = new SqlCommand(@"
+                SELECT MaxQuantity, QuantityConsumed, QuantityBalanced
+                FROM chamber
+                WHERE chamberid = @chamberId", conn))
+                {
+                    cmd.Parameters.AddWithValue("@chamberId", chamberId.Value);
+
+                    using (SqlDataReader reader = await cmd.ExecuteReaderAsync())
+                    {
+                        if (await reader.ReadAsync())
+                        {
+                            upsertAllotmentVM.TotalChamberCapacity = reader.IsDBNull(0) ? 0 : reader.GetInt32(0);
+                            upsertAllotmentVM.ChamberCapacityConsumed = reader.IsDBNull(1) ? 0 : reader.GetInt32(1);
+                            upsertAllotmentVM.ChamberCapacityBalanced = reader.IsDBNull(2) ? 0 : reader.GetInt32(2);
+                        }
+                    }
+                }
+            }
+
+            // --- Load all growers with agreements ---
+            growerList.Clear();
+            using (SqlCommand cmd = new SqlCommand(@"
+            SELECT p.partyid, p.PartyName, ag.Allotment
+            FROM party p
+            INNER JOIN Agreement ag ON p.partyid = ag.partyid", conn))
+            {
+                using (SqlDataReader reader = await cmd.ExecuteReaderAsync())
+                {
+                    while (await reader.ReadAsync())
+                    {
+                        growerList.Add(new Party
+                            {
+                                partyid = reader.GetInt32(0),
+                                PartyName = reader.IsDBNull(1) ? string.Empty : reader.GetString(1),
+                                Agreement = new Agreement
+                                {
+                                    partyid = reader.GetInt32(0),
+                                    Allotment = reader.IsDBNull(2) ? 0 : reader.GetInt32(2)
+                                }
+                            });
+                    }
+                }
+            }
+        }
+
+        allNames = growerList
+            .Select(p => $"{p.partyid:D3} - {p.PartyName ?? string.Empty}")
+            .ToList();
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public async Task GetAllocationsByChamberId(int? chamberId)
+    {
+        if (chamberId == null) return;
+
+        var results = new List<ChamberModelVM>();
+
+        using (var conn = new SqlConnection("server=DESKTOP-3F92UR5\\SQLEXPRESS;database=NewStoreProject_DB;Trusted_Connection=true;TrustServerCertificate=true;MultipleActiveResultSets=true"))
+        {
+            await conn.OpenAsync();
+
+            string query = @"
+            SELECT
+                a.chamberid,
+                c.chambername,
+                a.partyid,
+                p.PartyName,
+                SUM(a.Quantity) AS QtyAllocated,
+                c.IsLocked
+            FROM Allocation a
+            INNER JOIN chamber c ON a.chamberid = c.chamberid
+            INNER JOIN party p ON a.partyid = p.partyid
+            WHERE a.chamberid = @chamberId AND a.FlagDeleted = 0
+            GROUP BY a.chamberid, c.chambername, a.partyid, p.PartyName, c.IsLocked;";
+
+            using (var cmd = new SqlCommand(query, conn))
+            {
+                cmd.Parameters.AddWithValue("@chamberId", chamberId);
+
+                using (var reader = await cmd.ExecuteReaderAsync())
+                {
+                    while (await reader.ReadAsync())
+                    {
+                        results.Add(new ChamberModelVM
+                            {
+                                ChamberId = reader.GetInt32(reader.GetOrdinal("chamberid")),
+                                ChamberName = reader.GetString(reader.GetOrdinal("chambername")),
+                                GrowerId = reader.GetInt32(reader.GetOrdinal("partyid")),
+                                GrowerName = reader.GetString(reader.GetOrdinal("PartyName")),
+                                QtyAllocated = reader.IsDBNull(reader.GetOrdinal("QtyAllocated")) ? 0 : reader.GetInt32(reader.GetOrdinal("QtyAllocated")),
+                                isLocked = reader.IsDBNull(reader.GetOrdinal("IsLocked")) ? (bool?)null : reader.GetBoolean(reader.GetOrdinal("IsLocked"))
+                            });
+                    }
+                }
+            }
+        }
+
+        // assign to your variable
+        chamberDetails = results;
+
+        // notify UI
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void FilterNames(ChangeEventArgs e)
+    {
+        searchName = e.Value?.ToString() ?? "";
+
+        filteredNames = string.IsNullOrWhiteSpace(searchName)
+            ? allNames.ToList()
+            : allNames.Where(name => name.Contains(searchName, StringComparison.OrdinalIgnoreCase)).ToList();
+
+    }
+
+    private async void HideNameDropdown(FocusEventArgs e)
+    {
+        await Task.Delay(150);
+        filteredNames.Clear();
+        StateHasChanged();
+    }
+
+    private void ShowAllNames(FocusEventArgs e) => filteredNames = allNames.ToList();
+
+    private async Task SelectName(string selectedName)
+    {
+        var parts = selectedName.Split(" - ");
+        if (parts.Length < 2) return;
+
+        int realId = int.Parse(parts[0]);
+
+        // 1. Get Party and Agreement
+        Party person = null;
+        using (SqlConnection conn = new SqlConnection("server=DESKTOP-3F92UR5\\SQLEXPRESS;database=NewStoreProject_DB;Trusted_Connection=true;TrustServerCertificate=true;MultipleActiveResultSets=true"))
+        {
+            await conn.OpenAsync();
+
+            string sql = @"SELECT p.partyid, p.PartyName, a.Allotment
+                       FROM party p
+                       LEFT JOIN Agreement a ON p.partyid = a.partyid
+                       WHERE p.partyid = @partyid";
+
+            using (SqlCommand cmd = new SqlCommand(sql, conn))
+            {
+                cmd.Parameters.AddWithValue("@partyid", realId);
+
+                using (var reader = await cmd.ExecuteReaderAsync())
+                {
+                    if (await reader.ReadAsync())
+                    {
+                        person = new Party
+                            {
+                                partyid = reader.GetInt32(0),
+                                PartyName = reader.IsDBNull(1) ? null : reader.GetString(1),
+                                Agreement = reader.IsDBNull(2) ? null : new Agreement
+                                {
+                                    partyid = realId,
+                                    Allotment = reader.GetInt32(2)
+                                }
+                            };
+                    }
+                }
+            }
+
+            // 2. Get sum of allocations for this grower
+            int growerConsumedAll = 0;
+            string sql2 = @"SELECT ISNULL(SUM(Quantity), 0)
+                        FROM Allocation
+                        WHERE partyid = @partyid AND FlagDeleted = 0";
+
+            using (SqlCommand cmd = new SqlCommand(sql2, conn))
+            {
+                cmd.Parameters.AddWithValue("@partyid", realId);
+                growerConsumedAll = (int)await cmd.ExecuteScalarAsync();
+            }
+
+            // 3. Update VM
+            if (person != null)
+            {
+                upsertAllotmentVM.Name = selectedName;
+                upsertAllotmentVM.Id = person.partyid;
+                upsertAllotmentVM.AgreementQuantityAllowed = person.Agreement?.Allotment ?? 0;
+                upsertAllotmentVM.GrowerConsumedCapacityInAllChambers = growerConsumedAll;
+
+                upsertAllotmentVM.AgreementQuantityBalanced =
+                    (upsertAllotmentVM.AgreementQuantityAllowed ?? 0) - growerConsumedAll;
+            }
+        }
+
+        // 4. UI state updates
+        searchName = selectedName;
+        filteredNames = new List<string>(); //  avoid Clear()
+        agreementQtyErrorMessage = "";
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private bool isAllotmentInvalid = false;
+    string agreementQtyErrorMessage = null;
+    string newAllotmentErrorMessage = null;
+    string nameErrorMessage = null;
+
+    void ValidateAllotment(ChangeEventArgs e)
+    {
+        int newAllotment = 0;
+        //int growerid = abc;
+        int.TryParse(e.Value?.ToString(), out newAllotment);
+
+        int? agreement = upsertAllotmentVM.AgreementQuantityAllowed;
+
+        //int previousAllotment = upsertAllotmentVM.PreviousAllotment;
+        int totalTaken = upsertAllotmentVM.GrowerConsumedCapacityInAllChambers;
+        int chamberCapacityBalance = upsertAllotmentVM.ChamberCapacityBalanced + upsertAllotmentVM.GrowerConsumedCapacityInCurrentChamber;
+        int agreementBalance = upsertAllotmentVM.AgreementQuantityBalanced;
+
+
+
+        if (chamberCapacityBalance < agreementBalance)
+        {
+            upsertAllotmentVM.MaxAllotmentPossibleInCurrentChamber = chamberCapacityBalance;
+            if (upsertAllotmentVM.ChamberCapacityBalanced == 0)
+            {
+                upsertAllotmentVM.MaxAllotmentPossibleInCurrentChamber = upsertAllotmentVM.GrowerConsumedCapacityInCurrentChamber;
+            }
+        }
+        else
+        {
+            upsertAllotmentVM.MaxAllotmentPossibleInCurrentChamber = agreementBalance + upsertAllotmentVM.GrowerConsumedCapacityInCurrentChamber;
+            if (upsertAllotmentVM.ChamberCapacityBalanced == 0)
+            {
+                upsertAllotmentVM.MaxAllotmentPossibleInCurrentChamber = upsertAllotmentVM.GrowerConsumedCapacityInCurrentChamber;
+            }
+        }
+
+        isAllotmentInvalid = (newAllotment > upsertAllotmentVM.MaxAllotmentPossibleInCurrentChamber);
+
+        // Update only the new input, do not treat it as "previous" yet
+        upsertAllotmentVM.NewAllotment = newAllotment;
+        newAllotmentErrorMessage = null;
+        StateHasChanged();
+    }
+
+    bool isNewAllotmentDisabled = false;
+
+    private void HandleNewAllotmentBlur()
+    {
+        if (upsertAllotmentVM.NewAllotment > 0)
+        {
+            isNewAllotmentDisabled = true;
+        }
+    }
+
+    //Loading Data for Form in edit mode
+    private async Task<UpsertAllotmentVM> LoadDetails(int growerId, int chamberId)
+    {
+        string sql = @"
+        SELECT TOP 1
+            a.partyid,
+            a.Quantity,
+            a.FlagIsActive,
+            a.Series,
+            p.PartyName,
+            ag.Allotment AS AgreementAllotment,
+            c.MaxQuantity,
+            c.QuantityConsumed,
+            c.QuantityBalanced
+        FROM Allocation a
+        LEFT JOIN party p ON a.partyid = p.partyid
+        LEFT JOIN Agreement ag ON p.partyid = ag.partyid
+        LEFT JOIN chamber c ON a.chamberid = c.chamberid
+        WHERE a.partyid = @growerId
+          AND a.chamberid = @chamberId
+          AND a.FlagDeleted = 0;
+
+        SELECT TOP 1
+            c.MaxQuantity,
+            c.QuantityConsumed,
+            c.QuantityBalanced
+        FROM chamber c
+        WHERE c.chamberid = @chamberId;
+    ";
+
+        var result = new UpsertAllotmentVM();
+
+        using (var conn = new SqlConnection("server=DESKTOP-3F92UR5\\SQLEXPRESS;database=NewStoreProject_DB;Trusted_Connection=true;TrustServerCertificate=true;MultipleActiveResultSets=true"))
+        {
+            await conn.OpenAsync();
+            using (var cmd = new SqlCommand(sql, conn))
+            {
+                cmd.Parameters.AddWithValue("@growerId", growerId);
+                cmd.Parameters.AddWithValue("@chamberId", chamberId);
+
+                using (var reader = await cmd.ExecuteReaderAsync())
+                {
+                    // --- First result set (Allocation + Party + Agreement + Chamber) ---
+                    if (await reader.ReadAsync())
+                    {
+                        result.Id = reader["partyid"] != DBNull.Value ? Convert.ToInt32(reader["partyid"]) : growerId;
+                        result.Name = reader["PartyName"] != DBNull.Value ? reader["PartyName"].ToString() : string.Empty;
+                        result.PreviousAllotment = reader["Quantity"] != DBNull.Value ? Convert.ToInt32(reader["Quantity"]) : 0;
+                        result.ChamberId = chamberId;
+                        result.AgreementQuantityAllowed = reader["AgreementAllotment"] != DBNull.Value ? Convert.ToInt32(reader["AgreementAllotment"]) : 0;
+                        result.TotalChamberCapacity = reader["MaxQuantity"] != DBNull.Value ? Convert.ToInt32(reader["MaxQuantity"]) : 0;
+                        result.ChamberCapacityConsumed = reader["QuantityConsumed"] != DBNull.Value ? Convert.ToInt32(reader["QuantityConsumed"]) : 0;
+                        result.ChamberCapacityBalanced = reader["QuantityBalanced"] != DBNull.Value ? Convert.ToInt32(reader["QuantityBalanced"]) : 0;
+                        result.IsActive = reader["FlagIsActive"] != DBNull.Value && Convert.ToBoolean(reader["FlagIsActive"]);
+                        result.Series = reader["Series"] != DBNull.Value ? Convert.ToInt32(reader["Series"]) : 0;
+                        result.NewAllotment = reader["Quantity"] != DBNull.Value ? Convert.ToInt32(reader["Quantity"]) : (int?)null;
+                    }
+
+                    // --- Move to second result set (Chamber fallback if no allocation) ---
+                    if (await reader.NextResultAsync() && await reader.ReadAsync())
+                    {
+                        if (result.TotalChamberCapacity == 0)
+                            result.TotalChamberCapacity = reader["MaxQuantity"] != DBNull.Value ? Convert.ToInt32(reader["MaxQuantity"]) : 0;
+                        if (result.ChamberCapacityConsumed == 0)
+                            result.ChamberCapacityConsumed = reader["QuantityConsumed"] != DBNull.Value ? Convert.ToInt32(reader["QuantityConsumed"]) : 0;
+                        if (result.ChamberCapacityBalanced == 0)
+                            result.ChamberCapacityBalanced = reader["QuantityBalanced"] != DBNull.Value ? Convert.ToInt32(reader["QuantityBalanced"]) : 0;
+                    }
+                }
+            }
+        }
+
+        await InvokeAsync(StateHasChanged);
+        return result;
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        int growerId = upsertAllotmentVM.Id;
+        int chamberId = upsertAllotmentVM.ChamberId;
+
+        // --- Validations ---
+        if (isAllotmentInvalid || isGrowerDuplicate)
+            return;
+
+        if (upsertAllotmentVM.AgreementQuantityAllowed == null || upsertAllotmentVM.AgreementQuantityAllowed == 0)
+        {
+            agreementQtyErrorMessage = "Agreement quantity is required";
+            return;
+        }
+        agreementQtyErrorMessage = null;
+
+        if (upsertAllotmentVM.NewAllotment == null || upsertAllotmentVM.NewAllotment == 0)
+        {
+            newAllotmentErrorMessage = "New Allotment is required";
+            return;
+        }
+        newAllotmentErrorMessage = null;
+
+        string connStr = "server=DESKTOP-3F92UR5\\SQLEXPRESS;database=NewStoreProject_DB;Trusted_Connection=true;TrustServerCertificate=true;MultipleActiveResultSets=true";
+
+        using (SqlConnection conn = new SqlConnection(connStr))
+        {
+            await conn.OpenAsync();
+
+            // 1. Get chamber details
+            int chamberConsumed = 0;
+            int chamberBalanced = 0;
+            bool chamberLocked = false;
+
+            string getChamberQuery = "SELECT QuantityConsumed, QuantityBalanced, IsLocked FROM chamber WHERE chamberid = @chamberid";
+            using (SqlCommand cmd = new SqlCommand(getChamberQuery, conn))
+            {
+                cmd.Parameters.AddWithValue("@chamberid", chamberId);
+                using (var reader = await cmd.ExecuteReaderAsync())
+                {
+                    if (await reader.ReadAsync())
+                    {
+                        chamberConsumed = reader.GetInt32(0);
+                        chamberBalanced = reader.GetInt32(1);
+                        chamberLocked = reader.GetBoolean(2);
+                    }
+                }
+            }
+
+            // 2. Check if allocation exists
+            int? existingAllocationId = null;
+            int existingQty = 0;
+
+            string getAllocQuery = @"SELECT Id, Quantity FROM Allocation
+                                 WHERE partyid=@partyid AND chamberid=@chamberid AND FlagDeleted=0";
+            using (SqlCommand cmd = new SqlCommand(getAllocQuery, conn))
+            {
+                cmd.Parameters.AddWithValue("@partyid", growerId);
+                cmd.Parameters.AddWithValue("@chamberid", chamberId);
+                using (var reader = await cmd.ExecuteReaderAsync())
+                {
+                    if (await reader.ReadAsync())
+                    {
+                        existingAllocationId = reader.GetInt32(0);
+                        existingQty = reader.GetInt32(1);
+                    }
+                }
+            }
+
+            if (existingAllocationId.HasValue)
+            {
+                // --- EDIT CASE ---
+                int newQty = upsertAllotmentVM.NewAllotment ?? 0;
+                int diff = newQty - existingQty;
+
+                // Update allocation
+                string updateAlloc = @"UPDATE Allocation
+                                   SET Quantity=@qty, FlagIsActive=@active, Series=@series
+                                   WHERE Id=@id";
+                using (SqlCommand cmd = new SqlCommand(updateAlloc, conn))
+                {
+                    cmd.Parameters.AddWithValue("@qty", newQty);
+                    cmd.Parameters.AddWithValue("@active", upsertAllotmentVM.IsActive);
+                    cmd.Parameters.AddWithValue("@series", (object?)upsertAllotmentVM.Series ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("@id", existingAllocationId.Value);
+                    await cmd.ExecuteNonQueryAsync();
+                }
+
+                // Update chamber
+                chamberConsumed += diff;
+                chamberBalanced -= diff;
+                chamberLocked = chamberBalanced == 0;
+            }
+            else
+            {
+                // --- ADD CASE ---
+                int newQty = upsertAllotmentVM.NewAllotment ?? 0;
+                int newAllocId;
+
+                string insertAlloc = @"INSERT INTO Allocation
+                                   (partyid, chamberid, Quantity, FlagDeleted, CreatedAt, FlagIsActive, Series)
+                                   OUTPUT INSERTED.Id
+                                   VALUES (@partyid, @chamberid, @qty, 0, @created, @active, @series)";
+                using (SqlCommand cmd = new SqlCommand(insertAlloc, conn))
+                {
+                    cmd.Parameters.AddWithValue("@partyid", growerId);
+                    cmd.Parameters.AddWithValue("@chamberid", chamberId);
+                    cmd.Parameters.AddWithValue("@qty", newQty);
+                    cmd.Parameters.AddWithValue("@created", DateTime.Now);
+                    cmd.Parameters.AddWithValue("@active", upsertAllotmentVM.IsActive);
+                    cmd.Parameters.AddWithValue("@series", (object?)upsertAllotmentVM.Series ?? DBNull.Value);
+
+                    newAllocId = (int)await cmd.ExecuteScalarAsync();
+                }
+
+                // Insert into Dtrans
+                string insertDtrans = @"INSERT INTO Dtrans (chamberid, partyid, AllocationId, LotNumber, FlagDeleted, CreatedAt)
+                                    VALUES (@chamberid, @partyid, @allocId, NULL, 0, @created)";
+                using (SqlCommand cmd = new SqlCommand(insertDtrans, conn))
+                {
+                    cmd.Parameters.AddWithValue("@chamberid", chamberId);
+                    cmd.Parameters.AddWithValue("@partyid", growerId);
+                    cmd.Parameters.AddWithValue("@allocId", newAllocId);
+                    cmd.Parameters.AddWithValue("@created", DateTime.Now);
+                    await cmd.ExecuteNonQueryAsync();
+                }
+
+                // Update chamber
+                chamberConsumed += newQty;
+                chamberBalanced -= newQty;
+                chamberLocked = chamberBalanced == 0;
+            }
+
+            // Final chamber update
+            string updateChamber = @"UPDATE chamber
+                                 SET QuantityConsumed=@consumed, QuantityBalanced=@balanced, IsLocked=@locked
+                                 WHERE chamberid=@chamberid";
+            using (SqlCommand cmd = new SqlCommand(updateChamber, conn))
+            {
+                cmd.Parameters.AddWithValue("@consumed", chamberConsumed);
+                cmd.Parameters.AddWithValue("@balanced", chamberBalanced);
+                cmd.Parameters.AddWithValue("@locked", chamberLocked);
+                cmd.Parameters.AddWithValue("@chamberid", chamberId);
+                await cmd.ExecuteNonQueryAsync();
+            }
+        }
+
+        navigationManager.NavigateTo("chamber");
+    }
+
+    public void NavigateToPreviousPage()
+    {
+        navigationManager.NavigateTo("chamber");
+    }
+
+    public async Task NavigateToView(int growerId)
+    {
+        string connectionString = @"server=DESKTOP-3F92UR5\SQLEXPRESS;database=NewStoreProject_DB;Trusted_Connection=true;TrustServerCertificate=true;MultipleActiveResultSets=true";
+
+        var allocationList = new List<AllGrowerDetailsVM>();
+        int totalTaken = 0;
+        int agreementAllotmentValue = 0;
+
+        using (var connection = new SqlConnection(connectionString))
+        {
+            await connection.OpenAsync();
+
+            // Single query joining Allocation, Party, SubGrower, Chamber, and Agreement
+            string sql = @"
+            SELECT
+                a.Quantity,
+                a.Series,
+                a.chamberid,
+                c.chambername,
+                a.SubGrowerId,
+                p.PartyName,
+                sg.SubGrowerName,
+                ISNULL(ag.Allotment, 0) AS AgreementAllotment
+            FROM Allocation a
+            INNER JOIN party p ON a.partyid = p.partyid
+            LEFT JOIN SubGrowers sg ON a.SubGrowerId = sg.Id
+            INNER JOIN chamber c ON a.chamberid = c.chamberid
+            LEFT JOIN Agreement ag ON p.partyid = ag.partyid
+            WHERE a.partyid = @GrowerId AND a.FlagDeleted = 0";
+
+            using (var cmd = new SqlCommand(sql, connection))
+            {
+                cmd.Parameters.AddWithValue("@GrowerId", growerId);
+
+                using (var reader = await cmd.ExecuteReaderAsync())
+                {
+                    while (await reader.ReadAsync())
+                    {
+                        var quantity = reader["Quantity"] != DBNull.Value ? Convert.ToInt32(reader["Quantity"]) : 0;
+                        var series = reader["Series"] != DBNull.Value ? Convert.ToInt32(reader["Series"]) : (int?)null;
+                        var chamberId = reader["chamberid"] != DBNull.Value ? Convert.ToInt32(reader["chamberid"]) : 0;
+                        var chamberName = reader["chambername"]?.ToString() ?? string.Empty;
+                        var subGrowerId = reader["SubGrowerId"] != DBNull.Value ? Convert.ToInt32(reader["SubGrowerId"]) : (int?)null;
+                        var growerName = subGrowerId == null
+                            ? reader["PartyName"]?.ToString() ?? string.Empty
+                            : reader["SubGrowerName"]?.ToString() ?? string.Empty;
+                        var agreement = reader["AgreementAllotment"] != DBNull.Value ? Convert.ToInt32(reader["AgreementAllotment"]) : 0;
+
+                        // Calculate totalTaken on the fly
+                        totalTaken += quantity;
+                        agreementAllotmentValue = agreement; // same for all rows
+
+                        allocationList.Add(new AllGrowerDetailsVM
+                            {
+                                GrowerName = growerName,
+                                Quantity = quantity,
+                                ChamberId = chamberId,
+                                ChamberName = chamberName,
+                                Series = series
+                            });
+                    }
+                }
+            }
+        }
+
+        // Fill remaining VM properties: Agreement, TotalTaken, TotalAvailable
+        allGrowerDetailsVM = allocationList.Select(a => new AllGrowerDetailsVM
+            {
+                GrowerName = a.GrowerName,
+                Quantity = a.Quantity,
+                ChamberId = a.ChamberId,
+                ChamberName = a.ChamberName,
+                Series = a.Series,
+                Agreement = agreementAllotmentValue,
+                TotalTaken = totalTaken,
+                TotalAvailable = agreementAllotmentValue - totalTaken
+            }).ToList();
+
+        await JSRuntime.InvokeVoidAsync("bootstrapModalShow", "#growerDetailModal");
+    }
+
+
+    public async Task NavigateToEdit(int? growerId, int? chamberId)
+    {
+        this.growerId = growerId;
+        this.chamberId = chamberId;
+
+        if (growerId.HasValue && chamberId.HasValue)
+        {
+            // Load allocation data (keep as-is)
+            var loaded = await LoadDetails(growerId.Value, chamberId.Value);
+            if (loaded != null) upsertAllotmentVM = loaded;
+
+            string connectionString = @"server=DESKTOP-3F92UR5\SQLEXPRESS;database=NewStoreProject_DB;Trusted_Connection=true;TrustServerCertificate=true;MultipleActiveResultSets=true";
+
+            using (var connection = new SqlConnection(connectionString))
+            {
+                await connection.OpenAsync();
+
+                // Grower allocations in current chamber
+                string sqlCurrentChamber = @"SELECT SUM(Quantity)
+                                         FROM Allocation
+                                         WHERE partyid = @GrowerId AND chamberid = @ChamberId AND FlagDeleted = 0";
+
+                using (var cmd = new SqlCommand(sqlCurrentChamber, connection))
+                {
+                    cmd.Parameters.AddWithValue("@GrowerId", growerId.Value);
+                    cmd.Parameters.AddWithValue("@ChamberId", chamberId.Value);
+
+                    var result = await cmd.ExecuteScalarAsync();
+                    upsertAllotmentVM.GrowerConsumedCapacityInCurrentChamber = result != DBNull.Value ? Convert.ToInt32(result) : 0;
+                }
+
+                // Grower allocations in all chambers
+                string sqlAllChambers = @"SELECT SUM(Quantity)
+                                      FROM Allocation
+                                      WHERE partyid = @GrowerId AND FlagDeleted = 0";
+
+                using (var cmd = new SqlCommand(sqlAllChambers, connection))
+                {
+                    cmd.Parameters.AddWithValue("@GrowerId", growerId.Value);
+
+                    var result = await cmd.ExecuteScalarAsync();
+                    upsertAllotmentVM.GrowerConsumedCapacityInAllChambers = result != DBNull.Value ? Convert.ToInt32(result) : 0;
+                }
+
+                // Agreement balance
+                upsertAllotmentVM.AgreementQuantityBalanced =
+                    (upsertAllotmentVM.AgreementQuantityAllowed ?? 0) - upsertAllotmentVM.GrowerConsumedCapacityInAllChambers;
+            }
+
+            // Reload chamber allocations grid (keep as-is)
+            await GetAllocationsByChamberId(chamberId);
+
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+
+    public async Task NavigateToAdd(int? chamberId)
+    {
+        this.growerId = null; // <--- important
+        this.chamberId = chamberId;
+
+        if (chamberId.HasValue)
+        {
+            string connectionString = @"server=DESKTOP-3F92UR5\SQLEXPRESS;database=NewStoreProject_DB;Trusted_Connection=true;TrustServerCertificate=true;MultipleActiveResultSets=true";
+
+            using (var connection = new SqlConnection(connectionString))
+            {
+                await connection.OpenAsync();
+
+                string sql = @"SELECT chamberid, MaxQuantity, QuantityConsumed, QuantityBalanced
+                           FROM chamber
+                           WHERE chamberid = @ChamberId";
+
+                using (var command = new SqlCommand(sql, connection))
+                {
+                    command.Parameters.AddWithValue("@ChamberId", chamberId.Value);
+
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        if (await reader.ReadAsync())
+                        {
+                            upsertAllotmentVM = new UpsertAllotmentVM
+                                {
+                                    ChamberId = reader.GetInt32(reader.GetOrdinal("chamberid")),
+                                    TotalChamberCapacity = reader.GetInt32(reader.GetOrdinal("MaxQuantity")),
+                                    ChamberCapacityConsumed = reader["QuantityConsumed"] != DBNull.Value ? Convert.ToInt32(reader["QuantityConsumed"]) : 0,
+                                    ChamberCapacityBalanced = reader["QuantityBalanced"] != DBNull.Value ? Convert.ToInt32(reader["QuantityBalanced"]) : 0,
+                                    AgreementQuantityAllowed = 0,
+                                    AgreementQuantityBalanced = 0,
+                                    GrowerConsumedCapacityInAllChambers = 0,
+                                    Name = string.Empty,
+                                    Series = 0,
+                                    NewAllotment = 0,
+                                    IsActive = false
+                                };
+                        }
+                    }
+                }
+            }
+        }
+
+        await InvokeAsync(StateHasChanged);
+        await InvokeAsync(() => navigationManager.NavigateTo($"/upsertAllotment/{chamberId}"));
+    }
+
+    public async Task NavigateToDelete(int growerId, int chamberId)
+    {
+        string connectionString = "server=DESKTOP-3F92UR5\\SQLEXPRESS;database=NewStoreProject_DB;Trusted_Connection=true;TrustServerCertificate=true;MultipleActiveResultSets=true";
+
+        using (SqlConnection conn = new SqlConnection(connectionString))
+        {
+            await conn.OpenAsync();
+
+            // Load MixChamber
+            Chamber mixChamber = null;
+            using (SqlCommand cmd = new SqlCommand("SELECT chamberid, MaxQuantity, QuantityConsumed, QuantityBalanced FROM chamber WHERE chamberid = @chamberId", conn))
+            {
+                cmd.Parameters.AddWithValue("@chamberId", chamberId);
+                using (var reader = await cmd.ExecuteReaderAsync())
+                {
+                    if (await reader.ReadAsync())
+                    {
+                        mixChamber = new Chamber
+                            {
+                                chamberid = reader.GetInt32(reader.GetOrdinal("chamberid")),
+                                MaxQuantity = reader.GetInt32(reader.GetOrdinal("MaxQuantity")),
+                                QuantityConsumed = reader["QuantityConsumed"] as int?,
+                                QuantityBalanced = reader["QuantityBalanced"] as int?
+                            };
+                    }
+                }
+            }
+
+            // Load Allocation
+            Allocation allocation = null;
+            using (SqlCommand cmd = new SqlCommand(@"SELECT TOP 1 Id, Quantity
+                                                 FROM Allocation
+                                                 WHERE partyid = @growerId AND chamberid = @chamberId AND FlagDeleted = 0", conn))
+            {
+                cmd.Parameters.AddWithValue("@growerId", growerId);
+                cmd.Parameters.AddWithValue("@chamberId", chamberId);
+                using (var reader = await cmd.ExecuteReaderAsync())
+                {
+                    if (await reader.ReadAsync())
+                    {
+                        allocation = new Allocation
+                            {
+                                Id = reader.GetInt32(reader.GetOrdinal("Id")),
+                                Quantity = reader.GetInt32(reader.GetOrdinal("Quantity"))
+                            };
+                    }
+                }
+            }
+
+            // If no allocation or chamber, return
+            if (allocation == null || mixChamber == null)
+                return;
+
+            // Load Dtrans (LotNumber is NULL, not deleted)
+            int? dtransId = null;
+            using (SqlCommand cmd = new SqlCommand(@"SELECT TOP 1 Id
+                                                 FROM Dtrans
+                                                 WHERE partyid = @growerId AND chamberid = @chamberId
+                                                       AND AllocationId = @allocationId
+                                                       AND LotNumber IS NULL AND FlagDeleted = 0", conn))
+            {
+                cmd.Parameters.AddWithValue("@growerId", growerId);
+                cmd.Parameters.AddWithValue("@chamberId", chamberId);
+                cmd.Parameters.AddWithValue("@allocationId", allocation.Id);
+
+                var result = await cmd.ExecuteScalarAsync();
+                if (result != null && result != DBNull.Value)
+                {
+                    dtransId = Convert.ToInt32(result);
+                }
+            }
+
+            if (dtransId != null)
+            {
+                // Update MixChamber quantities
+                int newConsumed = (mixChamber.QuantityConsumed ?? 0) - allocation.Quantity;
+                int newBalanced = (mixChamber.QuantityBalanced ?? 0) + allocation.Quantity;
+
+                using (SqlCommand cmd = new SqlCommand(@"UPDATE chamber
+                                                     SET QuantityConsumed = @consumed,
+                                                         QuantityBalanced = @balanced
+                                                     WHERE chamberid = @chamberId", conn))
+                {
+                    cmd.Parameters.AddWithValue("@consumed", newConsumed);
+                    cmd.Parameters.AddWithValue("@balanced", newBalanced);
+                    cmd.Parameters.AddWithValue("@chamberId", mixChamber.chamberid);
+                    await cmd.ExecuteNonQueryAsync();
+                }
+
+                // Soft delete Dtrans
+                using (SqlCommand cmd = new SqlCommand("UPDATE Dtrans SET FlagDeleted = 1 WHERE Id = @id", conn))
+                {
+                    cmd.Parameters.AddWithValue("@id", dtransId.Value);
+                    await cmd.ExecuteNonQueryAsync();
+                }
+
+                // Soft delete Allocation
+                using (SqlCommand cmd = new SqlCommand("UPDATE Allocation SET FlagDeleted = 1 WHERE Id = @id", conn))
+                {
+                    cmd.Parameters.AddWithValue("@id", allocation.Id);
+                    await cmd.ExecuteNonQueryAsync();
+                }
+
+                // Refresh allocations grid (kept EF Core call)
+                await GetAllocationsByChamberId(chamberId);
+
+                // Reset form fields (Add mode)
+                this.growerId = null;
+                upsertAllotmentVM = new UpsertAllotmentVM
+                    {
+                        ChamberId = chamberId,
+                        TotalChamberCapacity = mixChamber.MaxQuantity,
+                        ChamberCapacityConsumed = newConsumed,
+                        ChamberCapacityBalanced = newBalanced,
+                        AgreementQuantityAllowed = 0,
+                        AgreementQuantityBalanced = 0,
+                        GrowerConsumedCapacityInAllChambers = 0,
+                        Name = string.Empty,
+                        Series = 0,
+                        NewAllotment = 0,
+                        IsActive = false
+                    };
+
+                await InvokeAsync(StateHasChanged);
+            }
+            else
+            {
+                PopupMessage = "Cannot delete. Lot Number is already present.";
+                await JSRuntime.InvokeVoidAsync("bootstrapModalShow", "#deleteNotAllowedModal");
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+    }
+
+    private bool isGrowerDuplicate = false;
+
+    private async Task CheckIfGrowerAlreadyInChamber()
+    {
+        int growerId = upsertAllotmentVM.Id;
+        int chamberId = upsertAllotmentVM.ChamberId;
+
+        if (growerId > 0 && chamberId > 0)
+        {
+            string query = @"
+            SELECT COUNT(1)
+            FROM Allocation
+            WHERE partyid = @partyid
+              AND chamberid = @chamberid
+              AND FlagDeleted = 0";
+
+            using (SqlConnection conn = new SqlConnection("server=DESKTOP-3F92UR5\\SQLEXPRESS;database=NewStoreProject_DB;Trusted_Connection=true;TrustServerCertificate=true;MultipleActiveResultSets=true"))
+            using (SqlCommand cmd = new SqlCommand(query, conn))
+            {
+                cmd.Parameters.AddWithValue("@partyid", growerId);
+                cmd.Parameters.AddWithValue("@chamberid", chamberId);
+
+                await conn.OpenAsync();
+
+                var result = await cmd.ExecuteScalarAsync();
+                bool isDuplicate = Convert.ToInt32(result) > 0;
+
+                isGrowerDuplicate = isDuplicate;
+                nameErrorMessage = isDuplicate
+                    ? "Grower is already present in this chamber."
+                    : null;
+
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        else
+        {
+            nameErrorMessage = null;
+        }
+    }
+
+
+    public void ClearFields()
+    {
+        isNewAllotmentDisabled = false; // <== reset this so input becomes enabled again
+
+
+        upsertAllotmentVM.Name = "";
+        upsertAllotmentVM.AgreementQuantityAllowed = 0;
+        upsertAllotmentVM.NewAllotment = 0;
+        upsertAllotmentVM.GrowerConsumedCapacityInAllChambers = 0;
+        upsertAllotmentVM.AgreementQuantityBalanced = 0;
+        upsertAllotmentVM.Series = 0;
+    }
+
+    private void Grid_CustomizeElement(GridCustomizeElementEventArgs e)
+    {
+        if (e.ElementType == GridElementType.DataRow)
+        {
+            if (e.VisibleIndex % 2 == 0)
+            {
+                e.Style = "background-color: #f2f2f2;";
+            }
+        }
+    }
+
+}

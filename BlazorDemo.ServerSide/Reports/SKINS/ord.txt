@@ -1,0 +1,71 @@
+USE [CADB2020]
+GO
+/****** Object:  StoredProcedure [dbo].[cotmpfull]    Script Date: 04/08/2021 12:30:01 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER   procedure           [dbo].[cotmpfull]
+AS
+delete from cina
+insert into cina
+ ( cno,gid,inq,cqty,ocqty,pqty)
+ select CHAMBER,gid,SUM(qty),SUM(cqty),SUM(ocqty),SUM(pqty) from dtrans group by
+ CHAMBER,gid
+ 
+insert into cina
+ ( cno,gid,oqty)
+ select CHAMBER,gid,SUM(qty) from dtransout group by
+ CHAMBER,gid
+
+ delete from cinaback
+ delete from gpmts
+  delete from gpmtsf
+ insert into cinaback select gid,ISNULL(sum(inq),0),ISNULL(sum(cqty),0),ISNULL(sum(ocqty),0)
+ ,ISNULL(sum(ocqty),0),0,0,0,0,0,ISNULL(sum(oqty),0),0,0 from cina group by gid
+
+insert into gpmts(gid,grading) 
+select pname,ISNULL(sum(pamount),0) from stgl where pamount>0 and ISNULL(flag,0)='Grading'
+group by pname
+
+insert into gpmts(gid,investment) 
+select pname,ISNULL(sum(pamount),0) from stgl where pamount>0 and ISNULL(flag,0)='investor'
+group by pname
+
+insert into gpmts(gid,comm) 
+select pname,ISNULL(sum(pamount),0) from stgl where pamount>0 and ISNULL(fn,0)='commission'
+group by pname
+
+
+
+
+
+
+
+insert into gpmts(gid,ca) 
+select gid,ISNULL(sum(amt),0) from tbill where amt>0 
+group by gid
+
+insert into gpmts(gid,pmts) 
+select pname,ISNULL(sum(bamount),0) from stgl where bamount>0 and Pname in(select distinct CAST(gid as varchar(50)) from dtrans)
+and ISNULL(DESCRIP,0)='GRT'
+group by pname
+
+insert into gpmts(gid,rawpur) 
+select pname,ISNULL(sum(bamount),0) from stgl where bamount>0 and Pname in(select distinct CAST(gid as varchar(50)) from dtrans)
+and ISNULL(flag,0)='TRANSFER'
+group by pname
+
+insert into gpmts(gid,fpur) 
+select pname,ISNULL(sum(bamount),0) from stgl where bamount>0 and Pname in(select distinct CAST(gid as varchar(50)) from dtrans)
+and ISNULL(flag,0)='FPURCHASE'
+group by pname
+insert into gpmtsf select gid,isnull(SUM(ca),0),isnull(SUM(grading),0),isnull(SUM(pmts),0),isnull(SUM(rawpur),0),isnull(SUM(fpur),0),isnull(SUM(investment),0),isnull(SUM(comm),0)  from gpmts group by gid
+update cinaback set ca=b.ca from cinaback a,gpmtsf b where a.gid=b.gid
+update cinaback set grading=b.grading from cinaback a,gpmtsf b where a.gid=b.gid
+update cinaback set pmts=b.pmts from cinaback a,gpmtsf b where a.gid=b.gid
+update cinaback set rawpur=b.rawpur from cinaback a,gpmtsf b where a.gid=b.gid
+update cinaback set fpur=b.fpur from cinaback a,gpmtsf b where a.gid=b.gid
+update cinaback set investment=b.investment from cinaback a,gpmtsf b where a.gid=b.gid
+update cinaback set comm=b.comm from cinaback a,gpmtsf b where a.gid=b.gid
+

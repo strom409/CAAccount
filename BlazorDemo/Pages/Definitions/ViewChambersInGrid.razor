@@ -1,0 +1,307 @@
+﻿@page "/viewChambersInGrid"
+@using BlazorDemo.Data
+@using Microsoft.EntityFrameworkCore
+@inject AppDbContext context
+@inject NavigationManager navigationManager
+
+@* <h3>ViewChambersInGrid</h3> *@
+<style>
+    .priority-info {
+        background-color: var(--bs-info)
+    }
+
+    .priority-warning {
+        background-color: var(--bs-orange)
+    }
+
+    .status-icon {
+        width: 0.5rem;
+        height: 0.5rem;
+    }
+
+    .priority-danger {
+        background-color: var(--bs-red)
+    }
+
+    .status-icon-new {
+        background-color: var(--bs-cyan);
+    }
+
+    .status-icon-rejected {
+        background-color: var(--bs-red);
+    }
+
+    .status-icon-postponed {
+        background-color: var(--bs-gray-600);
+    }
+
+    .status-icon-fixed {
+        background-color: var(--bs-green);
+    }
+
+    .bug-icon {
+        width: 16px;
+        height: 17px;
+        background-image: url("images/icons/bug.svg");
+    }
+
+    .dxbl-grid {
+        height: auto;
+        border-radius: 5px;
+        margin-top: 40px;
+        margin-bottom: 40px;
+    }
+
+    span {
+        font-size: large;
+    }
+
+    td.dxbl-align-center {
+        font-size: larger !important;
+    }
+
+    span.dxbl-btn-caption {
+        font-size: 14px;
+    }
+
+    dxbl-grid-header-content.dxbl-grid-header-content {
+        text-align: center;
+    }
+
+    .dxbl-grid-search-box-container dxbl-input-editor {
+        border: 1px solid black !important;
+    }
+
+    button.dxbl-btn.dxbl-btn-outline-secondary.dxbl-btn-icon {
+        color: green;
+    }
+
+    button.btn.btn-sm.btn-primary {
+        margin-bottom: -25px !important;
+    }
+</style>
+<div class="d-flex justify-content-end">
+    <button class="btn btn-sm btn-primary" @onclick=NavigateToAdd title="Add Chamber">
+        <i class="fa fa-plus me-1"></i> Add Chamber
+    </button>
+</div>
+<div style="overflow-x:auto; width:100%;">
+
+
+
+    <DxGrid Data="@chamberDetails" CustomizeElement="Grid_CustomizeElement"
+            ShowGroupPanel="false" TextWrapEnabled="false" AutoExpandAllGroupRows="true"
+            FilterMenuButtonDisplayMode="GridFilterMenuButtonDisplayMode.Always" ShowSearchBox="true" ColumnResizeMode="GridColumnResizeMode.NextColumn"
+            AllowSelectRowByClick="true" @bind-SearchText="@GridSearchText"
+            HighlightRowOnHover="true" PagerVisible="true" PageSize="@chamberDetails.Count" PageSizeSelectorVisible="false">
+
+        <Columns>
+            <DxGridDataColumn FieldName="@nameof(ChamberModelVM.BuildingId)" Caption="Building Code" TextAlignment="GridTextAlignment.Center" Width="170px">
+            </DxGridDataColumn>
+            @* <DxGridDataColumn FieldName="@nameof(ChamberModelVM.ChamberId)" Caption="Chamber ID" TextAlignment="GridTextAlignment.Center">
+            </DxGridDataColumn> *@
+            <DxGridDataColumn FieldName="@nameof(ChamberModelVM.ChamberName)" Caption="Chamber Name" TextAlignment="GridTextAlignment.Center" Width="171px">
+            </DxGridDataColumn>
+            <DxGridDataColumn FieldName="@nameof(ChamberModelVM.Type)" Caption="Type" TextAlignment="GridTextAlignment.Center" Width="150px">
+            </DxGridDataColumn>
+            <DxGridDataColumn FieldName="@nameof(ChamberModelVM.Floor)" Caption="Floor" TextAlignment="GridTextAlignment.Center" Width="90px">
+            </DxGridDataColumn>
+            <DxGridDataColumn FieldName="@nameof(ChamberModelVM.CFT)" Caption="CFT" TextAlignment="GridTextAlignment.Center" Width="80px">
+            </DxGridDataColumn>
+            <DxGridDataColumn FieldName="@nameof(ChamberModelVM.Status)" Caption="Status" TextAlignment="GridTextAlignment.Center" Width="95px">
+         
+
+                <CellDisplayTemplate Context="cellData">
+                    @{
+                        var status = cellData.Value?.ToString();
+                        var iconClass = status switch
+                        {
+                            "True" => "oi oi-circle-check text-success",
+                            "true" => "oi oi-x text-danger",
+                            "False" => "oi oi oi-x text-danger",
+                            _ => "oi oi-question-mark text-secondary"
+                        };
+                      
+                    }
+                  
+
+
+                </CellDisplayTemplate>
+
+            
+            
+            
+            
+            
+            
+            
+            
+            </DxGridDataColumn>
+            <DxGridDataColumn FieldName="@nameof(ChamberModelVM.ActualSize)" Caption="ActualSize" TextAlignment="GridTextAlignment.Center">
+            </DxGridDataColumn>
+            <DxGridDataColumn FieldName="@nameof(ChamberModelVM.UsableSize)" Caption="UsableSize" TextAlignment="GridTextAlignment.Center">
+            </DxGridDataColumn>
+            <DxGridDataColumn FieldName="@nameof(ChamberModelVM.Square)" Caption="Square(FT)" TextAlignment="GridTextAlignment.Center">
+            </DxGridDataColumn>
+            <DxGridDataColumn FieldName="@nameof(ChamberModelVM.isLocked)" Caption="IsLocked" TextAlignment="GridTextAlignment.Center">
+                <CellDisplayTemplate Context="cellData">
+                    @{
+                        var islocked = cellData.Value?.ToString();
+                        var iconClass = islocked switch
+                        {
+                            "True" => "oi oi-circle-check text-success",
+                            "true" => "oi oi-x text-danger",
+                            "False" => "oi oi oi-x text-danger",
+                            _ => "oi oi-question-mark text-secondary"
+                        };
+
+                    }
+
+
+
+                </CellDisplayTemplate>
+
+            
+            
+            </DxGridDataColumn>        
+            <DxGridDataColumn Caption="Action" TextAlignment="GridTextAlignment.Center">
+                <CellDisplayTemplate>
+                    @* <span class="me-1" style="cursor:pointer;" title="View">
+                        <i class="fa-sharp-duotone fa-solid fa-eye"></i>
+                    </span> *@
+                    <span class="me-1" @onclick=NavigateToAdd style="cursor:pointer" title="Add">
+                            <i class="fa fa-plus"></i>
+                    </span>
+                    <span class="me-1" @onclick="() => NavigateToEdit(((ChamberModelVM)context.DataItem).ChamberId)" style="cursor:pointer" title="Edit">
+                        <i class="fa  fa-pen"></i>
+                    </span>
+                    <span class="me-1" @onclick="() => NavigateToDelete(((ChamberModelVM)context.DataItem).ChamberId)" style="cursor:pointer" title="Delete">
+                        <i class="fa fa-trash"></i>
+                    </span>
+                </CellDisplayTemplate>
+            </DxGridDataColumn>
+        </Columns>
+        <TotalSummary>
+            <DxGridSummaryItem FieldName="@nameof(ChamberModelVM.ChamberId)"
+                               SummaryType="GridSummaryItemType.Count"
+                               FooterColumnName="@nameof(ChamberModelVM.ChamberName)"
+                               DisplayText="Total Chambers : {0}" />
+        </TotalSummary>
+        
+
+    </DxGrid>
+</div>
+
+<!-- Delete Not Allowed Modal -->
+<div class="modal fade" id="deleteNotAllowedModal" tabindex="-1" aria-labelledby="deleteNotAllowedLabel" aria-hidden="true">
+    <div class="modal-dialog" style="margin-top:10vh;">
+        <div class="modal-content border-danger">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteNotAllowedLabel">Deletion Restricted</h5>
+                <button type="button" class="btn-close text-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-danger fw-bold">
+                @DeleteChamberMessage
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-danger" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+                @code{
+
+        public class ChamberModelVM
+        {
+            public int ChamberId { get; set; }
+            public int? BuildingId { get; set; }
+            public string ChamberName { get; set; }
+            public string Type { get; set; }
+            public float? Floor { get; set; }
+            public float? CFT { get; set; }
+            public float? ActualSize { get; set; }
+            public float? UsableSize { get; set; }
+            public float? Square { get; set; }
+            public bool isLocked { get; set; }
+            public bool Status { get; set; }
+        }
+        private string GridSearchText = "";
+
+        private string DeleteChamberMessage = "";
+        ListSearchMode SearchMode { get; set; } = ListSearchMode.AutoSearch;
+        ListSearchFilterCondition SearchFilterCondition { get; set; } = ListSearchFilterCondition.Contains;
+        ListSearchTextParseMode SearchTextParseMode { get; set; } = ListSearchTextParseMode.GroupWordsByAnd;
+
+        private List<ChamberModelVM> chamberDetails = new();
+
+        protected override void OnInitialized()
+        {
+            GetAllChambers();
+        }
+
+        public void NavigateToAdd()
+        {
+            navigationManager.NavigateTo("/upsertchamber");
+        }
+        public void NavigateToEdit(int chamberId)
+        {
+            navigationManager.NavigateTo($"/upsertchamber/{chamberId}");
+        }
+
+        [Inject] IJSRuntime JSRuntime { get; set; }
+        public void NavigateToDelete(int chamberId)
+        {
+            var obj = context.chamber.FirstOrDefault(a => a.chamberid == chamberId);
+            if (obj != null)
+            {
+                var allocations = context.Allocation.Where(a => a.chamberid == obj.chamberid && !a.FlagDeleted).ToList();
+                if (allocations.Count == 0)
+                {
+                    obj.FlagDeleted = true;
+                    context.SaveChanges();
+                }
+                else
+                {
+                    DeleteChamberMessage = "This chamber cannot be removed due to existing allocation records.";
+                    JSRuntime.InvokeVoidAsync("bootstrapModalShow", "#deleteNotAllowedModal");
+                }
+            }
+            GetAllChambers();
+        }
+
+        public async Task GetAllChambers()
+        {
+            chamberDetails = await context.chamber
+                                .Include(a => a.Building)
+                                .Where(a => a.FlagDeleted == false)
+                .Select(a => new ChamberModelVM
+                {
+                    ChamberId = a.chamberid,
+                    ChamberName = a.chambername,
+                    Type = a.ChamberType ?? "NULL",
+                    Floor = a.Floor ?? 0,
+                    CFT = a.CFT ?? 0,
+                    ActualSize = a.ActualSize ?? 0,
+                    UsableSize = a.UsableSize ?? 0,
+                    Square = a.SquareFeet ?? 0,
+                    isLocked = a.IsLocked,
+                    Status = a.Status,
+                    BuildingId = a.BuildingId ?? 0,
+                })
+                .ToListAsync();
+            StateHasChanged();
+
+        }
+
+        private void Grid_CustomizeElement(GridCustomizeElementEventArgs e)
+        {
+            if (e.ElementType == GridElementType.DataRow)
+            {
+                if (e.VisibleIndex % 2 == 0)
+                {
+                    e.Style = "background-color: #f2f2f2;";
+                }
+            }
+        }
+    }

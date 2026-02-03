@@ -1,0 +1,16 @@
+{
+  "profiles": {
+    "YourApp": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": true,
+      "applicationUrl": "https://localhost:7000;http://localhost:5000",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "DOTNET_WATCH_RESTART_ON_RUDE_EDIT": "true"
+      },
+      "hotReloadEnabled": true,
+      "hotReloadProfile": "aspnetcore"
+    }
+  }
+}

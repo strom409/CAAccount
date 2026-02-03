@@ -1,0 +1,281 @@
+﻿@page "/login"
+@layout EmptyLayout
+   @using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
+@inject EmployeeAdoNetService EmployeeService
+@using Syncfusion.Blazor
+@inject UserSessionService UserSessionService
+@using Syncfusion.Blazor.DropDowns
+@inject NavigationManager NavigationManager
+@using BlazorDemo.Services;
+@using BlazorDemo;
+@inject IJSRuntime JS
+@inject ProtectedLocalStorage ProtectedLocalStore
+
+@inject NavigationManager Navigation
+
+@* Bootstrap CSS is already loaded in _Host.cshtml *@
+<div class="login-container d-flex align-items-center justify-content-center vh-100">
+    <div class="card shadow p-4 login-card w-100" style="max-width: 400px;">
+        <h4 class="text-center mb-4">User Login</h4>
+        <EditForm Model="@loginModel">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <div class="mb-3">
+                <InputText @bind-Value="loginModel.GlobalUserName" class="form-control input-placeholder-dim input-focus-dark" placeholder="Username" />
+            </div>
+
+            <div class="mb-3">
+                <InputText @bind-Value="loginModel.UserPassword" class="form-control input-placeholder-dim input-focus-dark" placeholder="Password" type="password" />
+            </div>
+            <div class="row mb-3">
+                <div class="col">
+                    <InputSelect @bind-Value="loginModel.GlobalUnitName" class="form-control input-placeholder-dim input-focus-dark">
+                        <option value="">Select Unit</option>
+                        <option>A</option>
+                        <option>B</option>
+                        <option>C</option>
+                    </InputSelect>
+                </div>
+                <div class="col">
+                    <InputSelect @bind-Value="loginModel.Fyear" class="form-control input-placeholder-dim input-focus-dark">
+                        <option value="">Financial Year</option>
+                        <option>25-26</option>
+                    </InputSelect>
+                </div>
+            </div>
+
+            <button type="button" class="btn btn-primary w-100" @onclick="CheckLogin" disabled="@isLoading">
+                @if (isLoading)
+                {
+                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    <span>Logging in...</span>
+                }
+                else
+                {
+                    <span>Login</span>
+                }
+            </button>
+        </EditForm>
+
+        <div class="text-center mt-3">
+            <a href="#">Forgot password?</a>
+        </div>
+    </div>
+</div>
+
+@if (ShowEmptyFieldDialogError)
+{
+    <DxPopup @bind-Visible="@ShowEmptyFieldDialogError"
+             HeaderText="Alert"
+             ShowCloseButton="true"
+             CssClass="dx-popup-danger">
+          
+
+
+        <Content>
+            <p><strong>Failed </strong>@DialogMessage</p>
+            <DxButton Text="OK" RenderStyle="ButtonRenderStyle.Primary" Click="@(() => ShowEmptyFieldDialogError = false)" />
+        </Content>
+    </DxPopup>
+}
+
+
+
+
+
+
+<DxDialogProvider />
+@code {
+    private bool? result { get; set; } = null;
+    private bool ShowEmptyFieldDialogError { get; set; }
+    private bool ShowEmptyFieldDialog { get; set; }
+    private string DialogMessage { get; set; } = "";
+
+    private CompanyModel loginModel = new();
+    private bool isLoading = false;
+    [Inject] IDialogService DialogService { get; set; }
+
+    private async Task CheckLogin()
+    {
+        if (isLoading) return; // Prevent multiple clicks
+        
+        await JS.InvokeVoidAsync("console.log", "🔵 Login button clicked!");
+        await JS.InvokeVoidAsync("console.log", "Username:", loginModel.GlobalUserName);
+        await JS.InvokeVoidAsync("console.log", "Unit:", loginModel.GlobalUnitName);
+        await JS.InvokeVoidAsync("console.log", "FYear:", loginModel.Fyear);
+        
+        var validationResults = new List<ValidationResult>();
+        var context = new ValidationContext(loginModel);
+
+        bool isValid = Validator.TryValidateObject(loginModel, context, validationResults, true);
+
+        if (!isValid)
+        {
+            await JS.InvokeVoidAsync("console.log", "❌ Validation failed", validationResults);
+            return;
+        }
+
+        try
+        {
+            isLoading = true;
+            StateHasChanged(); // Update UI to show loading state
+            
+            await JS.InvokeVoidAsync("console.log", "✅ Validation passed, calling API...");
+            // Model is valid – proceed to check login
+            var result = await EmployeeService.CheckUser(loginModel);
+            await JS.InvokeVoidAsync("console.log", "📡 API Response - RetFlag:", result?.RetFlag);
+            await JS.InvokeVoidAsync("console.log", "📡 API Response - RetMessage:", result?.RetMessage);
+
+        if (result != null && result.RetFlag.Trim() == "FALSE" && !string.IsNullOrEmpty(result.RetMessage))
+        {
+            DialogMessage = result.RetMessage;
+            ShowEmptyFieldDialogError = true;
+            _ = Task.Run(async () =>
+     {
+         await Task.Delay(3000);
+         ShowEmptyFieldDialogError = false;
+         await InvokeAsync(StateHasChanged); // refresh UI from background thread
+     });
+        }
+
+        if (result != null && result.RetFlag.Trim() == "TRUE")
+        {
+            // await JS.InvokeVoidAsync("alert", loginModel.GlobalUserName);
+         //   await JS.InvokeVoidAsync("alert", loginModel.GlobalUnitId);
+            ///       
+            loginModel.GlobalUnitId = result.GlobalUnitId;
+            loginModel.GlobalUserGroup = result.GlobalUserGroup;
+
+            UserSessionService.GlobalUserGroupall = loginModel.GlobalUserGroup;
+            //await UserSessionService.SaveUserToStorageAsync();
+          
+            await UserSessionService.SaveUserGroupAsync(loginModel.GlobalUserGroup);
+
+
+
+
+            await UserSessionService.LoginAsync(loginModel.GlobalUserName, loginModel.GlobalUnitName, result.GlobalUnitId, result.GlobalUserGroup);
+         
+            await ProtectedLocalStore.SetAsync("Username", loginModel.GlobalUserName);
+            await ProtectedLocalStore.SetAsync("Unitname", loginModel.GlobalUnitName);
+            await ProtectedLocalStore.SetAsync("Unitidno", result.GlobalUnitId.ToString() ?? "0");
+            await ProtectedLocalStore.SetAsync("UserGroup", loginModel.GlobalUserGroup);
+
+
+          // await UserSessionService.Login(loginModel.GlobalUserName, loginModel.GlobalUnitName);
+            Navigation.NavigateTo("/index");
+        return;
+    }
+
+        DialogMessage = "Invalid Credentials";
+        ShowEmptyFieldDialogError = true;
+        _ = Task.Run(async () =>
+     {
+     await Task.Delay(3000);
+     ShowEmptyFieldDialogError = false;
+     await InvokeAsync(StateHasChanged); // refresh UI from background thread
+     });
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("console.error", "❌ API Error:", ex.Message);
+            await JS.InvokeVoidAsync("console.error", "Stack trace:", ex.StackTrace);
+            
+            DialogMessage = $"Login failed: {ex.Message}";
+            ShowEmptyFieldDialogError = true;
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(5000);
+                ShowEmptyFieldDialogError = false;
+                await InvokeAsync(StateHasChanged);
+            });
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged(); // Update UI to hide loading state
+        }
+}
+}
+<style>
+    body {
+        background-color: black;
+    }
+
+    .login-container {
+        background-color: black;
+        min-height: 100vh;
+    }
+
+    .login-card {
+        border-radius: 12px;
+        border: none;
+        padding: 2rem;
+        /* Increased height by adding more padding */
+    }
+
+    .input-placeholder-dim::placeholder {
+        color: #adb5bd;
+        opacity: 0.8;
+    }
+
+    .input-focus-dark:focus {
+        border-color: #495057;
+        box-shadow: 0 0 0 0.2rem rgba(73, 80, 87, 0.25);
+    }
+
+    .btn-primary {
+        background-color: #56317F;
+        border-color: #56317F;
+        padding: 0.75rem;
+        font-weight: 500;
+        
+    }
+
+        .btn-primary:hover {
+            background-color: #56317F;
+            border-color: #56317F;
+        }
+
+    h4 {
+        color: #343a40;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+    }
+
+    .form-control {
+        padding: 0.75rem;
+        border-radius: 6px;
+    }
+
+    .forgot-password {
+        color: #6c757d;
+        text-decoration: none;
+    }
+
+        .forgot-password:hover {
+            color: #495057;
+            text-decoration: underline;
+        }
+
+    .dx-popup-danger .dxbs-modal-content {
+        background-color: #dc3545; /* Bootstrap's danger red */
+        color: #fff;
+        border-color: #dc3545;
+    }
+
+    .dx-popup-danger .dxbs-modal-header {
+        background-color: #dc3545;
+        color: #fff;
+        border-bottom: 1px solid #dc3545;
+    }
+
+    .dx-popup-danger .dxbs-modal-title {
+        color: #fff;
+    }
+
+    .dx-popup-danger .dxbs-close-button {
+        color: #fff; /* Adjust close button color if needed */
+    }
+</style>

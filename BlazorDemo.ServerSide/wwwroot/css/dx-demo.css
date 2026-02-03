@@ -1,0 +1,69 @@
+@page "/calenderslot"
+@using DevExpress.Blazor
+@inject IJSRuntime JSRuntime
+@inject NavigationManager Navigation
+
+<style >
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+.calendar-page {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+.dxbl-grid {
+    font-family: 'Source Sans Pro', sans-serif;
+    font-size: 13px;
+}
+
+    /* Optional: also target nested elements if needed */
+    .dxbl-grid * {
+        font-family: 'Source Sans Pro', sans-serif;
+        font-size: 13px;
+    }
+.calendar-container {
+    flex: 1;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+}
+
+.demo-calendar {
+    flex: 1;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Override DevExpress internal limits */
+.dx-calendar-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100% !important;
+}
+
+.dx-calendar-body {
+    flex: 1;
+    height: 100% !important;
+}
+
+.dx-calendar-table {
+    height: 100%;
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+}
+
+.dx-calendar-row {
+    height: calc(100% / 6); /* 6 weeks max in a month view */
+}
+
+.dx-calendar-cell {
+    height: 100%;
+    text-align: center;
+    vertica

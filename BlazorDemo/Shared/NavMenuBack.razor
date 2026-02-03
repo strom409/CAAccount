@@ -1,0 +1,457 @@
+﻿@inject DemoConfiguration Configuration
+@inject NavigationManager NavigationManager
+
+@if(!VisibleGroups.Any() && SearchResult != null) {
+   @*  <div class="search-no-results">No results found for <b>@SearchResult.RequestString</b>.</div> *@
+} else @* {
+    var expandedItems = GetExpandedItems();
+    @foreach(var group in VisibleGroups) {
+        @if(!Configuration.IsSingleProduct) {
+            <h5 class="demo-group">@GetGroupTitle(group)</h5>
+        } *@
+
+        @using DevExpress.Blazor
+@inject NavigationManager Navigation
+   @*  <DxTreeView Data="@MenuData"
+                TextFieldName="Text"
+                KeyFieldName="Id"
+                ParentFieldName="ParentId"
+                NavigateUrlFieldName="Url"
+                CssClass="w-100" />
+ *@
+ 
+
+        <style>
+        .compact-tree .dxbl-treeview-node {
+            padding: 1px 0;
+            margin: 0;
+        }
+
+        .compact-tree .dxbl-treeview-node-content {
+            min-height: 24px; /* Reduce from default 32px */
+        }
+       /* TreeView container with dark gradient */
+        .custom-treeview {
+            background: linear-gradient(to bottom right, #716866,#474747);
+            padding: 10px;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        /* Remove spacing between all nodes */
+        .my-tree .dxbs-treeview-node,
+        .my-tree .dxbs-treeview-children {
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        /* Node content padding */
+        .my-tree .dxbs-treeview-node-content {
+            padding: 3px 8px !important;
+            border-radius: 4px;
+            margin: 0 !important;
+            line-height: 1.2 !important;
+        }
+
+        /* Reduce indent for child nodes */
+        .my-tree .dxbs-treeview-children {
+            padding-left: 8px !important; /* You can reduce this further */
+        }
+
+        /* Hover effect */
+        .my-tree .dxbs-treeview-node-content:hover {
+            background-color: rgba(255, 255, 255, 0.1) !important;
+        }
+
+        /* Selected node */
+        .my-tree .dxbs-treeview-node-selected .dxbs-treeview-node-content {
+            background-color: rgba(255, 255, 255, 0.2) !important;
+        }
+
+        /* Optional: icon spacing */
+        .my-tree .dxbs-treeview-node-icon {
+            margin-right: 4px !important;
+        }
+
+        .dxbl-treeview .dxbl-treeview-node-container > .dxbl-treeview-node-container {
+            margin-left: 8px; /* Default is 16px */
+        }
+
+        /* Compact mode for all nodes */
+        .dxbl-treeview.compact-mode .dxbl-treeview-node {
+            padding-top: 0;
+            padding-bottom: 0;
+            margin-top: 0;
+            margin-bottom: 0;
+            line-height: 1.2;
+
+        }
+
+
+        .demo-treeview-template .nav-pills .nav-pills {
+            margin-left: 0 !important;
+        }
+
+        .demo-treeview-template h5 {
+            margin-bottom: .1rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            line-height: 1.2;
+    </style>
+
+
+
+
+
+
+
+
+
+    <div CssClass="demo-treeview-template cw-880">
+
+        <DxTreeView CssClass="compact-tree">
+            <Nodes>
+           
+                <DxTreeViewNode Text="Dashboard" NavigateUrl="/dashboard"
+                            IconCssClass="fa fa-angle-double-right"
+                         CssClass="@GetActiveClass("/dashboard")" />
+                <DxTreeViewNode Text="Basic Definitions">
+                    <Nodes>
+                    <DxTreeViewNode Text="Company Definition" NavigateUrl="Company"
+                                    IconCssClass="fa fa-angle-double-right"
+                        
+                        CssClass="@GetActiveClass("Pages/Definitions/")" />
+                        <DxTreeViewNode Text="Unit Codes" NavigateUrl="UnitDef"
+                                    IconCssClass="fa fa-angle-double-right"
+                        
+                                    
+                                    CssClass="@GetActiveClass("Pages/Definitions/")" />
+                    <DxTreeViewNode Text="Buildings" NavigateUrl="Building"
+                                    IconCssClass="fa fa-angle-double-right"
+                                    
+                                    CssClass="@GetActiveClass("/products/add")" />
+                    <DxTreeViewNode Text="product Type" NavigateUrl="ProductName"
+                                    IconCssClass="fa fa-angle-double-right"
+                                    CssClass="@GetActiveClass("/products/add")" />
+
+                    <DxTreeViewNode Text="Service Types" NavigateUrl="ServiceTypes"
+                                    IconCssClass="fa fa-angle-double-right"
+                                    CssClass="@GetActiveClass("/products/add")" />
+
+                    <DxTreeViewNode Text="Package Types" NavigateUrl="Packages"
+                                    IconCssClass="fa fa-angle-double-right"
+                                    CssClass="@GetActiveClass("/products/add")" />
+                   
+
+                    <DxTreeViewNode Text="Chamber Master" NavigateUrl=""
+                                    IconCssClass="fa fa-angle-double-right"
+                                    CssClass="@GetActiveClass("Pages/Definitions/")" />
+
+                    <DxTreeViewNode Text="Product Quality" NavigateUrl="ProductQuality"
+                                    IconCssClass="fa fa-angle-double-right"
+                                    CssClass="@GetActiveClass("/products/add")" />
+
+
+                    <DxTreeViewNode Text="Crate Types" NavigateUrl="CrateTypes"
+                                    IconCssClass="fa fa-angle-double-right"
+                                    CssClass="@GetActiveClass("/products/add")" />
+
+
+
+
+                    <DxTreeViewNode Text="Crate Flags" NavigateUrl="CrateFlags"
+                                    IconCssClass="fa fa-angle-double-right"
+                                    CssClass="@GetActiveClass("/products/add")" />
+
+
+
+
+
+                </Nodes>
+                </DxTreeViewNode>
+
+
+               <DxTreeViewNode Text="Grower Management">
+                    <Nodes>
+                    <DxTreeViewNode Text="Grower Group" NavigateUrl="GrowerRef"
+                                    IconCssClass="fa fa-angle-double-right"
+                                    CssClass="@GetActiveClass("Pages/Definitions/")" />
+                    <DxTreeViewNode Text="Reports" NavigateUrl="GrowerReport"
+                                    IconCssClass="fa fa-angle-double-right"
+                                    CssClass="@GetActiveClass("Pages/Definitions/")" />
+                 
+                </Nodes>
+                </DxTreeViewNode>
+
+
+            <DxTreeViewNode Text="Accounting Masters">
+                <Nodes>
+                    <DxTreeViewNode Text="Master Group" NavigateUrl="AccountMaster"
+                                    IconCssClass="fa fa-angle-double-right"
+                                    CssClass="@GetActiveClass("Pages/Definitions/")" />
+                    <DxTreeViewNode Text="Master SubGroup" NavigateUrl="AccountSubMaster"
+                                    IconCssClass="fa fa-angle-double-right"
+                                    CssClass="@GetActiveClass("Pages/Definitions/")" />
+
+                    <DxTreeViewNode Text="Account SubGroups" NavigateUrl="AccountSubGroup"
+                                    IconCssClass="fa fa-angle-double-right"
+                                    CssClass="@GetActiveClass("Pages/Definitions/")" />
+
+                    <DxTreeViewNode Text="Voucher Types" NavigateUrl="VoucherTypes"
+                                    IconCssClass="fa fa-angle-double-right"
+                                    CssClass="@GetActiveClass("Pages/Definitions/")" />
+
+                                    
+                                    
+                                    <DxTreeViewNode Text="General Accounts" NavigateUrl="AccountRef"
+                                    IconCssClass="fa fa-angle-double-right"
+                                    CssClass="@GetActiveClass("Pages/Definitions/")" />
+
+
+                    <DxTreeViewNode Text="Account Transactions" NavigateUrl="AccountTransactions"
+                                    IconCssClass="fa fa-angle-double-right"
+                                    CssClass="@GetActiveClass("Pages/Definitions/")" />
+
+                                    
+            <DxTreeViewNode Text="Debit Note" NavigateUrl="GrowerReport"
+                                IconCssClass="fa fa-angle-double-right"
+                                CssClass="@GetActiveClass("Pages/Definitions/")" />
+
+                <DxTreeViewNode Text="Credit Note" NavigateUrl="GrowerReport"
+                                IconCssClass="fa fa-angle-double-right"
+                                CssClass="@GetActiveClass("Pages/Definitions/")" /> 
+
+
+                </Nodes>
+            </DxTreeViewNode>
+
+                <DxTreeViewNode Text="Inventory Management">
+                    <Nodes>
+                        <DxTreeViewNode Text="Purchase Group" NavigateUrl="PurchaseGroup"
+                                        IconCssClass="fa fa-angle-double-right"
+                                        CssClass="@GetActiveClass("Pages/Definitions/")" />
+                        <DxTreeViewNode Text="Purchase Items" NavigateUrl="PurchaseItem"
+                                        IconCssClass="fa fa-angle-double-right"
+                                        CssClass="@GetActiveClass("Pages/Definitions/")" />
+
+                        <DxTreeViewNode Text="Purchase Order" NavigateUrl="AccountSubGroup"
+                                        IconCssClass="fa fa-angle-double-right"
+                                        CssClass="@GetActiveClass("Pages/Definitions/")" />
+
+                        <DxTreeViewNode Text="Purchase Receive" NavigateUrl="VoucherTypes"
+                                        IconCssClass="fa fa-angle-double-right"
+                                        CssClass="@GetActiveClass("Pages/Definitions/")" />
+
+
+
+                        <DxTreeViewNode Text="Purchase Reports" NavigateUrl="AccountRef"
+                                        IconCssClass="fa fa-angle-double-right"
+                                        CssClass="@GetActiveClass("Pages/Definitions/")" />
+
+
+                       
+
+                    </Nodes>
+                </DxTreeViewNode>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            </Nodes>
+        </DxTreeView>
+
+    </div>
+
+
+      
+
+
+
+
+      
+
+
+
+      @*   <DxTreeView @ref="@treeView"
+                    CssClass="sidebar-tree"
+                    UrlMatchMode="NavigationUrlMatchMode.Exact"
+                    NodeExpandCollapseAction="TreeViewNodeExpandCollapseAction.NodeClick"
+                    AllowSelectNodes="true"
+                    TextWrapEnabled="true" aria-label="@GetTreeLabel(group)">
+            <Nodes>
+                @foreach(var demoPage in group.GetNavTreeChildren(Configuration.IsSiteMode).Where(p => IsVisibleItem(p))) {
+                    <NavMenuLeaf DemoItem="@demoPage" SearchResult="@SearchResult" ExpandedItems="@expandedItems"></NavMenuLeaf>
+                }
+            </Nodes>
+        </DxTreeView> *@
+   
+
+@code {
+  
+    
+    @code {
+  
+        
+        
+        
+        
+        
+        
+        
+        class MenuItem {
+        public string Text { get; set; }
+        public string IconCssClass { get; set; }
+        public string Url { get; set; }
+        public List<MenuItem> Items { get; set; }
+    }
+        private string GetActiveClass(string path)
+        {
+            return Navigation.Uri.Contains(path, StringComparison.OrdinalIgnoreCase) ? "active" : string.Empty;
+        }
+    List<MenuItem> MenuData = new List<MenuItem> {
+        new MenuItem {
+            Text = "Dashboard", IconCssClass = "dx-icon-home", Url = "/dashboard"
+        },
+        new MenuItem {
+            Text = "Reports", IconCssClass = "dx-icon-chart",
+            Items = new List<MenuItem> {
+                new MenuItem { Text = "Sales Report", Url = "/reports/sales" },
+                new MenuItem { Text = "Inventory Report", Url = "/reports/inventory" }
+            }
+        },
+        new MenuItem {
+            Text = "Settings", IconCssClass = "dx-icon-preferences",
+            Items = new List<MenuItem> {
+                new MenuItem { Text = "User Management", Url = "/settings/users" },
+                new MenuItem { Text = "System Settings", Url = "/settings/system" }
+            }
+        }
+    };
+}
+   
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    DxTreeView treeView { set => treeViews.Add(value); }
+
+    List<DxTreeView> treeViews = new();
+
+    public IEnumerable<DemoGroup> Groups { get => Configuration.Groups; }
+
+    bool IsVisibleGroup(DemoGroup group) {
+        return SearchResult == null || SearchResult.ContainsInHierarchy(group);
+    }
+
+    bool IsVisibleItem(DemoItem item) {
+        return SearchResult == null || SearchResult.ContainsInHierarchy(item);
+    }
+
+    protected IEnumerable<DemoGroup> VisibleGroups { get => Groups.Where(g => IsVisibleGroup(g)); }
+
+    public MarkupString GetGroupTitle(DemoGroup group) {
+        if(SearchResult == null)
+            return new(group.Title);
+        return new(SearchResult.GetHighlightedMarkup(group.Title));
+    }
+
+    public string GetTreeLabel(DemoGroup group) {
+        return !Configuration.IsSingleProduct && !string.IsNullOrEmpty(group.NavigationAriaLabel) ? group.NavigationAriaLabel : null;
+    }
+
+    [Parameter] public DemoSearchResult SearchResult { get; set; }
+    [Parameter] public string ActivePage { get; set; }
+
+    void UpdateSelection() {
+        foreach(var treeView in treeViews) {
+            treeView.ClearSelection();
+            treeView.SelectNode(n => IsSelectedNode(n, ActivePage));
+        }
+    }
+
+    protected override void OnInitialized() {
+        NavigationManager.LocationChanged += OnLocationChanged;
+        base.OnInitialized();
+    }
+
+    protected override void OnAfterRender(bool firstRender) {
+        UpdateSelection();
+        base.OnAfterRender(firstRender);
+    }
+
+    protected override void OnParametersSet() {
+        UpdateSelection();
+        base.OnParametersSet();
+    }
+
+    public void Dispose() {
+        NavigationManager.LocationChanged -= OnLocationChanged;
+    }
+
+    void OnLocationChanged(object sender, LocationChangedEventArgs args) {
+        UpdateSelection();
+    }
+
+    HashSet<string> GetExpandedItems() {
+        var selectedItem = !string.IsNullOrEmpty(ActivePage) ? Configuration.FindDemoItemRecursively(i => IsSelectedNode(i.GetUrl(), ActivePage)) : null;
+        var result = new HashSet<string>();
+        while(selectedItem != null) {
+            result.Add(selectedItem.UniqueId);
+            selectedItem = selectedItem.ParentPage;
+        }
+
+        return result;
+    }
+
+    bool IsSelectedNode(ITreeViewNodeInfo node, string currentUri) {
+        return IsSelectedNode(node.NavigateUrl, currentUri);
+    }
+
+    bool IsSelectedNode(string navigateUrl, string currentUrl) {
+        if(string.IsNullOrEmpty(navigateUrl)) return false;
+
+        return currentUrl.EndsWith($"/{navigateUrl}", StringComparison.OrdinalIgnoreCase) ||
+               (currentUrl == NavigationManager.BaseUri && navigateUrl == "./") ||
+               currentUrl.Equals(navigateUrl, StringComparison.OrdinalIgnoreCase) ||
+               currentUrl.EndsWith(navigateUrl.Split('#')[0], StringComparison.OrdinalIgnoreCase);
+    }
+}
+@* <style>
+    .sidebar {
+        width: 250px;
+        height: 100vh;
+        background-color: #f8f9fa;
+        padding: 1rem;
+        box-shadow: 2px 0 6px rgba(0,0,0,0.1);
+    }
+
+    .dx-treeview-node.active {
+        background-color: #007bff !important;
+        color: white !important;
+        font-weight: 600;
+        border-radius: 5px;
+    }
+</style> *@

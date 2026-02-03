@@ -1,0 +1,283 @@
+﻿@page "/GrowerReport"
+@using DevExpress.Blazor.Reporting
+@inject EmployeeAdoNetService EmployeeService
+@using Syncfusion.Blazor
+@using DevExpress.Blazor.PdfViewer
+@rendermode InteractiveServer
+@using Syncfusion.Blazor.DropDowns
+@inject NavigationManager NavigationManager
+@inject ReportService ReportService
+@using DevExpress.XtraReports.UI
+@using BlazorDemo.Services;
+@using BlazorDemo;
+@using System.IO
+@using Microsoft.AspNetCore.Hosting
+@inject IWebHostEnvironment Env
+@using System.Data
+<link href="_content/DevExpress.Blazor.Themes/blazing-berry.bs5.min.css" rel="stylesheet" />
+<link rel="stylesheet" href="_content/DevExpress.Blazor.Reporting.Viewer/css/dx-blazor-reporting-components.bs5.css">
+<PageTitle>Grower Report</PageTitle>
+@inject IJSRuntime JS
+
+<h3>Grower Report</h3>
+<div class="d-flex justify-content-end gap-1">
+    <!-- gap-3 = 1rem (~16px) spacing -->
+
+    <button @onclick="GoBack" class="btn btn-primary">
+        <i class="fa fa-arrow-left"></i>
+    </button>
+
+</div>
+<div class="card p-3 mb-4">
+    <div class="row g-3">
+
+
+
+        <div class="col-md-3">
+
+            <label for="lastName" class="centered-field">Date From</label>
+            <DxDateEdit @bind-Date="companyModel.GrowerRepdate"
+                        CssClass="cw-320"
+                        InputId="deOverview" />
+
+
+        </div>
+
+
+        <div class="col-md-3">
+
+            <label for="lastName" class="centered-field">Date  To</label>
+            <DxDateEdit @bind-Date="companyModel.GrowerRepdateto"
+                        CssClass="cw-320"
+                        InputId="deOverview" />
+
+
+        </div>
+
+   
+
+
+
+
+
+
+        <div class="col-md-3">
+            <label for="email" class="centered-field">Grower Group</label>
+            <DxComboBox Data="@GetgrowerList"
+                        SearchMode="@SearchMode"
+                        SearchFilterCondition="@SearchFilterCondition"
+                        SearchTextParseMode="@SearchTextParseMode"
+                        @bind-Value="companyModel.GrowerGroupName"
+                        TextFieldName="GrowerName"
+                        ValueFieldName="GrowerName"
+                        CssClass="cw-480"
+                        InputId="cbFiltering"
+                        ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+                          
+
+
+
+        </div>
+
+
+        <div class="col-md-3">
+            <label for="email" class="centered-field">Status</label>
+            <DxComboBox Data="@Getstatuslist"
+                        SearchMode="@SearchMode"
+                        SearchFilterCondition="@SearchFilterCondition"
+                        SearchTextParseMode="@SearchTextParseMode"
+                        @bind-Value="companyModel.GrowerActive"
+                        TextFieldName="GrowerActive"
+                        ValueFieldName="GrowerActive"
+                        CssClass="cw-480"
+                        InputId="cbFiltering"
+                        ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+           
+
+
+
+        </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+    </div>
+
+</div>
+
+
+
+
+
+<div class="row">
+    <div class="col-12 d-flex justify-content-end gap-2">
+        <DxButton CssClass="button" @onclick="GeneratePreview">Preview</DxButton>
+        <DxButton @onclick="GenerateContract">Contract</DxButton>
+
+     
+    </div>
+</div>
+<br />
+
+
+@if (ShowEmptyFieldDialog)
+{
+    <DxPopup @bind-Visible="@ShowEmptyFieldDialog"
+             HeaderText="Validation Error"
+             ShowCloseButton="true"
+             CssClass="validation-dialog">
+        <Content>
+            <p>@DialogMessage</p>
+            <DxButton Text="OK" Click="@(() => ShowEmptyFieldDialog = false)" />
+        </Content>
+    </DxPopup>
+}
+
+
+
+@if (showReport)
+{
+  <div style="overflow-x:auto; width:100%;">
+        <DxReportViewer @ref="reportViewer" Zoom="1.2" Report="@Report">
+    </DxReportViewer>
+</div>
+}
+
+
+
+
+
+@code {
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var uri = new Uri(NavigationManager.Uri);
+            var pageSegment = uri.AbsolutePath.Trim('/'); // "login", "dashboard", etc.
+
+            string pageName = string.IsNullOrWhiteSpace(pageSegment)
+                ? "Home"
+                : System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(pageSegment.Replace("-", " "));
+            pageName = "Grower Report";
+            string title = $"Cold Store | {pageName}";
+            await JS.InvokeVoidAsync("setDocumentTitle", title);
+        }
+    }
+    CompanyModel companyModel = new CompanyModel();
+    IGrid MyGrid { get; set; }
+    List<CompanyModel> Growers = new List<CompanyModel>();
+    List<CompanyModel> GetgrowerList = new List<CompanyModel>();
+    bool showReport = false;
+
+    private bool? result { get; set; } = null;
+    private bool ShowEmptyFieldDialogError { get; set; }
+
+    private bool ShowEmptyFieldDialog { get; set; }
+    private string DialogMessage { get; set; } = "";
+
+    List<CompanyModel> Getstatuslist = new List<CompanyModel>();
+
+    ListSearchMode SearchMode { get; set; } = ListSearchMode.AutoSearch;
+    ListSearchFilterCondition SearchFilterCondition { get; set; } = ListSearchFilterCondition.Contains;
+    ListSearchTextParseMode SearchTextParseMode { get; set; } = ListSearchTextParseMode.GroupWordsByAnd;
+    protected override async Task OnInitializedAsync()
+    {
+        // companyModel = await EmployeeService.GetCompanyByIdAsync(companyId);
+        companyModel = new CompanyModel
+        {
+
+        };
+        GetgrowerList = await EmployeeService.GetallGrowerlist();
+        Getstatuslist = await EmployeeService.GetallStatus();
+
+
+    }
+
+
+
+
+
+    protected async Task GenerateContract()
+    {
+
+
+        if (string.IsNullOrWhiteSpace(companyModel.GrowerGroupName))
+        {
+            companyModel.GrowerGroupName = "ALL";
+
+        }
+
+
+        await EmployeeService.GenerateContractPreview(companyModel);
+
+        Report = XtraReport.FromFile(Path.Combine(Directory.GetCurrentDirectory(),
+          @"Reports\contract.repx"));
+
+
+        showReport = true;
+
+    }
+
+
+    protected async Task GeneratePreview()
+    {
+
+        if (string.IsNullOrWhiteSpace(companyModel.GrowerActive))
+        {
+            DialogMessage = "Please Select  valid Status group";
+            ShowEmptyFieldDialog = true;
+            return;
+
+        }
+
+
+        if (string.IsNullOrWhiteSpace(companyModel.GrowerGroupName))
+        {
+            companyModel.GrowerGroupName = "ALL";
+
+        }
+
+
+  await EmployeeService.GenerateGrowerPreview(companyModel);
+
+        Report = XtraReport.FromFile(Path.Combine(Directory.GetCurrentDirectory(),
+          @"Reports\Final.repx"));
+
+
+        showReport = true;
+
+    }
+
+
+    private async Task GoBack()
+    {
+        await JS.InvokeVoidAsync("history.back");
+    }
+     DxReportViewer? reportViewer;
+    XtraReport? Report;
+    private void ShowReport()
+    {
+
+
+
+        Report = XtraReport.FromFile(Path.Combine(Directory.GetCurrentDirectory(),
+             @"Reports\XtraReport11.repx"));
+
+       showReport = true;
+    }
+
+
+
+   }
+
+       

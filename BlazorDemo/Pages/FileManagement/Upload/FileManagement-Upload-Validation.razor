@@ -1,0 +1,29 @@
+﻿<DemoPageSectionComponent Id="FileManagement-Upload-Validation">
+    @inject NavigationManager NavigationManager
+
+    <div class="upload-container">
+        <div style="@(SelectedFilesCount > 0 ? "display: none" : string.Empty)">
+            <span class="drop-file-icon mb-3"></span>
+            <span class="drop-file-label mb-3">Click the Select File button to select a file</span>
+        </div>
+        <DxUpload Name="myFile"
+                  MaxFileSize="4000000"
+                  AllowedFileExtensions="@(new List<string> { ".jpg", ".jpeg", ".gif", ".png" })"
+                  UploadUrl="@GetUploadUrl("api/UploadValidation/Upload/")"
+                  SelectedFilesChanged="@SelectedFilesChanged">
+        </DxUpload>
+    </div>
+
+    @code {
+        int SelectedFilesCount { get; set; }
+
+        protected void SelectedFilesChanged(IEnumerable<UploadFileInfo> files) {
+            SelectedFilesCount = files.ToList().Count;
+
+            InvokeAsync(StateHasChanged);
+        }
+        protected string GetUploadUrl(string url) {
+            return NavigationManager.ToAbsoluteUri(url).AbsoluteUri;
+        }
+    }
+</DemoPageSectionComponent>

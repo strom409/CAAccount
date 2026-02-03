@@ -1,0 +1,1688 @@
+﻿@page "/Qualityinspection/{Growerid:int}"
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Hosting
+@using Microsoft.Extensions.Hosting
+@inject IWebHostEnvironment Env
+@inject IWebHostEnvironment Environment
+@inject NavigationManager NavigationManager
+@inject HttpClient Http
+@inject EmployeeAdoNetService EmployeeService
+@using Syncfusion.Blazor
+@inject NavigationManager NavigationManager
+@using System.IO
+@using Syncfusion.Blazor.DropDowns
+@inject UserSessionService UserSessionService
+@inject ProtectedLocalStorage ProtectedLocalStore
+@using BlazorDemo.Services;
+@using BlazorDemo;
+@using BlazorDemo.Pages.Definitions;
+
+
+@inject IJSRuntime JS
+
+<PageTitle>Quality Insapect</PageTitle>
+
+<style>
+    .custom-messagebox {
+        border: 2px solid #0078D4; /* Blue border */
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2); /* Optional shadow */
+    }
+
+    label {
+        font-weight: 600;
+    }
+    /* Slightly darker but still subtle placeholder */
+    .input-placeholder-dim::placeholder {
+        color: rgba(130, 130, 130, 0.3) !important; /* dim gray, 30% opacity */
+        opacity: 1 !important;
+    }
+
+    /* Dark gray border on focus, no shadow */
+    .input-focus-dark:focus {
+        border-color: #343a40; /* dark gray */
+        box-shadow: none !important;
+        outline: none;
+    }
+
+    .table-responsive {
+        overflow-x: auto;
+        width: 100%;
+    }
+
+    .table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.875rem; /* optional small font */
+    }
+
+        .table th, .table td {
+            padding: 0.5rem;
+            text-align: left;
+        }
+
+    .zebra-table tbody tr:nth-child(odd) {
+        background-color: white;
+    }
+
+    .zebra-table tbody tr:nth-child(even) {
+        background-color: #f9f9f9;
+    }
+
+    .page-header {
+        background-color: #1e1e2f; /* Dark background */
+        color: white; /* Makes all text inside white */
+        padding: 15px 20px;
+        border-bottom: 1px solid #444;
+    }
+
+        .page-header h2 {
+            margin: 0;
+            font-weight: 600;
+            color: white; /* Optional, to ensure specificity */
+            font-size: 1rem;
+        }
+
+
+    /* Custom small font */
+    .small-font {
+        font-size: 0.82rem;
+    }
+
+    .control-wrapper {
+        max-width: 250px;
+        margin: 0 auto;
+        padding: 50px 0px 0px;
+    }
+
+    .example-label {
+        font-size: 14px;
+        margin-bottom: 6px;
+        /* Standardize form control styles for horizontal alignment */
+        input .form-control, .e-input-group, .e-control-wrapper, .e-autocomplete, .e-input
+
+    {
+        min-height: 38px; /* Bootstrap default */
+        line-height: 1.5;
+        font-size: 14px;
+        font-family: 'Source Sans Pro', sans-serif;
+        padding: 6px 12px;
+        box-sizing: border-box;
+    }
+
+    /* Optional: Align content inside Syncfusion AutoComplete */
+    .e-autocomplete .e-input {
+        padding: 6px 12px !important;
+    }
+
+    /* Remove extra bottom spacing in SfAutoComplete wrapper */
+    .e-autocomplete.e-control-wrapper {
+        margin-bottom: 0 !important;
+    }
+
+    /* Align labels consistently */
+    label.form-label {
+        font-size: 14px;
+        margin-bottom: 4px;
+        font-family: 'Source Sans Pro', sans-serif;
+    }
+
+    /* Remove extra vertical margin if any Syncfusion adds it */
+    .e-control-wrapper {
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
+    }
+
+</style>
+
+<EditForm Model="@EditModel">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="wrapper row-offcanvas row-offcanvas-left">
+        <div class="row">
+            <div class="col-md-12">
+                       <div class="card p-3 mb-4" style="border: 2px solid darkgrey; background-color: white;">
+
+                            <h4 class="box-title">Quality Inspection <small>- Edit</small></h4>
+                         
+                        <div class="d-flex justify-content-end gap-2">
+                            
+                                   @if (companyModel.QcAdd == true)
+            {
+                            <button @onclick="PostQuality" class="btn btn-primary btn-sm">Save</button>
+                            <button @onclick="PostQualitywithsplit" class="btn btn-primary btn-sm">Save and Split</button>
+            }
+                            
+                            <a @onclick="GoBack" class="btn btn-info btn-sm text-white">
+                                <i class="fa fa-arrow-left"></i> Back
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+    </div> 
+            <div class="col-md-12">
+                <input type="hidden" value="@EditModel.PreInwardCode" />
+            </div>
+
+            <div class="col-md-12">
+                <div class="box box-primary">
+                    <div class="box-body">
+                        <div class="form-group">
+                            <div class="row">
+                                <div class="col-sm-12">
+                                    <table id="example2">
+                                        <tbody>
+                                            <tr>
+                                                <td style="text-align: left;">
+                                                    <b>Grower Group : </b>@EditModel.GrowerGroupName
+                                                    @if (EditModel.IsInvestor)
+                                                    {
+                                                        <span class="redtext">@EditModel.InvestorText</span>
+                                                    }
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="text-align: left;"><b>Grower Name : </b>@EditModel.GrowerName</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="text-align: left;"><b>Lot : </b>@EditModel.LotIrn</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="text-align: left;"><b>Item Name : </b>@EditModel.Itemname</td>
+                                            </tr>
+                                    <tr>
+                                        <td style="text-align: left;"><b>Chamber No : </b>@EditModel.ChamberId</td>
+                                    </tr>
+                                            <tr>
+                                                <td style="text-align: left;"><b>Variety : </b>@EditModel.VarietyId</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="text-align: left;"><b>PreInward Date : </b>@EditModel.PreInwardDate.ToShortDateString()</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                  
+                    <div style="border-bottom: 2px solid darkgrey ; padding: 10px 0;">
+                   
+                    </div>
+                    <br />
+                    <div class="box box-primary">
+                        <div class="box-body">
+                            <div class="row"
+                                <div class="col-sm-6">
+                                    <div class="form-group">
+                                        <div class="col-md-12" style="padding-left: 0px;">
+                                            <div class="col-md-9" style="padding-left: 0px;">
+                                                <label for="image1">Quality Image 1</label>
+                                                <InputFile OnChange="HandleFileSelected" id="image1"  accept="image/*" capture="camera" />
+                                          @if (image1){
+                                                    <a class="imgLnk" @onclick="@(() => ShowModal($"uploads/{image1File}"))" style="cursor: pointer" >View</a>
+                                          }
+                                                <input type="hidden" value="@EditModel.Image1Path" />
+                                            </div>
+                                            <div class="col-md-3">
+                                                <br />
+                                               
+                                                   @* // <a class="imgLnk" style="cursor: pointer" >View</a>
+                                                *@
+                                            </div>in
+                                              <div class="col-md-9" style="padding-left: 0px;">
+                                                <label for="image1">Quality Image 2</label>
+                                                <InputFile OnChange="HandleFileSelected2" id="image1"  accept="image/*" capture="camera" />
+                                         
+                                        @if (image2)
+                                        {
+                                                    <a class="imgLnk" @onclick="@(() => ShowModal2($"uploads/{image2File}"))" style="cursor: pointer" >View</a>
+                                        }
+
+
+                                                <input type="hidden" value="@EditModel.Image1Path" />
+                                            </div>
+                                            <div class="col-md-3">
+                                                <br />
+                                                @if (!string.IsNullOrEmpty(EditModel.Image1Path))
+                                                {
+                                                   
+                                                    <a class="imgLnk" @onclick="@(() => ShowModal3($"uploads/{image3File}"))" style="cursor: pointer" >View</a>
+                                                
+                                                
+                                                }
+                                            </div>
+                                              <div class="col-md-9" style="padding-left: 0px;">
+                                                <label for="image1">Quality Image 3</label>
+                                                <InputFile OnChange="HandleFileSelected3" id="image1"  accept="image/*" capture="camera" />
+                                        @if (image3)
+                                        {
+                                                               <a class="imgLnk" @onclick="@(() => ShowModal3($"uploads/{image3File}"))" style="cursor: pointer" >View</a>
+
+                                        }
+
+                                                <input type="hidden" value="@EditModel.Image1Path" />
+                                            </div>
+                                            <div class="col-md-3">
+                                                <br />
+                                                @if (!string.IsNullOrEmpty(EditModel.Image1Path))
+                                                {
+                                                    <a class="imgLnk" style="cursor: pointer" >View</a>
+                                                }
+                                            </div>
+                                       
+                                        
+                                        </div>
+
+                                        <!-- Repeat similar structure for Image 2 and 3 -->
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="lotNo">Lot No<span class="redtext">*</span></label>
+                                        <input class="form-control input-placeholder-dim input-focus-dark"type="text" value="@EditModel.LotNo" disabled />
+                                    </div>
+
+                                    <div class="form-group">
+                                        <div class="row">
+                                            <div class="col-md-3">
+                                                <label for="pressure1">Avg Pressure1</label>
+                                        <input id="txtPressure1" type="number" @bind="EditModel.Pressure1" @bind:event="oninput" class="form-control input-placeholder-dim input-focus-dark"
+                                                       placeholder="Avg. Press1"  />
+                                            </div>
+                                             <div class="col-md-3">
+                                                <label for="pressure2">Avg Pressure2</label>
+                                        <input id="txtPressure2" type="number" @bind="EditModel.Pressure2" @bind:event="oninput" class="form-control input-placeholder-dim input-focus-dark"
+                                                       placeholder="Avg. Press2"  />
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label for="pressure3">Avg Pressure3</label>
+                                        <input id="txtPressure3" type="number" @bind="EditModel.Pressure3"  @bind:event="oninput" class="form-control input-placeholder-dim input-focus-dark"
+                                                       placeholder="Avg. Press3" />
+                                            </div>
+                                            <!-- Repeat for Pressure2 and Pressure3 -->
+                                          
+                                            <div class="col-md-3">
+                                                <label for="avgPressure">Avg Pressure <span class="redtext">*</span></label>
+                                        <input id="txtPressure" type="number" value="@AveragePressure" class="form-control input-placeholder-dim input-focus-dark" disabled placeholder="Avg. Press3" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                   <br />
+                                    <div class="form-group">
+                                        <div class="row">
+                                            <div class="col-md-3">
+                                                <label for="avgWeight1">Avg Weight1</label>
+                                        <input type="number" @bind="EditModel.AvgWeight1" @bind:event="oninput" class="form-control input-placeholder-dim input-focus-dark" />
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label for="avgWeight1">Avg Weight2</label>
+                                        <input type="number" @bind="EditModel.AvgWeight2" @bind:event="oninput" class="form-control input-placeholder-dim input-focus-dark" />
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label for="avgWeight1">Avg Weight3</label>
+                                        <input type="number" @bind="EditModel.AvgWeight3" @bind:event="oninput" class="form-control input-placeholder-dim input-focus-dark" />
+                                            </div>
+                                            <!-- Repeat for AvgWeight2 and AvgWeight3 -->
+                                            <div class="col-md-3">
+                                                <label for="avgWeight">Avg Weight <span class="redtext">*</span></label>
+                                        <input type="number" value="@AverageWeight" class="form-control input-placeholder-dim input-focus-dark" disabled />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="brand">Variety<span class="redtext">*</span></label>
+                                     <DxComboBox Data="@banks"
+                        SearchMode="@SearchMode"
+                        SearchFilterCondition="@SearchFilterCondition"
+                        SearchTextParseMode="@SearchTextParseMode"
+                        @bind-Value="EditModel.VarietyId"
+                        TextFieldName="Qname"
+                        ValueFieldName="Qname"
+                            CssClass="custom-input-height"
+                        InputId="cbFiltering"
+
+                        ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+
+                                    
+                                    
+                                    </div>
+                                      <div class="form-group">
+                                        <input hidden="true" @bind="EditModel.ChamberId" class="form-control input-placeholder-dim input-focus-dark" />
+                                   
+                                      <label for="lastName" class="form-label">Chamber No</label>
+            <DxComboBox Data="@Runningchambers"
+                        SearchMode="@SearchMode"
+                        SearchFilterCondition="@SearchFilterCondition"
+                        SearchTextParseMode="@SearchTextParseMode"
+                        @bind-Value="EditModel.NewchamberId"
+                        TextFieldName="ChamberId"
+                        ValueFieldName="ChamberId"
+                            CssClass="custom-input-height"
+                        InputId="cbFiltering"
+                       
+                        ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+
+
+
+
+
+                                    </div>
+                                </div>
+
+                                <div class="col-sm-6">
+                                    <div class="form-group">
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <label for="bGradeAvgType">B Grade Avg<span class="redtext">*</span></label>
+                                                <select @bind="EditModel.BGradeAvgType" class="form-control">
+                                                    <option value="0">Select</option>
+                                                    <option value="KG/Crate">KG/Crate</option>
+                                                    <option value="Per/Crate">Per/Crate</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label for="bGradeAvg1">BGrade Avg1</label>
+                                                <input type="number" @bind="EditModel.BGradeAvg1" @bind:event="oninput" 
+                                                       class="form-control input-placeholder-dim input-focus-dark"/>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label for="bGradeAvg2">BGrade Avg2</label>
+                                                <input type="number" @bind="EditModel.BGradeAvg2" @bind:event="oninput"  
+                                                       class="form-control input-placeholder-dim input-focus-dark"/>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <div class="row">
+                                            <div class="col-md-12">
+                                                <label for="bGradeAvgValue">BGrade Avg<span class="redtext">*</span></label>
+                                                <input value="@AverageBgrade"  class="form-control input-placeholder-dim input-focus-dark"readonly />
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-12">
+                                                <div class="form-group">
+                                                    <br />
+                                                    <label for="lessColorPer">Less Color %</label>
+                                                    <input @bind="EditModel.LessColorPercentage" class="form-control input-placeholder-dim input-focus-dark"/>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="avgSize">Avg size <span class="redtext">*</span></label>
+                                        <select @bind="EditModel.AvgSize" class="form-control">
+                                            <option value="0">Select</option>
+                                            <option value="O">Over</option>
+                                            <option value="E">Avg</option>
+                                            <option value="U">Under</option>
+                                            <option value="S">Small</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="remarks">Remarks</label>
+                                        <input @bind="EditModel.QualityRemarks" class="form-control input-placeholder-dim input-focus-dark"/>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <table>
+                                            <tr>
+                                                <td>
+                                                    <label>Select Option : </label>
+                                                </td>
+                                                <td style="width:50pt">
+                                                    <input type="checkbox"   @onchange="@ToggleAllDefects" id="chALL"  
+                                                       />
+                                                    <label for="chALL" id="lblscaball">&nbsp; All</label>
+                                                </td>
+                                            </tr>
+                                        </table>
+
+                                        <br />
+                                     <div class="row">
+    <div class="col-md-4">
+        <input type="checkbox" id="chk1" @bind="EditModel.HasWaterCore" />
+        <label for="chk1">Water Core</label><br />
+
+        <input type="checkbox" id="chk2" @bind="EditModel.HasScab" />
+        <label for="chk2">Scabe</label><br />
+
+        <input type="checkbox" id="chk3" @bind="EditModel.HasBitterRot" />
+        <label for="chk3">Bitter Rot</label><br />
+
+        <input type="checkbox" id="chk4" @bind="EditModel.HasOlla" />
+        <label for="chk4">OLLA</label><br />
+
+        <input type="checkbox" id="chk5" @bind="EditModel.HasFlySpeck" />
+        <label for="chk5">Fly Speck</label>
+    </div>
+
+    <div class="col-md-4">
+        <input type="checkbox" id="chk6" @bind="EditModel.HasRusting" />
+        <label for="chk6">Rusting</label><br />
+
+        <input type="checkbox" id="chk7" @bind="EditModel.HasBitterPit" />
+        <label for="chk7">BitterPit</label><br />
+
+        <input type="checkbox" id="chk8" @bind="EditModel.HasBlouch" />
+        <label for="chk8">Blouch</label><br />
+
+        <input type="checkbox" id="chk9" @bind="EditModel.HasSanjose" />
+        <label for="chk9">Sanjose</label>
+    </div>
+
+    <div class="col-md-4">
+        <input type="checkbox" id="chk10" @bind="EditModel.HasTouch" />
+        <label for="chk10">Touch</label><br />
+
+        <input type="checkbox" id="chk11" @bind="EditModel.HasSunburn" />
+        <label for="chk11">Sunburn</label><br />
+
+        <input type="checkbox" id="chk12" @bind="EditModel.HasInsectHole" />
+        <label for="chk12">Insect Hole</label><br />
+
+        <input type="checkbox" id="chk13" @bind="EditModel.HasScar" />
+        <label for="chk13">Scar</label>
+    </div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+        </div>
+    </div>
+
+            <div class="col-md-12">
+                <div class="box-footer btnfloat">
+                    <button @onclick="PostQuality" class="btn btn-primary btn-sm">Save</button>
+            <button @onclick="PostQualitywithsplit" class="btn btn-primary btn-sm">Save And Split</button>
+
+
+
+            <a href="/qualityinspections" class="btn btn-default btn-sm">Cancel</a>
+                </div>
+            </div>
+    
+</EditForm>
+@if (ShowEmptyFieldDialog)
+{
+<DxPopup @bind-Visible="@ShowEmptyFieldDialog"
+         HeaderText="Validation Error"
+         ShowCloseButton="true"
+         CssClass="validation-dialog">
+    <Content>
+        <p>@DialogMessage</p>
+        <DxButton Text="OK" Click="@(() => ShowEmptyFieldDialog = false)" />
+    </Content>
+</DxPopup>
+}
+
+
+<!-- Image Modal -->
+@if (showModal && !string.IsNullOrEmpty(modalImageUrl))
+{
+    <div class="modal fade show" style="display: block;" id="imagemodal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-body">
+                    <button type="button" class="btn-close" @onclick="CloseModal" aria-label="Close"></button>
+                    <br /><br />
+                    <div class="box box-solid">
+                        <div class="box-body">
+                        
+                            <img src="@modalImageUrl?v=@DateTime.Now.Ticks" alt="Preview Image" />
+                            <div class="carousel slide" data-ride="carousel">
+                               
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+ 
+@* @if (showModal && !string.IsNullOrEmpty(modalImageUrl))
+{
+  
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);" role="dialog">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Image Preview</h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal" aria-label="Close"></button>
+              
+                </div>
+                <div class="modal-body text-center">
+                    <img src="@modalImageUrl" class="img-fluid" />
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+ *@
+
+
+<DxPopup @bind-Visible="@Addmixlot"
+         HeaderText="Add Mix Lot"
+         Width="500px">
+    <Content>
+
+            .
+           
+            <!-- First Row -->
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label class="form-label">Lot No</label>
+                    <InputNumber id="remarks"
+                               style="font-size: 14px; height: 30px; font-family: 'Source Sans Pro', sans-serif;"
+                               class="form-control input-placeholder-dim input-focus-dark"
+                               @bind-Value="EditModel.Lotno"
+                               placeholder="Group Name" readonly />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Variety</label>
+                <DxComboBox Data="@banks"
+                            SearchMode="@SearchMode"
+                            SearchFilterCondition="@SearchFilterCondition"
+                            SearchTextParseMode="@SearchTextParseMode"
+                            @bind-Value="EditModel.VarietyId"
+                            TextFieldName="Qname"
+                            ValueFieldName="Qname"
+                            CssClass="custom-input-height"
+                            InputId="cbFiltering"
+                            ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+                </div>
+            </div>
+
+            <!-- Second Row -->
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label class="form-label">Khata Name</label>
+                    <InputText id="remarks"
+                               style="font-size: 14px; height: 30px; font-family: 'Source Sans Pro', sans-serif;"
+                               class="form-control input-placeholder-dim input-focus-dark"
+                               @bind-Value="EditModel.Mixlotkhata"
+                               placeholder="Khata" />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Qty</label>
+                <InputNumber inputmode="numeric"
+                           maxlength="10"
+                           style="font-size: 14px; font-family: 'Source Sans Pro', sans-serif;"
+                           class="form-control input-placeholder-dim input-focus-dark"
+                           @bind-Value="EditModel.SplitlotQty"
+                           placeholder="Qty" />
+
+                </div>
+            </div>
+
+
+
+            <div class="modal-footer" style="display: flex; justify-content: space-between; flex-direction: row-reverse;">
+                <div class="d-flex gap-2">
+                    <DxButton class="btn btn-primary btn-sm" Text="Save" @onclick="SaveNewSub" />
+                    <DxButton class="btn btn-primary btn-sm" Text="Close" @onclick="HideNewsub" />
+                </div>
+            </div>
+    
+    </Content>
+</DxPopup>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+@code 
+{
+    [Parameter] public int Growerid { get; set; }
+    bool ShowImageModal { get; set; } = false;
+    private CompanyModel EditModel = new();
+    bool image1 { get; set; } = false;
+    bool image2 { get; set; } = false;
+    bool image3 { get; set; } = false;
+    CompanyModel companyModel = new CompanyModel();
+    private string? image1File, image2File, image3File;
+    ListSearchMode SearchMode { get; set; } = ListSearchMode.AutoSearch;
+    ListSearchFilterCondition SearchFilterCondition { get; set; } = ListSearchFilterCondition.Contains;
+    ListSearchTextParseMode SearchTextParseMode { get; set; } = ListSearchTextParseMode.GroupWordsByAnd;
+    List<CompanyModel> banks = new List<CompanyModel>();
+    List<CompanyModel> Runningchambers = new List<CompanyModel>();
+
+    private bool showModal = false;
+    private string? modalImageUrl;
+    private string? Path1;
+    private string? Extensionnew;
+    private string AverageWeight => CalculateAverageweight();
+    private string AverageBgrade => CalculateAverageBgrade();
+    @code {
+        private bool SelectAll;
+        private bool ShowEmptyFieldDialog { get; set; }
+        private bool ShowEmptyFieldDialogError { get; set; }
+        private bool Addmixlot { get; set; } 
+
+
+
+        private async void SaveNewSub()
+        {
+
+
+
+            if (string.IsNullOrWhiteSpace(EditModel.VarietyId))
+            {
+                DialogMessage = "Please Select  valid Variety";
+                ShowEmptyFieldDialog = true;
+                return;
+
+            }
+
+            if (string.IsNullOrWhiteSpace(EditModel.Mixlotkhata))
+            {
+                DialogMessage = "Please Select  valid Khata Name";
+                ShowEmptyFieldDialog = true;
+                return;
+
+            }
+
+
+
+
+
+            if (EditModel.SplitlotQty < 0)
+            {
+
+                DialogMessage = "Valid Lot qty is Required";
+                ShowEmptyFieldDialog = true;
+                return;
+
+            }
+            if (EditModel.SplitlotQty >= EditModel.PreInwardQty)
+            {
+                DialogMessage = "Split quantity cannot be greater or equal to pre-inward quantity";
+                ShowEmptyFieldDialog = true;
+                return;
+            }
+
+            var result = await EmployeeService.AddMixlot(EditModel);
+
+
+
+
+            if (result != null && result.RetFlag.Trim() == "TRUE" && !string.IsNullOrEmpty(result.RetMessage))
+            {
+
+
+
+
+                EditModel.SplitlotQty =  0;
+                EditModel.Mixlotkhata = string.Empty;
+
+             // forceLoad: true
+                Addmixlot = false;
+                int alot = EditModel.Mixlotno;
+                NavigationManager.NavigateTo($"/Qualityinspection/{alot}", forceLoad: true);
+
+                return;
+            }
+
+
+            if (result != null && result.RetFlag.Trim() == "FALSE")
+            {
+
+                DialogMessage = result.RetMessage ?? "Failed to Update grower group.";
+                ShowEmptyFieldDialog = true;
+
+                return;
+            }
+
+
+
+
+
+        
+        
+        
+        
+        }
+
+        private async void Testadd()
+        {
+            Addmixlot = true;
+            StateHasChanged();
+        }
+
+        private async void HideNewsub()
+        {
+            Addmixlot= false;
+        }
+
+        private void ToggleAllDefects(ChangeEventArgs e)
+        {
+            bool isChecked = (bool)e.Value;
+
+            EditModel.HasWaterCore = isChecked;
+            EditModel.HasScab = isChecked;
+            EditModel.HasBitterRot = isChecked;
+            EditModel.HasOlla = isChecked;
+            EditModel.HasFlySpeck = isChecked;
+            EditModel.HasRusting = isChecked;
+            EditModel.HasBitterPit = isChecked;
+            EditModel.HasBlouch = isChecked;
+            EditModel.HasSanjose = isChecked;
+            EditModel.HasTouch = isChecked;
+            EditModel.HasSunburn = isChecked;
+            EditModel.HasInsectHole = isChecked;
+            EditModel.HasScar = isChecked;
+        }
+    }
+
+
+    public static string ConvertFilePathToUrl(string filePath, string baseLocalPath, string baseUrlPath)
+    {
+    string relativePath = filePath.Substring(baseLocalPath.Length).TrimStart(Path.DirectorySeparatorChar);
+    return baseUrlPath.TrimEnd('/') + "/" + relativePath.Replace(Path.DirectorySeparatorChar, '/');
+    }
+
+    private string CalculateAverageBgrade()
+    {
+    if (EditModel.BGradeAvg1.HasValue &&
+        EditModel.BGradeAvg2.HasValue)
+    {
+        var avg = (EditModel.BGradeAvg1.Value +
+                   EditModel.BGradeAvg2.Value)
+           / 2;
+        EditModel.BGradeAvgValue = Math.Round(avg, 2);
+        return Math.Round(avg, 2).ToString();
+    }
+    EditModel.BGradeAvgValue = null;
+    return string.Empty;
+    }
+
+
+
+    private string AveragePressure => CalculateAveragePressure();
+    private async void ShowModal(string filePath)
+    {
+    var extensions = new[] { ".jpg", ".jpeg", ".png", ".bmp" };
+    var uploadsPath = Path.Combine(Env.WebRootPath, "uploads");
+    string extensionsn = ".jpeg";
+    int selectedlot = EditModel.Lotno;
+
+    image1 = CheckIfImageExists($"{selectedlot}-1", uploadsPath, extensions);
+
+
+    Path1 = Path.Combine(uploadsPath, $"{selectedlot}-1" + Extensionnew);
+
+
+
+
+    string imageUrl = ConvertFilePathToUrl(Path1, uploadsPath, "/uploads/");
+    modalImageUrl = imageUrl;
+
+    showModal = true;
+    }
+
+        List<CompanyModel> GetchamberAnalysis = new List<CompanyModel>();
+   decimal TotalQty=0;
+        decimal actualidqty = 0;
+
+            
+            private async void ShowModal2(string filePath)
+    {
+    var extensions = new[] { ".jpg", ".jpeg", ".png", ".bmp" };
+    var uploadsPath = Path.Combine(Env.WebRootPath, "uploads");
+    string extensionsn = ".jpeg";
+    int selectedlot = EditModel.Lotno;
+
+    image2 = CheckIfImageExists($"{selectedlot}-2", uploadsPath, extensions);
+
+
+
+    Path1 = Path.Combine(uploadsPath, $"{selectedlot}-2" + Extensionnew);
+
+
+
+
+    string imageUrl = ConvertFilePathToUrl(Path1, uploadsPath, "/uploads/");
+    modalImageUrl = imageUrl;
+
+    showModal = true;
+    }
+
+
+
+    private  void ShowModal3(string filePath)
+    {
+    var extensions = new[] { ".jpg", ".jpeg", ".png", ".bmp" };
+    var uploadsPath = Path.Combine(Env.WebRootPath, "uploads");
+
+    int selectedlot = EditModel.Lotno;
+    image3 = CheckIfImageExists($"{selectedlot}-3", uploadsPath, extensions);
+
+
+
+    Path1 = Path.Combine(uploadsPath, $"{selectedlot}-3" + Extensionnew);
+
+
+
+
+    string imageUrl = ConvertFilePathToUrl(Path1, uploadsPath, "/uploads/");
+    modalImageUrl = imageUrl;
+
+    showModal = true;
+    }
+
+
+
+
+
+    private void CloseModal()
+    {
+    //
+    modalImageUrl = null;
+    showModal = false;
+
+    }
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+    var file = e.File;
+
+    if (file != null)
+    {
+        var extension = Path.GetExtension(file.Name);
+        var fname = EditModel.Lotno + "-1";
+        var customFileName = $"{fname}{extension}";
+        var resizedImage = await file.RequestImageFileAsync("image/jpeg", 800, 800); // Resize to 800x800 max
+        var stream = resizedImage.OpenReadStream(1024 * 1024); // Limit to 1MB stream (optional)
+
+        var streamContent = new StreamContent(stream);
+        streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/jpeg");
+
+        var content = new MultipartFormDataContent();
+
+
+
+        content.Add(streamContent, "file", customFileName);
+
+        try
+        {
+
+            var url = NavigationManager.BaseUri + $"api/upload?filename={Uri.EscapeDataString(customFileName)}";
+            var response = await Http.PostAsync(url, content);
+            // var response = await Http.PostAsync($"/api/upload?filename={Uri.EscapeDataString(customFileName)}", content);
+
+            if (response.IsSuccessStatusCode)
+            {
+               // await JS.InvokeVoidAsync("alert", "Upload successful!");
+                image1 =true;
+            }
+            else
+            {
+                var errorMsg = await response.Content.ReadAsStringAsync();
+                await JS.InvokeVoidAsync("alert", $"Upload failed: {response.StatusCode}\n{errorMsg}");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("alert", $"Exception: {ex.Message}");
+        }
+    }
+    }   
+
+    private async Task HandleFileSelected2(InputFileChangeEventArgs e)
+    {
+    var file = e.File;
+
+    if (file != null)
+    {
+        var extension = Path.GetExtension(file.Name);
+        var fname = EditModel.Lotno + "-2";
+        var customFileName = $"{fname}{extension}";
+        var resizedImage = await file.RequestImageFileAsync("image/jpeg", 800, 800); // Resize to 800x800 max
+        var stream = resizedImage.OpenReadStream(1024 * 1024); // Limit to 1MB stream (optional)
+
+        var streamContent = new StreamContent(stream);
+        streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/jpeg");
+
+        var content = new MultipartFormDataContent();
+
+
+
+        content.Add(streamContent, "file", customFileName);
+
+        try
+        {
+
+            var url = NavigationManager.BaseUri + $"api/upload?filename={Uri.EscapeDataString(customFileName)}";
+            var response = await Http.PostAsync(url, content);
+            // var response = await Http.PostAsync($"/api/upload?filename={Uri.EscapeDataString(customFileName)}", content);
+
+            if (response.IsSuccessStatusCode)
+            {
+                image2 = true;
+               /// await JS.InvokeVoidAsync("alert", "Upload successful!");
+            }
+            else
+            {
+                var errorMsg = await response.Content.ReadAsStringAsync();
+                await JS.InvokeVoidAsync("alert", $"Upload failed: {response.StatusCode}\n{errorMsg}");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("alert", $"Exception: {ex.Message}");
+        }
+    }
+    }
+    private async Task HandleFileSelected3(InputFileChangeEventArgs e)
+    {
+    var file = e.File;
+
+    if (file != null)
+    {
+        var extension = Path.GetExtension(file.Name);
+        var fname = EditModel.Lotno + "-3";
+        var customFileName = $"{fname}{extension}";
+        var resizedImage = await file.RequestImageFileAsync("image/jpeg", 800, 800); // Resize to 800x800 max
+        var stream = resizedImage.OpenReadStream(1024 * 1024); // Limit to 1MB stream (optional)
+
+        var streamContent = new StreamContent(stream);
+        streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/jpeg");
+
+        var content = new MultipartFormDataContent();
+
+
+
+        content.Add(streamContent, "file", customFileName);
+
+        try
+        {
+
+            var url = NavigationManager.BaseUri + $"api/upload?filename={Uri.EscapeDataString(customFileName)}";
+            var response = await Http.PostAsync(url, content);
+            // var response = await Http.PostAsync($"/api/upload?filename={Uri.EscapeDataString(customFileName)}", content);
+
+            if (response.IsSuccessStatusCode)
+            {
+                image3 = true;
+               /// await JS.InvokeVoidAsync("alert", "Upload successful!");
+            }
+            else
+            {
+                var errorMsg = await response.Content.ReadAsStringAsync();
+                await JS.InvokeVoidAsync("alert", $"Upload failed: {response.StatusCode}\n{errorMsg}");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("alert", $"Exception: {ex.Message}");
+        }
+    }
+    }
+        private async Task GoBack()
+        {
+    await JS.InvokeVoidAsync("history.back");
+        }
+       
+    
+
+
+protected override async Task OnInitializedAsync()
+    {
+
+
+    var userResult13 = await ProtectedLocalStore.GetAsync<string>("UserGroup");
+    string GlobalUserGroup = userResult13.Success ? userResult13.Value : null;
+    companyModel = await EmployeeService.GetQcPriv(GlobalUserGroup);
+
+
+    int selectedGrowerId=Growerid;
+
+    EditModel = await EmployeeService.GetLotFullDet(selectedGrowerId);
+    var extensions = new[] { ".jpg", ".jpeg", ".png", ".bmp" };
+    var uploadsPath = Path.Combine(Env.WebRootPath, "uploads");
+
+    int selectedlot=EditModel.Lotno;
+
+    image1 = CheckIfImageExists($"{selectedlot}-1", uploadsPath, extensions);
+    image2 = CheckIfImageExists($"{selectedlot}-2", uploadsPath, extensions);
+    image3 = CheckIfImageExists($"{selectedlot}-3", uploadsPath, extensions);
+
+    Path1 = Path.Combine(uploadsPath, $"{selectedlot}-1" + extensions);
+    banks = await EmployeeService.GetallQuality();
+
+    int selectedid = EditModel.Partyid;
+
+    Runningchambers = await EmployeeService.GetRunningChambers(selectedid);
+
+    }
+        private string DialogMessage { get; set; } = "";
+
+    private bool CheckIfImageExists(string baseFileName, string folderPath, string[] extensions)
+    {
+    foreach (var ext in extensions)
+    {
+        var fullPath = Path.Combine(folderPath, baseFileName + ext);
+        if (System.IO.File.Exists(fullPath))
+        {
+            Extensionnew = ext;
+
+            return true;
+        }
+    }
+    return false;
+    }
+
+
+
+
+
+        private bool isProcessing = false;
+
+
+        async Task PostQuality()
+        {
+    if (isProcessing) return;
+    isProcessing = true;
+
+    try
+
+
+    {
+
+
+
+        @* EditModel.AvgPressure *@
+
+        if (!EditModel.Pressure1.HasValue || EditModel.Pressure1 < 0)
+
+        {
+            DialogMessage = "Please enter Valid Pressure 1 value";
+            ShowEmptyFieldDialog = true;
+            return;
+        }
+
+        if (!EditModel.Pressure2.HasValue || EditModel.Pressure2 < 0)
+
+        {
+            DialogMessage = "Please enter Valid Pressure 2 value";
+            ShowEmptyFieldDialog = true;
+            return;
+        }
+
+        if (!EditModel.Pressure3.HasValue || EditModel.Pressure3 < 0)
+
+        {
+            DialogMessage = "Please enter Valid Pressure 3 value";
+            ShowEmptyFieldDialog = true;
+            return;
+        }
+
+        if (!EditModel.AvgWeight1.HasValue || EditModel.AvgWeight1 < 0)
+
+        {
+            DialogMessage = "Please enter Valid Weight 1 value";
+            ShowEmptyFieldDialog = true;
+            return;
+        }
+
+
+        if (!EditModel.AvgWeight2.HasValue || EditModel.AvgWeight2 < 0)
+
+        {
+            DialogMessage = "Please enter Valid Weight 2 value";
+            ShowEmptyFieldDialog = true;
+            return;
+        }
+        if (!EditModel.AvgWeight3.HasValue || EditModel.AvgWeight3 < 0)
+
+        {
+            DialogMessage = "Please enter Valid Weight 3 value";
+            ShowEmptyFieldDialog = true;
+            return;
+        }
+
+
+
+        if (!EditModel.BGradeAvg1.HasValue || EditModel.BGradeAvg1 < 0)
+
+        {
+            DialogMessage = "Please enter Valid bgrade 1 value";
+            ShowEmptyFieldDialog = true;
+            return;
+        }
+
+
+
+
+        if (!EditModel.BGradeAvg2.HasValue || EditModel.BGradeAvg2 < 0)
+
+        {
+            DialogMessage = "Please enter Valid bgrade 2 value";
+            ShowEmptyFieldDialog = true;
+            return;
+        }
+
+
+
+        if (string.IsNullOrWhiteSpace(EditModel.VarietyId) || string.IsNullOrWhiteSpace(EditModel.VarietyId))
+        {
+            DialogMessage = "Please Enter the lot variety";
+            ShowEmptyFieldDialog = true;
+            return;
+        }
+
+
+
+        if (string.IsNullOrWhiteSpace(EditModel.BGradeAvgType) || string.IsNullOrWhiteSpace(EditModel.BGradeAvgType))
+        {
+            DialogMessage = "Please Enter the Bgrade avg Type";
+            ShowEmptyFieldDialog = true;
+            return;
+        }
+
+        if (!EditModel.BGradeAvgValue.HasValue || EditModel.BGradeAvgValue < 0)
+        {
+            DialogMessage = "Please enter Valid Bgrade Avg value";
+            ShowEmptyFieldDialog = true;
+            return;
+        }
+
+
+        if (string.IsNullOrWhiteSpace(EditModel.LessColorPercentage) || string.IsNullOrWhiteSpace(EditModel.LessColorPercentage))
+        {
+            DialogMessage = "Please Enter the Less Color Percentage";
+            ShowEmptyFieldDialog = true;
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(EditModel.QualityRemarks) || string.IsNullOrWhiteSpace(EditModel.QualityRemarks))
+        {   
+            (EditModel.QualityRemarks)= "";
+        }
+        if (string.IsNullOrWhiteSpace(EditModel.AvgSize) || string.IsNullOrWhiteSpace(EditModel.AvgSize))
+        {   
+            DialogMessage = "Please Enter the valid Average Size";
+            ShowEmptyFieldDialog = true;
+            return;
+        }
+        int selectedNewchamber = 0;
+        if (EditModel.NewchamberId <= 0)
+        {
+            selectedNewchamber = 0;
+        }
+
+        if (EditModel.NewchamberId > 0)
+        {
+            selectedNewchamber = EditModel.NewchamberId;
+            GetchamberAnalysis = await EmployeeService.CheckChamber(selectedNewchamber);
+
+            decimal ActiveChamberQty = GetchamberAnalysis.FirstOrDefault()?.ChamberAvailQty ?? 0;
+            EditModel.ChamberAvailQty = ActiveChamberQty;
+
+    TotalQty = EditModel.PreInwardQty ?? 0;
+            if (TotalQty > EditModel.ChamberAvailQty)
+            {
+                DialogMessage = $"Entered quantity cannot exceed available  quantity ({ActiveChamberQty}).";
+                ShowEmptyFieldDialog = true;
+                return;
+            }
+
+    
+    
+    }
+    int selectedlot = EditModel.Lotno;
+
+    if (!image1)
+    {
+        DialogMessage = "Quality Image 1 not found";
+        ShowEmptyFieldDialog = true;
+        return;
+    }
+    
+     if (!image2)
+    {
+        DialogMessage = "Quality Image 2 not found";
+        ShowEmptyFieldDialog = true;
+        return;
+    }
+     if (!image3)
+    {
+        DialogMessage = "Quality Image 3 not found";
+        ShowEmptyFieldDialog = true;
+        return;
+    }
+
+        var result = await EmployeeService.AddQualityProc(EditModel);
+        if (result != null && result.RetFlag.Trim() == "TRUE" && !string.IsNullOrEmpty(result.RetMessage))
+        {
+            NavigationManager.NavigateTo("/QualityMain", forceLoad: true);
+
+
+
+
+                       return;
+        }
+
+
+        if (result != null && result.RetFlag.Trim() == "FALSE")
+        {
+
+            DialogMessage = result.RetMessage ?? "Failed to add Master Group.";
+            ShowEmptyFieldDialog = true;
+
+            return;
+        }
+
+
+
+
+
+    }
+    finally
+    {
+        isProcessing = false;
+    }
+        }
+
+
+
+       
+
+        async Task PostQualitywithsplit()
+        {
+    if (isProcessing) return;
+    isProcessing = true;
+
+    try
+
+
+    {
+
+
+
+        @* EditModel.AvgPressure *@
+
+        if (!EditModel.Pressure1.HasValue || EditModel.Pressure1 < 0)
+
+        {
+            DialogMessage = "Please enter Valid Pressure 1 value";
+            ShowEmptyFieldDialog = true;
+            return;
+        }
+
+        if (!EditModel.Pressure2.HasValue || EditModel.Pressure2 < 0)
+
+        {
+            DialogMessage = "Please enter Valid Pressure 2 value";
+            ShowEmptyFieldDialog = true;
+            return;
+        }
+
+        if (!EditModel.Pressure3.HasValue || EditModel.Pressure3 < 0)
+
+        {
+            DialogMessage = "Please enter Valid Pressure 3 value";
+            ShowEmptyFieldDialog = true;
+            return;
+        }
+
+        if (!EditModel.AvgWeight1.HasValue || EditModel.AvgWeight1 < 0)
+
+        {
+            DialogMessage = "Please enter Valid Weight 1 value";
+            ShowEmptyFieldDialog = true;
+            return;
+        }
+
+
+        if (!EditModel.AvgWeight2.HasValue || EditModel.AvgWeight2 < 0)
+
+        {
+            DialogMessage = "Please enter Valid Weight 2 value";
+            ShowEmptyFieldDialog = true;
+            return;
+        }
+        if (!EditModel.AvgWeight3.HasValue || EditModel.AvgWeight3 < 0)
+
+        {
+            DialogMessage = "Please enter Valid Weight 3 value";
+            ShowEmptyFieldDialog = true;
+            return;
+        }
+
+
+
+        if (!EditModel.BGradeAvg1.HasValue || EditModel.BGradeAvg1 < 0)
+
+        {
+            DialogMessage = "Please enter Valid bgrade 1 value";
+            ShowEmptyFieldDialog = true;
+            return;
+        }
+
+
+
+
+        if (!EditModel.BGradeAvg2.HasValue || EditModel.BGradeAvg2 < 0)
+
+        {
+            DialogMessage = "Please enter Valid bgrade 2 value";
+            ShowEmptyFieldDialog = true;
+            return;
+        }
+
+
+
+        if (string.IsNullOrWhiteSpace(EditModel.VarietyId) || string.IsNullOrWhiteSpace(EditModel.VarietyId))
+        {
+            DialogMessage = "Please Enter the lot variety";
+            ShowEmptyFieldDialog = true;
+            return;
+        }
+
+
+
+        if (string.IsNullOrWhiteSpace(EditModel.BGradeAvgType) || string.IsNullOrWhiteSpace(EditModel.BGradeAvgType))
+        {
+            DialogMessage = "Please Enter the Bgrade avg Type";
+            ShowEmptyFieldDialog = true;
+            return;
+        }
+
+        if (!EditModel.BGradeAvgValue.HasValue || EditModel.BGradeAvgValue < 0)
+        {
+            DialogMessage = "Please enter Valid Bgrade Avg value";
+            ShowEmptyFieldDialog = true;
+            return;
+        }
+
+
+        if (string.IsNullOrWhiteSpace(EditModel.LessColorPercentage) || string.IsNullOrWhiteSpace(EditModel.LessColorPercentage))
+        {
+            DialogMessage = "Please Enter the Less Color Percentage";
+            ShowEmptyFieldDialog = true;
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(EditModel.QualityRemarks) || string.IsNullOrWhiteSpace(EditModel.QualityRemarks))
+        {
+            (EditModel.QualityRemarks) = "";
+        }
+        if (string.IsNullOrWhiteSpace(EditModel.AvgSize) || string.IsNullOrWhiteSpace(EditModel.AvgSize))
+        {
+            DialogMessage = "Please Enter the valid Average Size";
+            ShowEmptyFieldDialog = true;
+            return;
+        }
+        int selectedNewchamber = 0;
+        if (EditModel.NewchamberId <= 0)
+        {
+            selectedNewchamber = 0;
+        }
+
+        if (EditModel.NewchamberId > 0)
+        {
+            selectedNewchamber = EditModel.NewchamberId;
+            GetchamberAnalysis = await EmployeeService.CheckChamber(selectedNewchamber);
+
+            decimal ActiveChamberQty = GetchamberAnalysis.FirstOrDefault()?.ChamberAvailQty ?? 0;
+            EditModel.ChamberAvailQty = ActiveChamberQty;
+
+            TotalQty = EditModel.PreInwardQty ?? 0;
+            if (TotalQty > EditModel.ChamberAvailQty)
+            {
+                DialogMessage = $"Entered quantity cannot exceed available  quantity ({ActiveChamberQty}).";
+                ShowEmptyFieldDialog = true;
+                return;
+            }
+
+
+
+        }
+        int selectedlot = EditModel.Lotno;
+
+        if (!image1)
+        {
+            DialogMessage = "Quality Image 1 not found";
+            ShowEmptyFieldDialog = true;
+            return;
+        }
+
+        if (!image2)
+        {
+            DialogMessage = "Quality Image 2 not found";
+            ShowEmptyFieldDialog = true;
+            return;
+        }
+        if (!image3)
+        {
+            DialogMessage = "Quality Image 3 not found";
+            ShowEmptyFieldDialog = true;
+            return;
+        }
+
+        var result = await EmployeeService.AddQualityProc(EditModel);
+        if (result != null && result.RetFlag.Trim() == "TRUE" && !string.IsNullOrEmpty(result.RetMessage))
+        {
+            @* NavigationManager.NavigateTo("/QualityMain", forceLoad: true); *@
+
+            Addmixlot = true;
+            StateHasChanged();
+
+            return;
+        }
+
+
+        if (result != null && result.RetFlag.Trim() == "FALSE")
+        {
+
+            DialogMessage = result.RetMessage ?? "Failed to add Master Group.";
+            ShowEmptyFieldDialog = true;
+
+            return;
+        }
+
+
+
+
+
+    }
+    finally
+    {
+        isProcessing = false;
+    }
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    private string CalculateAveragePressure()
+    {
+    if (EditModel.Pressure1.HasValue &&
+        EditModel.Pressure2.HasValue &&
+        EditModel.Pressure3.HasValue)
+    {
+        var avg = (EditModel.Pressure1.Value +
+                   EditModel.Pressure2.Value +
+                   EditModel.Pressure3.Value) / 3;
+        EditModel.AvgPressure = Math.Round(avg, 2);
+        return Math.Round(avg, 2).ToString();
+
+    }
+
+    return string.Empty;
+    }
+
+
+
+    private string CalculateAverageweight()
+    {
+    if (EditModel.AvgWeight1.HasValue &&
+        EditModel.AvgWeight2.HasValue &&
+        EditModel.AvgWeight3.HasValue)
+    {
+        var avg = (EditModel.AvgWeight1.Value +
+                   EditModel.AvgWeight2.Value +
+                   EditModel.AvgWeight3.Value) / 3;
+        EditModel.AvgWeight= Math.Round(avg, 2);
+        return Math.Round(avg, 2).ToString();
+    }
+    EditModel.AvgWeight = null;
+    return string.Empty;
+    }
+}
+
+
+
+
+
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script>
+
+    function calculateAvgPressure() {
+        debugger
+        var divideNo = 3;
+        var strError = "";
+        var isValid = true;
+        var avg1 = $("#txtPressure1").val();
+        var avg2 = $("#txtPressure2").val();
+        var avg3 = $("#txtPressure3").val();
+        if (avg1 != "") {
+            if (isNaN(avg1)) {
+                strError += 'Please valid Avg Pressure1<br/>';
+                $('#txtPressure1').addClass("redborder");
+                isValid = false;
+            }
+            else
+                $('#txtPressure1').removeClass("redborder");
+        }
+        else {
+            avg1 = "0";
+            divideNo = divideNo - 1;
+        }
+
+        if (avg2 != "") {
+            if (isNaN(avg2)) {
+                strError += 'Please valid Avg Pressure2<br/>';
+                $('#txtPressure2').addClass("redborder");
+                isValid = false;
+            }
+            else
+                $('#txtPressure2').removeClass("redborder");
+        }
+        else {
+            avg2 = "0";
+            divideNo = divideNo - 1;
+        }
+
+        if (avg3 != "") {
+            if (isNaN(avg3)) {
+                strError += 'Please valid Avg Pressure3<br/>';
+                $('#txtPressure3').addClass("redborder");
+                isValid = false;
+            }
+            else
+                $('#txtPressure3').removeClass("redborder");
+        }
+        else {
+            avg3 = "0";
+            divideNo = divideNo - 1;
+        }
+
+        if (!isValid) {
+            mAlert(strError, 'Error');
+            setTimeout(function () { mAlertClose() }, 10000);
+        }
+        else if (divideNo > 0) {
+            $("#txtPressure").val(((parseFloat(avg1) + parseFloat(avg2) + parseFloat(avg3)) / divideNo).toFixed(2));
+        }
+        else {
+            $("#txtPressure").val("");
+        }
+    }
+</script>

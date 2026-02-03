@@ -1,0 +1,1774 @@
+﻿@page "/ChamberView"
+@using Microsoft.Data.SqlClient
+@inject EmployeeAdoNetService EmployeeService
+
+@inject ProtectedLocalStorage ProtectedLocalStore
+@inject UserSessionService userSessionService
+@inject IJSRuntime JS
+@inject NavigationManager NavigationManager
+@using BlazorDemo.Data
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.JSInterop
+@using BlazorDemo.Models
+
+@using Microsoft.AspNetCore.Components.Web
+@using System.IO
+@using BlazorDemo.Pages.Definitions;
+@using BlazorDemo.Services;
+@using BlazorDemo; 
+ 
+<div class="d-inline-flex align-items-center gap-3 ms-3">
+    <h5 class="fw-bold m-0">Total In Qty:@companyModel.TotInQty</h5>
+    <h5 class="fw-bold m-0">Total Out Qty:@companyModel.TotOutQty</h5>
+    <h5 class="fw-bold m-0">Balance Qty:@companyModel.TotBalQty</h5>
+</div>
+
+<link />
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<style>
+    .lock-btn {
+        padding: 6px 14px;
+        border: none;
+        border-radius: 6px;
+        font-weight: bold;
+        cursor: pointer;
+        color: black;
+        transition: all 0.25s ease-in-out;
+        /* Stronger shadow: darker + bigger spread */
+        box-shadow: 0px 18px 30px rgba(0, 0, 0, 0.5), /* main deeper shadow */
+        0px 9px 15px rgba(0, 0, 0, 0.3); /* secondary softer shadow */
+    }
+
+        .lock-btn:hover {
+            transform: translateY(-5px) scale(1.02); /* slightly bigger + lifted */
+            box-shadow: 0px 12px 24px rgba(0, 0, 0, 0.55), 0px 6px 14px rgba(0, 0, 0, 0.35);
+        }
+
+        .lock-btn:active {
+            transform: translateY(0) scale(0.98); /* subtle press-down effect */
+            box-shadow: 0px 6px 12px rgba(0, 0, 0, 0.45), 0px 2px 6px rgba(0, 0, 0, 0.25);
+        }
+
+        .lock-btn:focus {
+            outline: none; /* removes default blue outline */
+            box-shadow: 0px 6px 12px rgba(0, 0, 0, 0.35), 0px 2px 4px rgba(0, 0, 0, 0.2); /* keep same shadow as normal */
+        }
+
+
+
+    .legend-container {
+        display: flex;
+        justify-content: flex-end;
+        margin-bottom: 10px;
+    }
+
+    .legend {
+        display: flex;
+        gap: 12px;
+        font-family: Arial, sans-serif;
+        font-size: 14px;
+        padding: 6px 10px;
+        border-radius: 6px;
+        box-shadow: 0 0 5px rgba(0,0,0,0.2);
+    }
+
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .color-box {
+        width: 14px;
+        height: 14px;
+        display: inline-block;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+    }
+
+    .yellow {
+        background-color: orangered;
+    }
+
+    .white {
+        background-color: white;
+    }
+
+    .green {
+        background-color: green;
+    }
+
+    .red {
+        background-color: red;
+    }
+
+
+    .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 4px;
+    margin-top: 0px;
+}
+
+/* Ensure at least 2 columns on very small screens */
+@@media (max-width: 480px) {
+    .grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* 3 columns on tablet */
+@@media (min-width: 481px) and (max-width: 768px) {
+    .grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* auto-fit for larger screens */
+@@media (min-width: 769px) {
+    .grid {
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    }
+}
+
+.card {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 8px;
+    font-family: sans-serif;
+    border-radius: 6px;
+    min-height: 90px;
+    position: relative;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+    height: 125px;
+}
+
+        .card .text-center {
+            margin-top: auto; /* push button to bottom */
+        }
+
+
+    .locked::before, .unlocked::before {
+        content: "🔒";
+        position: absolute;
+        top: 10px;
+        left: 10px;
+    }
+
+    .unlocked::before {
+        content: "🔓";
+    }
+
+    .title {
+        font-weight: bold;
+        font-size: 15px;
+        margin-left: 2px;
+        margin-bottom: 8px;
+    }
+
+    .line {
+        display: flex;
+        justify-content: space-between;
+        padding: 0 10px;
+        font-size: 14px;
+        font-weight: 500;
+    }
+
+    .scrollable-content {
+        height: 100%;
+        overflow-y: auto;
+        padding: 15px;
+        scrollbar-width: thin;
+        scrollbar-color: #c1c1c1 #f5f5f5;
+    }
+
+        /* For Webkit browsers */
+        .scrollable-content::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .scrollable-content::-webkit-scrollbar-track {
+            background: #f5f5f5;
+            border-radius: 4px;
+        }
+
+        .scrollable-content::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+        }
+
+            .scrollable-content::-webkit-scrollbar-thumb:hover {
+                background: #a8a8a8;
+            }
+</style>
+<div class="legend-container">
+    <div class="legend">
+        <div class="legend-item">
+            <span class="color-box yellow"></span> Upto 9.9%
+        </div>
+        <div class="legend-item">
+            <span class="color-box green"></span> 10% - 90%
+        </div>
+        <div class="legend-item">
+            <span class="color-box red"></span> Above 90%
+        </div>
+    </div>
+</div>
+
+
+<div class="grid mb-5">
+    @foreach (var ch in allChambers)
+    {
+        var bgColor = GetCardColornew(Convert.ToInt32(ch.ChamberInqty), ch.ChamberInqty, ch.IsLocked);
+        <div class="card @(ch.IsLocked ? "locked" : "unlocked")" style="background-color:@bgColor;cursor:pointer;" @onclick=" () =>  ShowModal(ch.ChamberId)">
+
+            <div class="title" style="color: black; text-align: center;">@ch.ChamberName</div>
+            <div class="line">
+                <span style="color:black">In Qty</span>
+                <span style="color:black">@ch.ChamberInqty</span>
+            </div>
+            <div class="line">
+                <span style="color:black">Out Qty</span>
+                <span style="color:black">@ch.ChamberOutqty</span>
+            </div>
+
+            <div class="line">
+                <span style="color:black">Bal Qty</span>
+                <span style="color:black">@ch.ChamberBalance</span>
+            </div>
+           
+           @*  <div class="line">
+                <span style="color:black">(IN) @ch.ChamberinDate</span>
+                <span style="color:black">(Out) @ch.ChamberOutDate</span>
+            </div> *@
+
+           @*  <div class="line">
+                <span style="color: black; text-align: left; display: block; width: 100%;">@ch.ChamberinDate</span>
+            </div>
+            <div class="line">
+                <span style="color: black; text-align: right; display: block; width: 100%;">@ch.ChamberOutDate</span>
+            </div> *@
+           @*  <div class="text-center mt-2">
+                <button class="btn btn-sm lock-btn"
+                        @onclick:stopPropagation="true"
+                        @onclick="() => Changechstat(ch.ChamberId)">
+                    @(ch.IsLocked ? "Unlock" : "Lock")
+                </button> *@
+            </div>
+        @* </div> *@
+    }
+</div>
+<style>
+    .alt-item {
+        background-color: rgba(243, 244, 245, 1) !important;
+    }
+
+        .alt-item > td {
+            --dxbl-grid-bg: rgba(243, 244, 245, 1) !important;
+            background-color: rgba(243, 244, 245, 1) !important;
+        }
+
+
+
+</style>
+<style>
+    .responsive-popup {
+    width: 95vw;
+    max-width: 1200px;
+}
+
+/* For small screens */
+@@media (max-width: 768px) {
+    .responsive-popup {
+        width: 85vw !important;
+        max-width: 400px !important;
+    }
+}
+
+/* For very small screens */
+@@media (max-width: 480px) {
+    .responsive-popup {
+        width: 90vw !important;
+        max-width: 350px !important;
+    }
+}
+</style>
+<DxPopup @bind-Visible="@showAllocation"
+         CssClass="responsive-popup"
+         HorizontalAlignment="HorizontalAlignment.Center"
+         VerticalAlignment="VerticalAlignment.Center"
+         HeaderText="Grower Group Summary"
+         Width="95vw" 
+         MaxWidth="1200px"
+         Height="auto"
+         MinHeight="300px"
+         CloseOnEscape="true"
+         CloseOnOutsideClick="false">
+
+    <Content>
+        <div style="width: 100%; max-width: 100%;">
+            <DxGrid Data="@Getallocation"
+                    PageSize="10" CssClass="source-sans-grid"
+                    ShowSearchBox="false"
+                    ShowGroupPanel="false"
+                    FilterMenuButtonDisplayMode="GridFilterMenuButtonDisplayMode.Never"
+                    ColumnResizeMode="GridColumnResizeMode.NextColumn"
+                    CustomizeElement="Grid_CustomizeElement"
+                    TextWrapEnabled="true"
+                    AllowColumnResizing="true"
+                    ColumnMinWidth="80">
+                @* Set minimum column width *@
+
+                <Columns>
+                    <DxGridDataColumn FieldName=@nameof(companyModel.Partyid)
+                                      Visible="false" Caption="Party"
+                                      Width="40%" />
+                    <DxGridDataColumn FieldName=@nameof(companyModel.ChamberId)
+                                 Visible="false" Caption="Party"
+                                      Width="40%" />
+
+                    <DxGridDataColumn FieldName=@nameof(companyModel.ChamberName)
+                                      Caption="Party"
+                                      Width="40%" />
+                    <DxGridDataColumn FieldName=@nameof(companyModel.GrowerGroupName)
+                                      Caption="Party"
+                                      Width="40%" />
+
+
+                    <DxGridDataColumn FieldName=@nameof(companyModel.ChamberInqty)
+                                    DisplayFormat="f0"  Caption="In Qty"
+                                      Width="20%" />
+
+                    <DxGridDataColumn FieldName=@nameof(companyModel.Chamberoutqty)
+                                     DisplayFormat="f0"  Caption="Out Qty"
+                                      Width="20%" />
+
+                    <DxGridDataColumn FieldName=@nameof(companyModel.Chamberbalqty)
+                                      DisplayFormat="f0" Caption="Balance"
+                                      Width="25%" />
+
+                    <DxGridCommandColumn Width="15%">
+                        <HeaderTemplate>
+                            <strong></strong>
+                            <a  style="text-decoration: none;" href="javascript:void(0);">Action</a>
+                        </HeaderTemplate>
+                        <CellDisplayTemplate>
+
+                            <button class="btn btn-success"
+                                    @onclick="@(() => EditItem(context.DataItem))"
+                                    title="Delete Item">View
+                            </button>
+                                                     
+                        </CellDisplayTemplate>
+                    </DxGridCommandColumn>
+                </Columns>
+
+                <TotalSummary>
+                    <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum" ValueDisplayFormat="F0" FieldName="@nameof(companyModel.Chamberoutqty)" />
+                    <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum" ValueDisplayFormat="F0" FieldName="@nameof(companyModel.ChamberInqty)" />
+                    <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum" ValueDisplayFormat="F0" FieldName="@nameof(companyModel.Chamberbalqty)" />
+
+                </TotalSummary>
+
+            </DxGrid>
+        </div>
+
+        @if (showgrower == true)
+        {
+            <div style="border: 1px solid #ddd; padding: 8px; margin: 10px 0; background-color: green;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; align-items: center; text-align: center; gap: 10px;">
+                    <div style="color: white;">
+                        <strong>Agreement</strong>
+                        <div>@totalcapgrower</div>
+                    </div>
+                    <div style="color: white;">
+                        <strong>Alloted</strong>
+                        <div>@totalallocgrower</div>
+                    </div>
+                    <div style="color: white;">
+                        <strong>Pending</strong>
+                        <div>@(totalcapgrower - totalallocgrower)</div>
+                    </div>
+                </div>
+            </div>
+             
+            <div style="width: 100%; max-width: 100%; overflow-x: auto;">
+                <DxGrid Data="@GetGrowerallocation"
+                        PageSize="10" CssClass="source-sans-grid"
+                        ShowSearchBox="false"
+                        ShowGroupPanel="false"
+                        FilterMenuButtonDisplayMode="GridFilterMenuButtonDisplayMode.Always"
+                        ColumnResizeMode="GridColumnResizeMode.NextColumn"
+                        CustomizeElement="Grid_CustomizeElement"
+                        TextWrapEnabled="true"
+                      >
+
+                    <Columns>
+                        <DxGridDataColumn FieldName=@nameof(companyModel.AllocationNo)
+                                          Visible="true"
+                                          Caption="Chamber" HeaderCssClass="wrap-header-text"
+                                          Width="10%" />
+
+                        <DxGridDataColumn FieldName=@nameof(companyModel.GrowerGroupName)
+                                          Caption="Party"  HeaderCssClass="wrap-header-text"
+                                          Width="45%" />
+
+                        <DxGridDataColumn FieldName=@nameof(companyModel.ChamberAllocation)
+                                          Caption="Qty"
+
+                                          Width="10%" />
+
+                        <DxGridCommandColumn Width="15%">
+                            <HeaderTemplate>
+                                <strong>Actions</strong>
+                                <a class="fa fa-trash text-red" style="text-decoration: none;" href="javascript:void(0);"></a>
+                            </HeaderTemplate>
+                            <CellDisplayTemplate>
+                                @* Action buttons can be added here if needed *@
+                            </CellDisplayTemplate>
+                        </DxGridCommandColumn>
+                    </Columns>
+
+                   
+                </DxGrid>
+            </div>
+        }
+
+        <style>
+            /* Responsive styles */
+            .dxbl-popup-content {
+                max-width: 100vw !important;
+            }
+
+            .scrollable-content {
+                max-height: 70vh; /* Adjust based on your needs */
+                overflow-y: auto;
+                padding: 10px;
+            }
+
+                /* Optional: Custom scrollbar styling */
+                .scrollable-content::-webkit-scrollbar {
+                    width: 8px;
+                }
+
+                .scrollable-content::-webkit-scrollbar-track {
+                    background: #f1f1f1;
+                    border-radius: 4px;
+                }
+
+                .scrollable-content::-webkit-scrollbar-thumb {
+                    background: #c1c1c1;
+                    border-radius: 4px;
+                }
+
+                    .scrollable-content::-webkit-scrollbar-thumb:hover {
+                        background: #a8a8a8;
+                    }
+            @@media (max-width: 768px) {
+                .dxbl-grid {
+                    width: 100% !important;
+                    min-width: unset !important;
+                }
+
+                .wrap-header-text {
+                    white-space: normal; /* Allows text to wrap */
+                }
+                .dxbl-grid-column-header,
+                .dxbl-grid-cell {
+                    padding: 4px 6px !important;
+                    font-size: 0.875rem !important;
+                }
+                /* Stack the summary cards on mobile */
+                .dxbl-popup-content .dxbl-grid-container {
+                    overflow-x: auto;
+                }
+            }
+
+            .rightalign {
+                word-wrap: true;
+                margin-right: 0px !important;
+                width: 100%;
+            }
+
+            @@media (max-width: 480px) {
+                .dxbl-popup {
+                    width: 98vw !important;
+                    margin: 1vw !important;
+                }
+
+                .dxbl-grid-command-column {
+                    width: 20% !important;
+                }
+
+                .dxbl-grid-data-column {
+                    min-width: 70px !important;
+                }
+            }
+
+            .alt-item {
+                background-color: rgba(243, 244, 245, 1) !important;
+            }
+
+                .alt-item > td {
+                    --dxbl-grid-bg: rgba(243, 244, 245, 1) !important;
+                    background-color: rgba(243, 244, 245, 1) !important;
+                }
+        </style>
+
+    </Content>
+</DxPopup>
+<style>
+    source-sans-grid,
+    .source-sans-grid * {
+        font-family: 'Source Sans Pro', sans-serif !important;
+        font-size: 13px !important;
+    }
+</style>
+
+
+<DxPopup @bind-Visible="@ShowSubgrowers"
+         CssClass="responsive-popup"
+         HorizontalAlignment="HorizontalAlignment.Center"
+         VerticalAlignment="VerticalAlignment.Center"
+         HeaderText="Grower  Summary" 
+         Width="95vw"
+         MaxWidth="1200px"
+         Height="500px"
+         MinHeight="300px"
+         CloseOnEscape="true"
+         CloseOnOutsideClick="false">
+
+    <Content>
+        <div style="width: 100%; max-width: 100%;">
+            <DxGrid Data="@GetSubGrowers" CssClass="source-sans-grid"
+                    PageSize="10"
+                    ShowSearchBox="false"
+                    ShowGroupPanel="false"
+                    FilterMenuButtonDisplayMode="GridFilterMenuButtonDisplayMode.Never"
+                    ColumnResizeMode="GridColumnResizeMode.NextColumn"
+                    CustomizeElement="Grid_CustomizeElement"
+                    TextWrapEnabled="true"
+                    AllowColumnResizing="true"
+                    ColumnMinWidth="80">
+                @* Set minimum column width *@
+
+                <Columns>
+                  
+                    <DxGridDataColumn FieldName=@nameof(companyModel.ChamberId)
+                                      Visible="false" Caption="Party"
+                                      Width="40%" />
+
+                    <DxGridDataColumn FieldName=@nameof(companyModel.ChamberName)
+                                      Caption="Party"
+                                      Width="40%" />
+               
+
+                                         <DxGridDataColumn FieldName=@nameof(companyModel.GrowerName)
+                                      Caption="Party"
+                                      Width="40%" />
+
+                    <DxGridDataColumn FieldName=@nameof(companyModel.ChamberInqty)
+                                      DisplayFormat="f0" Caption="In Qty"
+                                      Width="20%" />
+
+                    <DxGridDataColumn FieldName=@nameof(companyModel.Chamberoutqty)
+                                      DisplayFormat="f0" Caption="Out Qty"
+                                      Width="20%" />
+
+                    <DxGridDataColumn FieldName=@nameof(companyModel.Chamberbalqty)
+                                      DisplayFormat="f0" Caption="Balance"
+                                      Width="25%" />
+@* 
+                    <DxGridCommandColumn Width="15%">
+                        <HeaderTemplate>
+                            <strong></strong>
+                            <a class="oi oi-action" style="text-decoration: none;" href="javascript:void(0);"></a>
+                        </HeaderTemplate>
+                        <CellDisplayTemplate>
+
+                            <a title="View Summary" class="fa fa-eye"
+                               @onclick="@(() => EditItem(context.DataItem))"
+                               style="cursor: pointer; margin-right: 8px;">
+                            </a>
+
+                        </CellDisplayTemplate>
+                    </DxGridCommandColumn> *@
+                </Columns>
+
+                <TotalSummary>
+                    <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum" ValueDisplayFormat="F0" FieldName="@nameof(companyModel.Chamberoutqty)" />
+                    <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum" ValueDisplayFormat="F0" FieldName="@nameof(companyModel.ChamberInqty)" />
+                    <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum" ValueDisplayFormat="F0" FieldName="@nameof(companyModel.Chamberbalqty)" />
+
+                </TotalSummary>
+
+            </DxGrid>
+        </div>
+
+        @if (showgrower == true)
+        {
+            <div style="border: 1px solid #ddd; padding: 8px; margin: 10px 0; background-color: green;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; align-items: center; text-align: center; gap: 10px;">
+                    <div style="color: white;">
+                        <strong>Agreement</strong>
+                        <div>@totalcapgrower</div>
+                    </div>
+                    <div style="color: white;">
+                        <strong>Alloted</strong>
+                        <div>@totalallocgrower</div>
+                    </div>
+                    <div style="color: white;">
+                        <strong>Pending</strong>
+                        <div>@(totalcapgrower - totalallocgrower)</div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="width: 100%; max-width: 100%; overflow-x: auto;">
+                <DxGrid Data="@GetGrowerallocation"
+                        PageSize="10"
+                        ShowSearchBox="false"
+                        ShowGroupPanel="false"
+                        FilterMenuButtonDisplayMode="GridFilterMenuButtonDisplayMode.Always"
+                        ColumnResizeMode="GridColumnResizeMode.NextColumn"
+                        CustomizeElement="Grid_CustomizeElement"
+                        TextWrapEnabled="true">
+
+                    <Columns>
+                        <DxGridDataColumn FieldName=@nameof(companyModel.AllocationNo)
+                                          Visible="true"
+                                          Caption="Chamber" HeaderCssClass="wrap-header-text"
+                                          Width="10%" />
+
+                        <DxGridDataColumn FieldName=@nameof(companyModel.GrowerGroupName)
+                                          Caption="Party" HeaderCssClass="wrap-header-text"
+                                          Width="45%" />
+
+                        <DxGridDataColumn FieldName=@nameof(companyModel.ChamberAllocation)
+                                          Caption="Qty"
+                                          Width="10%" />
+
+                        <DxGridCommandColumn Width="15%">
+                            <HeaderTemplate>
+                                <strong>Actions</strong>
+                                <a class="oi oi-action" style="text-decoration: none;" href="javascript:void(0);"></a>
+                            </HeaderTemplate>
+                            <CellDisplayTemplate>
+                                @* Action buttons can be added here if needed *@
+                            </CellDisplayTemplate>
+                        </DxGridCommandColumn>
+                    </Columns>
+
+
+                </DxGrid>
+            </div>
+        }
+
+        <style>
+            /* Responsive styles */
+            .dxbl-popup-content {
+                max-width: 100vw !important;
+            }
+
+            @@media (max-width: 768px) {
+                .dxbl-grid {
+                    width: 100% !important;
+                    min-width: unset !important;
+                }
+
+                .wrap-header-text {
+                    white-space: normal; /* Allows text to wrap */
+                }
+
+                .dxbl-grid-column-header,
+                .dxbl-grid-cell {
+                    padding: 4px 6px !important;
+                    font-size: 0.875rem !important;
+                }
+                /* Stack the summary cards on mobile */
+                .dxbl-popup-content .dxbl-grid-container {
+                    overflow-x: auto;
+                }
+            }
+
+            .rightalign {
+                word-wrap: true;
+                margin-right: 0px !important;
+                width: 100%;
+            }
+
+            @@media (max-width: 480px) {
+                .dxbl-popup {
+                    width: 98vw !important;
+                    margin: 1vw !important;
+                }
+
+                .dxbl-grid-command-column {
+                    width: 20% !important;
+                }
+
+                .dxbl-grid-data-column {
+                    min-width: 70px !important;
+                }
+            }
+
+            .alt-item {
+                background-color: rgba(243, 244, 245, 1) !important;
+            }
+
+                .alt-item > td {
+                    --dxbl-grid-bg: rgba(243, 244, 245, 1) !important;
+                    background-color: rgba(243, 244, 245, 1) !important;
+                }
+        </style>
+
+    </Content>
+</DxPopup>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="modal fade" id="chamberModal" tabindex="-1" aria-labelledby="chamberModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            JS.InvokeVoidAsync("alert","BEST");
+            @if (selectedChamber != null)
+            {
+                          
+
+                
+                <div class="modal-header bg-secondary">
+                    <h5 class="modal-title ">Chamber No : @selectedChamber.ChamberName</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+            } 
+            
+                <div class="modal-body">
+                        <!-- Add Button -->
+                        @if (!selectedChamber.IsLocked)
+                        {
+                            <div class="d-flex justify-content-end mb-2">
+                                <button class="btn btn-sm btn-primary" @onclick="@(() => NavigateToAdd(selectedChamber?.ChamberId ?? 0))" title="Add Allotment">
+                                    <i class="fa fa-plus me-1"></i> Add Allotment
+                                </button>
+                            </div>
+                        }
+                        <!-- Grower Allocations Table -->
+                        <div style="overflow-y: auto; max-height: 300px;">
+                            <table class="table table-bordered table-striped">
+                                <thead>
+                                    <tr class="table-secondary">
+                                        <th style="width: 50%;">Grower Name</th>
+                                        <th style="width: 25%;" class="text-center">Quantity Occupied</th>
+                                        <th style="width: 25%;" class="text-center">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var ga in selectedGrowerAllocations)
+                                    {
+                                        <tr>
+                                            <td>@ga.GrowerName</td>
+                                            <td class="text-center">@ga.Quantity</td>
+                                            <td class="text-center">
+                                                <span @onclick="@(() => NavigateToView(ga.GrowerId))" class="me-2" style="cursor:pointer" title="View">
+                                                    <i class="fa-sharp-duotone fa-solid fa-eye"></i>
+                                                </span>
+                                                @if (!ga.IsLocked)
+                                                {
+                                                    <span @onclick="@(() => NavigateToAdd(ga.ChamberId))" class="me-2" style="cursor:pointer" title="Add">
+                                                        <i class="fa-solid fa-plus"></i>
+                                                    </span>
+                                                }
+                                                <span @onclick="@(() => NavigateToEdit(ga.GrowerId, ga.ChamberId))" class="me-1" style="cursor:pointer" title="Edit">
+                                                    <i class="fa-solid fa-pen-to-square"></i>
+                                                </span>
+                                                <span @onclick="@(() => NavigateToDelete(ga.GrowerId, ga.ChamberId))" class="" style="cursor:pointer" title="Delete">
+                                                    <i class="fa-solid fa-trash"></i>
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    }
+
+                                    @if (!selectedGrowerAllocations.Any())
+                                    {
+                                        <tr>
+                                            <td colspan="3" class="text-center text-muted">No growers allocated yet.</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        <!-- Summary Table as a Separate Table -->
+                        @if (selectedGrowerAllocations.Any())
+                        {
+                            <table class="table table-bordered text-center mt-3">
+                                <thead class="table-light fw-bold">
+                                    <tr>
+                                        <th colspan="2">Chamber Summary</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="table-dark">
+                                        <td>Total Chamber Capacity</td>
+                                        <td class="text-center">@selectedGrowerAllocations.FirstOrDefault().ChamberCapacity</td>
+                                    </tr>
+                                    <tr class="table-warning">
+                                        <td>Total Quantity Consumed</td>
+                                        <td class="text-center">@selectedGrowerAllocations.Sum(g => g.Quantity)</td>
+                                    </tr>
+                                    <tr class="table-success">
+                                        <td>Quantity Available</td>
+                                        <td class="text-center">@(selectedChamber.Capacity - selectedGrowerAllocations.Sum(g => g.Quantity))</td>
+                                    </tr>
+                                    <tr class="table-info">
+                                        <td>Chamber Locked?</td>
+                                        <td class="text-center">@(selectedChamber.IsLocked ? "Yes 🔒" : "No 🔓")</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        }
+
+
+
+
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                }
+
+            </div>
+        </div>
+    </div> 
+
+
+
+<!-- Delete Not Allowed Modal -->
+<div class="modal fade" id="deleteNotAllowedModal" tabindex="-1" aria-labelledby="deleteNotAllowedLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content border-danger">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteNotAllowedLabel">Delete Not Allowed</h5>
+                <button type="button" class="btn-close text-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-danger fw-bold">
+                @PopupMessage
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-danger" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- Second Bootstrap Modal From First Modal To Second Modal Showing AllGrowerDetails -->
+
+<div class="modal fade" id="growerDetailModal" tabindex="-1" aria-labelledby="growerDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-info">
+                <h5 class="modal-title">Grower Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body">
+                @if (allGrowerDetailsVM != null && allGrowerDetailsVM.Any())
+                {
+                    <!-- Table 1: Per-chamber details -->
+                    <div style="overflow-y: auto; max-height: 300px;">
+                        <table class="table table-bordered table-striped table-warning table-hover mb-4">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Grower Name</th>
+                                    <th>Chamber ID</th>
+                                    <th>Chamber Name</th>
+                                    <th>Quantity</th>
+                                    <th>Series</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var detail in allGrowerDetailsVM)
+                                {
+                                    <tr>
+                                        <td>@detail.GrowerName</td>
+                                        <td>@detail.ChamberId</td>
+                                        <td>@detail.ChamberName</td>
+                                        <td>@detail.Quantity</td>
+                                        <td>@detail.Series</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Table 2: Summary -->
+
+                    <table class="table table-bordered text-center mt-4">
+                        <thead class="table-light fw-bold">
+                            <tr>
+                                <th colspan="2">Grower Summary</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="table-warning">
+                                <td>Agreement Allotment</td>
+                                <td class="text-center">@allGrowerDetailsVM.FirstOrDefault()?.Agreement</td>
+                            </tr>
+                            <tr class="table-success">
+                                <td>Total Quantity Taken</td>
+                                <td class="text-center">@allGrowerDetailsVM.FirstOrDefault()?.TotalTaken</td>
+                            </tr>
+                            <tr class="table-info">
+                                <td>Quantity Available</td>
+                                <td class="text-center">@allGrowerDetailsVM.FirstOrDefault()?.TotalAvailable</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                }
+                else
+                {
+                    <p class="text-muted text-center">No details found for this grower.</p>
+                }
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+@if (ShowEmptyFieldDialog)
+{
+    <DxPopup @bind-Visible="@ShowEmptyFieldDialog"
+             HeaderText="Validation Error"
+             ShowCloseButton="true"
+             CssClass="validation-dialog">
+        <Content>
+            <p>@DialogMessage</p>
+            <DxButton Text="OK" Click="@(() => ShowEmptyFieldDialog = false)" />
+        </Content>
+    </DxPopup>
+}
+<style>
+    .custom-popup-style {
+        background-color: #fdfdfd;
+        border: 2px solid #0078d4;
+        border-radius: 12px;
+        padding: 10px;
+        font-family: 'Segoe UI', sans-serif;
+    }
+
+        .custom-popup-style .dxbs-popup-header {
+            background-color: #0078d4;
+            color: white;
+            font-weight: bold;
+            border-bottom: none;
+        }
+
+        .custom-popup-style .dxbs-popup-content {
+            font-size: 15px;
+            padding: 15px;
+        }
+</style>
+@if (ShowEmptyFieldDialogError)
+{
+    <DxPopup @bind-Visible="@ShowEmptyFieldDialogError"
+             HeaderText="Confirmation Message"
+             ShowCloseButton="true"
+             CssClass="custom-popup-style">
+
+
+
+        <Content>
+            <p><strong>Success </strong>@DialogMessage</p>
+            <DxButton Text="OK" RenderStyle="ButtonRenderStyle.Primary" Click="@(() => ShowEmptyFieldDialogError = false)" />
+        </Content>
+    </DxPopup>
+}
+
+<DxPopup @bind-Visible="@DeleteDialog"
+         HeaderText="Confirmation"
+         ShowCloseButton="true"
+         CssClass="validation-dialog">
+    <Content>
+        Are you sure you want to delete the  Allocation>
+        <div>
+            <DxButton RenderStyle="ButtonRenderStyle.Primary" Click="@OnConfirmYesDelete">Yes</DxButton>
+            <DxButton RenderStyle="ButtonRenderStyle.Secondary" Click="@OnConfirmNoDelete">No</DxButton>
+        </div>
+    </Content>
+
+</DxPopup>
+ 
+@code {
+    private int selectedallocationid;
+
+    private bool DeleteDialog = false;
+    private CompanyModel EditModel = new();
+    private CompanyModel Privmodel = new();
+    private bool ShowSubgrowers = false;
+    private bool isDropDownVisible = false;
+    private string DialogMessage { get; set; } = "";
+    private bool ShowEmptyFieldDialogError { get; set; }
+    private bool buttonmain = false;
+    private bool buttonsecond = false;
+    private bool dataLoaded = false;
+    ListSearchMode SearchMode { get; set; } = ListSearchMode.AutoSearch;
+    ListSearchFilterCondition SearchFilterCondition { get; set; } = ListSearchFilterCondition.Contains;
+    ListSearchTextParseMode SearchTextParseMode { get; set; } = ListSearchTextParseMode.GroupWordsByAnd;
+    public int selectedchamberid;
+    CompanyModel companyModel = new CompanyModel();
+    public bool showAllocation = false;
+    List<CompanyModel> GetgrowerList = new List<CompanyModel>();
+    List<CompanyModel> Getallocation = new List<CompanyModel>();
+    List<CompanyModel> GetGrowerallocation = new List<CompanyModel>();
+
+    List<CompanyModel> GetSubGrowers = new List<CompanyModel>();
+
+    public string selectedparty; 
+    private bool ShowEmptyFieldDialog { get; set; }
+    private bool showgrower = false;
+
+    string GrowerGroupKey = Guid.NewGuid().ToString();
+    private int totalcapgrower;
+    private int totalallocgrower;
+
+    private async Task OnGrowerGroupChanged(string? newCountryId)
+    {
+
+        selectedparty = newCountryId;
+        companyModel.GrowerGroupName= selectedparty;
+        string inputString = selectedparty;
+        int extractedValue = 0;
+        extractedValue = int.Parse(inputString.Split('-')[0]);
+
+        companyModel = await EmployeeService.GetchsummaryGrower(extractedValue);
+        totalcapgrower = companyModel.chambercapacitytotalgrower;
+        totalallocgrower = companyModel.chamberallotedtotalgrower;
+        GetGrowerallocation = await EmployeeService.GetchsummaryGrowerdet(extractedValue);
+
+
+
+
+
+
+        showgrower = true;
+        StateHasChanged();
+
+    }
+    private void OnConfirmNoDelete()
+    {
+        DeleteDialog = false;
+    }
+
+
+    private async void DeleteAllocation(int Trid)
+    {
+        int SelectedTrid = Trid;
+        DeleteDialog = true;
+
+
+        selectedallocationid = Trid;
+        StateHasChanged();
+
+
+        return;
+
+
+
+    }
+
+
+    void Grid_CustomizeElement(GridCustomizeElementEventArgs e)
+    {
+        if (e.ElementType == GridElementType.DataRow && e.VisibleIndex % 2 == 1)
+        {
+            e.CssClass = "alt-item";
+        }
+        if (e.ElementType == GridElementType.HeaderCell)
+        {
+            e.Style = "background-color: var(--DS-color-surface-neutral-default-selected)";
+            e.CssClass = "header-bold";
+        }
+
+
+    }
+
+
+
+    protected async Task OnConfirmYesDelete()
+    {
+
+        var result = await EmployeeService.DeleteAllocation(selectedallocationid, EditModel);
+        if (result != null && result.RetFlag.Trim() == "TRUE" && !string.IsNullOrEmpty(result.RetMessage))
+        {
+            Getallocation = await EmployeeService.GetChallocation(selectedchamberid);
+            allChambers = await EmployeeService.GetChambersAsync();
+
+
+            companyModel.GrowerGroupName = string.Empty;
+            companyModel.ChamberAllocation = 0;
+
+            DialogMessage = result.RetMessage;
+            ShowEmptyFieldDialogError = true;
+
+
+            StateHasChanged();
+            DeleteDialog = false; // Close the delete confirmation dialog
+            return;
+        }
+
+
+
+        if (result != null && result.RetFlag.Trim() == "FALSE")
+        {
+
+            DialogMessage = result.RetMessage ?? "Failed to delete Item group.";
+            ShowEmptyFieldDialog = true;
+            DeleteDialog = false;
+            return;
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        StateHasChanged();
+        DeleteDialog = false;
+
+    }
+
+
+
+
+    //private Chamber? CselectedChamber = null;
+
+
+
+    public int selectedid;
+
+    public int selectedno;
+    private async Task EditItem(object dataItem)
+    {
+        if (dataItem is CompanyModel companyModel)
+        {
+
+
+            selectedno = companyModel.Partyid;
+            selectedid = companyModel.ChamberId;
+            // await  JS.InvokeVoidAsync("alert", selectedno);
+
+            //   await JS.InvokeVoidAsync("alert", selectedid);
+
+            GetSubGrowers = await EmployeeService.Getchamberdetgrowers(selectedno, selectedid);
+
+
+            ShowSubgrowers = true;
+
+
+
+
+
+
+        }
+    }
+
+
+    private string GetCardColornew(int QtyConsumed, int MaxQty, bool IsLocked)
+    {
+        // Always red if locked or fully consumed
+        
+        double percentage = QtyConsumed;
+
+        if (percentage > 0)
+            return "yellow";
+        else if (percentage >= 90)
+            return "green";
+        else
+            return "white";
+    }
+
+
+
+
+
+    private string GetCardColor(int QtyConsumed, int MaxQty, bool IsLocked)
+    {
+        // Always red if locked or fully consumed
+        if (IsLocked || QtyConsumed >= MaxQty)
+            return "red";
+
+        // Calculate percentage consumed
+        double percentage = ((double)QtyConsumed / MaxQty) * 100;
+
+        if (percentage <= 9.9)
+            return "yellow";
+        else if (percentage <= 90)
+            return "green";
+        else
+            return "red";
+    }
+
+
+    public async Task Changechstat(int chamberId)
+    {
+
+
+
+
+        await EmployeeService.LockUnlockChamber(chamberId,companyModel);
+        allChambers = await EmployeeService.GetChambersAsync();
+
+    }
+
+
+    private async Task HandleFocus(FocusEventArgs e)
+    {
+        if (!isDropDownVisible)
+        {
+            isDropDownVisible = true;
+        }
+
+        if (!dataLoaded)
+        {
+            await Task.Delay(500); // Simulate async delay
+            GetgrowerList = await EmployeeService.GetallGrowerlist();
+        }
+    }
+    private async Task OnDropDownVisibleChanged(bool isVisible)
+    {
+        if (isVisible)
+        {
+            await Task.Delay(500); // Simulate async data fetch
+
+            GetgrowerList = await EmployeeService.GetallGrowerlist();
+            StateHasChanged(); // Force re-render
+        }
+    }
+
+
+    public async Task LockUnlockChamber(int chamberId)
+    {
+        using (var connection = new SqlConnection("server=DESKTOP-3F92UR5\\SQLEXPRESS;database=NewStoreProject_DB;Trusted_Connection=true;TrustServerCertificate=true;MultipleActiveResultSets=true"))
+        {
+            await connection.OpenAsync();
+
+            // First get the current lock status
+            bool currentLockStatus = false;
+            string selectQuery = "SELECT IsLocked FROM chamber WHERE chamberid = @chamberId";
+
+            using (var selectCommand = new SqlCommand(selectQuery, connection))
+            {
+                selectCommand.Parameters.AddWithValue("@chamberId", chamberId);
+                var result = await selectCommand.ExecuteScalarAsync();
+                if (result != null)
+                {
+                    currentLockStatus = Convert.ToBoolean(result);
+                }
+            }
+
+            // Toggle the lock status
+            bool newLockStatus = !currentLockStatus;
+            string updateQuery = "UPDATE chamber SET IsLocked = @IsLocked WHERE chamberid = @chamberId";
+
+            using (var updateCommand = new SqlCommand(updateQuery, connection))
+            {
+                updateCommand.Parameters.AddWithValue("@IsLocked", newLockStatus);
+                updateCommand.Parameters.AddWithValue("@chamberId", chamberId);
+                await updateCommand.ExecuteNonQueryAsync();
+            }
+
+            // Update the local view model
+            var chamberVm = allChambers.FirstOrDefault(c => c.ChamberId == chamberId);
+            if (chamberVm != null)
+            {
+                chamberVm.IsLocked = newLockStatus;
+            }
+
+            StateHasChanged();
+        }
+    }
+
+    public class ChamberModelVM
+    {
+        // public int ChamberId { get; set; }
+        // public string ChamberName { get; set; }
+        // public int? MaxQty { get; set; }
+        // public int? QtyConsumed { get; set; }
+        // public int? QtyAvailable { get; set; }
+        // public bool IsLocked { get; set; }
+    }
+
+    [Inject] IJSRuntime JSRuntime { get; set; }
+
+    public class GrowerAllocationVM
+    {
+        public string GrowerName { get; set; }
+        public int Quantity { get; set; }
+        public int PartyId { get; set; }
+        public int GrowerId { get; set; }
+        public int ChamberId { get; set; }
+        public int ChamberCapacity { get; set; }
+
+        public bool IsLocked { get; set; }
+    }
+
+
+    public class AllGrowerDetailsVM
+    {
+        public string GrowerName { get; set; }
+        public int Quantity { get; set; }
+        public int ChamberId { get; set; }
+        public string ChamberName { get; set; }
+        public int? Series { get; set; }
+        public int Agreement { get; set; }
+        public int TotalTaken { get; set; }
+        public int TotalAvailable { get; set; }
+    }
+
+    public List<AllGrowerDetailsVM> allGrowerDetailsVM { get; set; }
+    public CompanyModel selectedChamber = new();
+
+    private List<GrowerAllocationVM> selectedGrowerAllocations = new();
+
+
+    private List<CompanyModel> allChambers = new();
+
+    public string PopupMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        buttonmain = true;
+        buttonsecond = false;
+        allChambers = await EmployeeService.GetChambersInAsync();
+
+        var userResult13 = await ProtectedLocalStore.GetAsync<string>("UserGroup");
+        string GlobalUserGroup = userResult13.Success ? userResult13.Value : null;
+        Privmodel = await EmployeeService.GetAllocationpriv(GlobalUserGroup);
+         companyModel = await EmployeeService.Dashtotals();
+
+      
+    }
+
+
+
+
+    private async Task SaveNewSub()
+    {
+
+
+
+        EditModel.GrowerGroupName = selectedparty;
+
+        if (string.IsNullOrWhiteSpace(EditModel.GrowerGroupName))
+        {
+            DialogMessage = "Please selected  valid party name";
+            ShowEmptyFieldDialog = true;
+            return;
+
+        }
+
+        if (EditModel.ChamberId <= 0)
+        {
+            DialogMessage = "Please enter a valid chamber No";
+            ShowEmptyFieldDialog = true;
+            return;
+        }
+
+
+        if (EditModel.ChamberAllocation <= 0)
+        {
+            DialogMessage = "Please enter a valid qty ";
+            ShowEmptyFieldDialog = true;
+            return;
+        }
+
+        var result = await EmployeeService.SaveChamberAllocation(EditModel);
+
+
+        if (result != null && result.RetFlag.Trim() == "TRUE" && !string.IsNullOrEmpty(result.RetMessage))
+        {
+            DialogMessage = result.RetMessage;
+            ShowEmptyFieldDialogError = true;
+            companyModel = await EmployeeService.Getchsummary(EditModel.ChamberId);
+
+            Getallocation = await EmployeeService.GetChallocation(selectedchamberid);
+            allChambers = await EmployeeService.GetChambersAsync();
+
+
+            companyModel.GrowerGroupName=string.Empty;
+            companyModel.ChamberAllocation = 0;
+
+
+
+
+
+            StateHasChanged();
+            return;
+        }
+
+
+        if (result != null && result.RetFlag.Trim() == "FALSE")
+        {
+
+            DialogMessage = result.RetMessage ?? "Error";
+            ShowEmptyFieldDialog = true;
+
+            return;
+        }
+
+
+
+
+
+
+    }
+
+
+
+
+    private async Task UpdateAllocation()
+    {
+
+
+
+        // EditModel.GrowerGroupName = selectedparty;
+
+        // if (string.IsNullOrWhiteSpace(EditModel.GrowerGroupName))
+        // {
+        //     DialogMessage = "Please selected  valid party name";
+        //     ShowEmptyFieldDialog = true;
+        //     return;
+
+        // }
+
+        if (EditModel.ChamberId <= 0)
+        {
+            DialogMessage = "Please enter a valid chamber No";
+            ShowEmptyFieldDialog = true;
+            return;
+        }
+        if (EditModel.AllocationNo <= 0)
+        {
+            DialogMessage = "Please enter a valid idno No";
+            ShowEmptyFieldDialog = true;
+            return;
+        }
+
+        if (EditModel.ChamberAllocation <= 0)
+        {
+            DialogMessage = "Please enter a valid qty ";
+            ShowEmptyFieldDialog = true;
+            return;
+        }
+
+        var result = await EmployeeService.UpdateChamberAllocation(EditModel);
+
+
+        if (result != null && result.RetFlag.Trim() == "TRUE" && !string.IsNullOrEmpty(result.RetMessage))
+        {
+            DialogMessage = result.RetMessage;
+            ShowEmptyFieldDialogError = true;
+            companyModel = await EmployeeService.Getchsummary(EditModel.ChamberId);
+
+            Getallocation = await EmployeeService.GetChallocation(selectedchamberid);
+            allChambers = await EmployeeService.GetChambersAsync();
+
+
+            companyModel.GrowerGroupName = string.Empty;
+            companyModel.ChamberAllocation = 0;
+
+
+
+
+
+            StateHasChanged();
+            return;
+        }
+
+
+        if (result != null && result.RetFlag.Trim() == "FALSE")
+        {
+
+            DialogMessage = result.RetMessage ?? "Error";
+            ShowEmptyFieldDialog = true;
+
+            return;
+        }
+
+
+
+
+
+
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    private async Task HideNewsub()
+    {
+        buttonmain=true;
+        buttonsecond = false;
+
+
+        showAllocation = false;
+
+
+    }
+    private int totalcap;
+    private int totalalloc;
+    private async Task ShowModal(int chamberId)
+    {
+       
+        //CselectedChamber=chamberId;
+        Getallocation = await EmployeeService.Getchamberdet(chamberId);
+
+
+       
+        showAllocation = true;
+
+                        
+
+    }
+
+    public async Task NavigateToEdit(int growerId, int chamberId)
+    {
+        // Hide modal asynchronously
+        await JSRuntime.InvokeVoidAsync("bootstrapModalHide", "#chamberModal");
+
+        // Navigate to edit page
+        //navigationManager.NavigateTo($"upsertAllotment/{growerId}/{chamberId}");
+    }
+
+
+
+
+    public void NavigateToView(int growerId)
+    {
+        string sql = @"
+                        SELECT
+                            CASE WHEN a.SubGrowerId IS NULL THEN p.PartyName ELSE s.SubGrowerName END AS GrowerName,
+                            a.Quantity,
+                            a.chamberid AS ChamberId,
+                            c.chambername AS ChamberName,
+                            a.Series,
+                            ag.Allotment AS Agreement,
+                            SUM(a.Quantity) OVER (PARTITION BY a.partyid) AS TotalTaken,
+                            ag.Allotment - SUM(a.Quantity) OVER (PARTITION BY a.partyid) AS TotalAvailable
+                        FROM dbo.Allocation a
+                        INNER JOIN dbo.Party p ON a.partyid = p.partyid
+                        LEFT JOIN dbo.SubGrowers s ON a.SubGrowerId = s.Id   -- ✅ fixed
+                        INNER JOIN dbo.Chamber c ON a.chamberid = c.chamberid
+                        INNER JOIN dbo.Agreement ag ON ag.partyid = a.partyid
+                        WHERE a.partyid = @GrowerId AND a.FlagDeleted = 0
+                        ORDER BY a.Series;
+                        ";
+
+
+        var list = new List<AllGrowerDetailsVM>();
+
+        using (SqlConnection conn = new SqlConnection("server=DESKTOP-3F92UR5\\SQLEXPRESS;database=NewStoreProject_DB;Trusted_Connection=true;TrustServerCertificate=true;MultipleActiveResultSets=true"))
+        {
+            conn.Open();
+            using (SqlCommand cmd = new SqlCommand(sql, conn))
+            {
+                cmd.Parameters.AddWithValue("@GrowerId", growerId);
+
+                using (SqlDataReader reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        var vm = new AllGrowerDetailsVM
+                            {
+                                GrowerName = reader["GrowerName"].ToString(),
+                                Quantity = Convert.ToInt32(reader["Quantity"]),
+                                ChamberId = Convert.ToInt32(reader["ChamberId"]),
+                                ChamberName = reader["ChamberName"].ToString(),
+                                Series = reader["Series"] == DBNull.Value ? null : (int?)Convert.ToInt32(reader["Series"]),
+                                Agreement = Convert.ToInt32(reader["Agreement"]),
+                                TotalTaken = Convert.ToInt32(reader["TotalTaken"]),
+                                TotalAvailable = Convert.ToInt32(reader["TotalAvailable"])
+                            };
+
+                        list.Add(vm);
+                    }
+                }
+            }
+        }
+
+        allGrowerDetailsVM = list;
+
+        JSRuntime.InvokeVoidAsync("bootstrapModalShow", "#growerDetailModal");
+    }
+
+
+
+    public async Task NavigateToDelete(int growerId, int chamberId)
+    {
+        using (SqlConnection conn = new SqlConnection("server=DESKTOP-3F92UR5\\SQLEXPRESS;database=NewStoreProject_DB;Trusted_Connection=true;TrustServerCertificate=true;MultipleActiveResultSets=true"))
+        {
+            await conn.OpenAsync();
+
+            // 1. Get chamber
+            string chamberQuery = @"SELECT chamberid, QuantityConsumed, QuantityBalanced
+                                FROM chamber WHERE chamberid = @chamberId";
+            SqlCommand cmdChamber = new SqlCommand(chamberQuery, conn);
+            cmdChamber.Parameters.AddWithValue("@chamberId", chamberId);
+            SqlDataReader readerChamber = await cmdChamber.ExecuteReaderAsync();
+
+            if (!await readerChamber.ReadAsync())
+            {
+                readerChamber.Close();
+                return;
+            }
+            readerChamber.Close();
+
+            // 2. Get Allocation
+            string allocationQuery = @"SELECT TOP 1 Id, Quantity
+                                   FROM Allocation
+                                   WHERE partyid = @growerId
+                                     AND chamberid = @chamberId
+                                     AND FlagDeleted = 0";
+            SqlCommand cmdAllocation = new SqlCommand(allocationQuery, conn);
+            cmdAllocation.Parameters.AddWithValue("@growerId", growerId);
+            cmdAllocation.Parameters.AddWithValue("@chamberId", chamberId);
+
+            SqlDataReader readerAllocation = await cmdAllocation.ExecuteReaderAsync();
+            if (!await readerAllocation.ReadAsync())
+            {
+                readerAllocation.Close();
+                return;
+            }
+            int allocationId = readerAllocation.GetInt32(0);
+            int allocationQty = readerAllocation.GetInt32(1);
+            readerAllocation.Close();
+
+            // 3. Get Dtrans record with LotNumber = NULL
+            string dtransQuery = @"SELECT TOP 1 Id
+                               FROM Dtrans
+                               WHERE partyid = @growerId
+                                 AND chamberid = @chamberId
+                                 AND AllocationId = @allocationId
+                                 AND LotNumber IS NULL
+                                 AND FlagDeleted = 0";
+            SqlCommand cmdDtrans = new SqlCommand(dtransQuery, conn);
+            cmdDtrans.Parameters.AddWithValue("@growerId", growerId);
+            cmdDtrans.Parameters.AddWithValue("@chamberId", chamberId);
+            cmdDtrans.Parameters.AddWithValue("@allocationId", allocationId);
+
+            object dtransIdObj = await cmdDtrans.ExecuteScalarAsync();
+
+            if (dtransIdObj != null)
+            {
+                // 4. Update chamber quantities
+                string updateChamber = @"UPDATE chamber
+                                     SET QuantityConsumed = QuantityConsumed - @qty,
+                                         QuantityBalanced = QuantityBalanced + @qty
+                                     WHERE chamberid = @chamberId";
+                SqlCommand cmdUpdateChamber = new SqlCommand(updateChamber, conn);
+                cmdUpdateChamber.Parameters.AddWithValue("@qty", allocationQty);
+                cmdUpdateChamber.Parameters.AddWithValue("@chamberId", chamberId);
+                await cmdUpdateChamber.ExecuteNonQueryAsync();
+
+                // 5. Soft delete dtrans
+                string updateDtrans = @"UPDATE Dtrans SET FlagDeleted = 1 WHERE Id = @dtransId";
+                SqlCommand cmdUpdateDtrans = new SqlCommand(updateDtrans, conn);
+                cmdUpdateDtrans.Parameters.AddWithValue("@dtransId", (int)dtransIdObj);
+                await cmdUpdateDtrans.ExecuteNonQueryAsync();
+
+                // 6. Soft delete allocation
+                string updateAllocation = @"UPDATE Allocation SET FlagDeleted = 1 WHERE Id = @allocationId";
+                SqlCommand cmdUpdateAllocation = new SqlCommand(updateAllocation, conn);
+                cmdUpdateAllocation.Parameters.AddWithValue("@allocationId", allocationId);
+                await cmdUpdateAllocation.ExecuteNonQueryAsync();
+
+                // Simulate "DELETE FROM selectedGrowerAllocations WHERE GrowerId=@growerId AND ChamberId=@chamberId"
+                for (int i = selectedGrowerAllocations.Count - 1; i >= 0; i--)
+                {
+                    if (selectedGrowerAllocations[i].GrowerId == growerId &&
+                        selectedGrowerAllocations[i].ChamberId == chamberId)
+                    {
+                        selectedGrowerAllocations.RemoveAt(i);
+                    }
+                }
+
+
+
+
+                await EmployeeService.GetChambersAsync();
+                StateHasChanged();
+            }
+            else
+            {
+                PopupMessage = "Cannot delete. Lot Number is already present.";
+                await JSRuntime.InvokeVoidAsync("bootstrapModalShow", "#deleteNotAllowedModal");
+                StateHasChanged();
+            }
+        }
+    }
+
+
+
+
+    public async Task NavigateToAdd(int chamberId)
+    {
+        // Hide the modal asynchronously
+        await JSRuntime.InvokeVoidAsync("bootstrapModalHide", "#chamberModal");
+
+        // Navigate to the Add page
+       // navigationManager.NavigateTo($"upsertAllotment/{chamberId}");
+    }
+
+
+}

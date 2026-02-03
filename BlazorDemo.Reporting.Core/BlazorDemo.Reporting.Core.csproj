@@ -1,0 +1,32 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <EnableDefaultItems>False</EnableDefaultItems>
+    <OutputType>Library</OutputType>
+    <ImplicitUsings>enabled</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.JSInterop" Version="8.0.10" />
+    <PackageReference Include="System.Drawing.Common" Version="8.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="8.0.0" />
+  </ItemGroup>
+  <ItemGroup Condition="!Exists('..\..\..\..\Reporting\CS\DevExpress.DemoReports\DevExpress.DemoReports.NetCore.csproj')">
+    <PackageReference Include="DevExpress.Reporting.Demos" Version="24.2.6" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Services\ReportingFontLoader.cs" />
+    <Compile Include="Services\ReportingCookieHelper.cs" />
+    <Compile Include="Services\ReportFactory.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Signatures\John_Smith.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Signatures\certificate.pfx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+</Project>

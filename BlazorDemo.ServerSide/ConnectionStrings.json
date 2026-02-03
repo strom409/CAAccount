@@ -1,0 +1,5 @@
+{
+  "ConnectionStrings": {
+    "SqlDbContext": "Server=localhost\\SQLEXPRESS;Database=cadb2025;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=true"
+  }
+}

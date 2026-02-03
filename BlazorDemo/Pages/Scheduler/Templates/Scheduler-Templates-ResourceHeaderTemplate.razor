@@ -1,0 +1,63 @@
+﻿@page "/Scheduler/Templates/ResourceHeaderTemplate"
+
+<DemoPageSectionComponent Id="Scheduler-Templates-ResourceHeaderTemplate">
+    <DemoChildContent>
+        <DxScheduler @bind-StartDate="@StartDate"
+                     DataStorage="@DataStorage"
+                     GroupType="@SchedulerGroupType.Resource"
+                     ResourceColorInHeaderVisible="false"
+                     HtmlCellDecoration="OnHtmlCellDecoration"
+                     CssClass="demo-sc-size">
+            <Views>
+                <DxSchedulerDayView DayCount="2" ShowWorkTimeOnly="true" CellMinWidth="120">
+                    <ResourceHeaderCellTemplate>
+                        <div class="" style="display: flex; flex-direction: row; align-items: center;">
+                            <img class="card" src="@(StaticAssetUtils.GetImagePath(context.Resource.CustomFields["ImageFileName"].ToString()))"
+                                 alt=""
+                                 style="object-fit: cover; height: 80px; width: 80px; object-position: 0px 0px; border-radius: 50%;" />
+                            <div style="padding: 0.4725rem;">@context.Resource.Caption</div>
+                        </div>
+                    </ResourceHeaderCellTemplate>
+                </DxSchedulerDayView>
+            </Views>
+        </DxScheduler>
+    </DemoChildContent>
+
+    @code {
+        DateTime StartDate { get; set; } = DateTime.Today;
+
+        DxSchedulerDataStorage DataStorage = new DxSchedulerDataStorage() {
+            AppointmentsSource = ResourceAppointmentCollection.GetAppointments(),
+            AppointmentMappings = new DxSchedulerAppointmentMappings() {
+                Type = "AppointmentType",
+                Start = "StartDate",
+                End = "EndDate",
+                Subject = "Caption",
+                AllDay = "AllDay",
+                Location = "Location",
+                Description = "Description",
+                LabelId = "Label",
+                StatusId = "Status",
+                RecurrenceInfo = "Recurrence",
+                ResourceId = "ResourceId"
+            },
+            ResourcesSource = ResourceCollection.GetResourcesForGrouping(),
+            ResourceMappings = new DxSchedulerResourceMappings() {
+                Id = "Id",
+                Caption = "Name",
+                BackgroundCssClass = "BackgroundCss",
+                TextCssClass = "TextCss",
+                CustomFieldMappings = new List<DxSchedulerCustomFieldMapping> {
+                    new DxSchedulerCustomFieldMapping{ Name = "ImageFileName", Mapping = "ImageFileName" }
+                }
+            }
+        };
+
+        void OnHtmlCellDecoration(SchedulerHtmlCellDecorationEventArgs args) {
+            if(args.CellType == SchedulerCellType.ResourceHeader) {
+                args.CssClass = "card-header";
+                args.Style = "padding: 0.4725rem;";
+            }
+        }
+    }
+</DemoPageSectionComponent>

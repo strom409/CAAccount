@@ -1,0 +1,1 @@
+Taskkill /IM store2023.exe /f

@@ -1,0 +1,691 @@
+﻿@page "/upsertChamber"
+@page "/upsertChamber/{chamberId:int}"
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.Data.SqlClient
+@using BlazorDemo.CustomAttributes
+@using BlazorDemo.Data
+@using Microsoft.EntityFrameworkCore
+@using BlazorDemo.Models
+@inject AppDbContext context
+@inject NavigationManager navigationManager
+
+<EditForm Model="@addChamberVM" OnValidSubmit="@HandleValidSubmit" Context="addCtx">
+    <DataAnnotationsValidator />
+    <DevExpress.Blazor.Internal.DxCardHeader>
+                <h3 class="mb-0 text-primary">@((chamberId != 0) ? "Edit Chamber" : "Add Chamber")</h3>
+            </DevExpress.Blazor.Internal.DxCardHeader>
+    <DxFormLayout CssClass="equal-height-container">
+        
+
+
+        <DxFormLayoutGroup Caption="Chamber Details" ColSpanMd="12">
+
+                            <DxSpinEdit hidden @bind-Value="@addChamberVM.ChamberId" />
+
+            <DxFormLayoutItem ColSpanMd="12">
+                <CaptionTemplate>
+                    Building Name : <span style="color:red">*</span>
+                </CaptionTemplate>
+                <Template>
+                    <DxComboBox Data="@buildingNames"
+                                @bind-Value="@addChamberVM.BuildingName"
+                                SearchMode="@SearchMode"
+                                SearchFilterCondition="@SearchFilterCondition"
+                                SearchTextParseMode="@SearchTextParseMode" 
+                                NullText="Select Building Name" />
+                    <ValidationMessage For="@(() => addChamberVM.BuildingName)" />
+                </Template>
+            </DxFormLayoutItem>
+
+            <DxFormLayoutItem ColSpanMd="12">
+                <CaptionTemplate>
+                    Unit Name : <span style="color:red">*</span>
+                </CaptionTemplate>
+                <Template>
+                    <DxComboBox Data="@unitNames"
+                                @bind-Value="@addChamberVM.UnitName"
+                                SearchMode="@SearchMode"
+                                SearchFilterCondition="@SearchFilterCondition"
+                                SearchTextParseMode="@SearchTextParseMode"
+                                NullText="Select Unit Name" />
+                    <ValidationMessage For="@(() => addChamberVM.UnitName)" />
+                </Template>
+            </DxFormLayoutItem>
+
+            <DxFormLayoutItem ColSpanMd="12">
+                <CaptionTemplate>
+                    Chamber Name : <span style="color:red">*</span>
+                </CaptionTemplate>
+                <Template>
+                    <DxTextBox @bind-Text="@addChamberVM.ChamberName" />
+                    <ValidationMessage For="@(() => addChamberVM.ChamberName)" />
+                </Template>
+            </DxFormLayoutItem>
+
+            <DxFormLayoutItem ColSpanMd="12">
+                <CaptionTemplate>
+                    Chamber Capacity : <span style="color:red" class="me-2">*</span>
+                </CaptionTemplate>
+                <Template>
+                    <DxSpinEdit @bind-Value="@addChamberVM.ChamberCapacity" />
+                    <ValidationMessage For="@(() => addChamberVM.ChamberCapacity)" />
+                </Template>
+            </DxFormLayoutItem>
+
+            <DxFormLayoutItem ColSpanMd="12">
+                <CaptionTemplate>
+                    Bin Or Meznine : <span style="color:red">*</span>
+                </CaptionTemplate>
+                <Template>
+                    <DxComboBox Data="@BinOrMeznine"
+                                @bind-Value="@addChamberVM.BinOrMeznineChamber" />
+                    <ValidationMessage For="@(() => addChamberVM.BinOrMeznineChamber)" />
+                </Template>
+            </DxFormLayoutItem>
+
+
+            <DxFormLayoutItem ColSpanMd="12" Caption="Chamber Locked">
+                <DxCheckBox @bind-Checked="@addChamberVM.ChamberLocked" />
+            </DxFormLayoutItem>
+
+        </DxFormLayoutGroup>
+        
+        <DxFormLayoutGroup Caption="Specifications" ColSpanMd="12">
+            
+
+            <DxFormLayoutItem Caption="Status : " ColSpanMd="12">
+            <fieldset role="radiogroup">
+                <div class="dx-demo-radio-group">
+                    
+                    <DxRadio GroupName="status-radio-group"
+                               @bind-GroupValue="@addChamberVM.Status" 
+                                   Value="true" >
+                                   Active
+                    </DxRadio>
+                        <DxRadio GroupName="status-radio-group"
+                                 @bind-GroupValue="@addChamberVM.Status"
+                                 Value="false">
+                            InActive
+                        </DxRadio>
+                </div>
+                
+            </fieldset>
+            </DxFormLayoutItem>
+            
+            <DxFormLayoutItem ColSpanMd="12">
+                <CaptionTemplate>
+                    Type : <span style="color:red">*</span>
+                </CaptionTemplate>
+                <Template>
+                    <fieldset role="radiogroup">
+                        <div class="dx-demo-radio-group">
+                            @foreach (var type in chamberTypes)
+                            {
+                                <DxRadio GroupName="priorities-radio-group"
+                                         @bind-GroupValue="@addChamberVM.Type"
+                                         Value="@type">
+                                    @type
+                                </DxRadio>
+                            }
+                        </div>
+                    </fieldset>
+                <ValidationMessage For="@(() => addChamberVM.Type)" />
+                </Template>
+                </DxFormLayoutItem>
+
+        </DxFormLayoutGroup>
+        
+
+        <DxFormLayoutGroup Caption="Sizing" ColSpanMd="12">
+
+            <DxFormLayoutItem Caption="" ColSpanMd="4">
+                <CaptionTemplate>
+                    Length (ft) : <span style="color:red">*</span>
+                </CaptionTemplate>
+                <Template>
+                    <DxSpinEdit @bind-Value="@addChamberVM.Length" />
+                    <ValidationMessage For="@(() => addChamberVM.Length)" />
+                </Template>
+            </DxFormLayoutItem>
+
+
+            <DxFormLayoutItem ColSpanMd="4">
+                <CaptionTemplate>
+                    Width (ft) : <span style="color:red">*</span>
+                </CaptionTemplate>
+                <Template>
+                    <DxSpinEdit @bind-Value="@addChamberVM.Width" />
+                    <ValidationMessage For="@(() => addChamberVM.Width)" />
+                </Template>
+            </DxFormLayoutItem>
+
+
+            <DxFormLayoutItem ColSpanMd="4">
+                <CaptionTemplate>
+                    Height (ft) : <span style="color:red">*</span>
+                </CaptionTemplate>
+                <Template>
+                    <DxSpinEdit @bind-Value="@addChamberVM.Height" />
+                    <ValidationMessage For="@(() => addChamberVM.Height)" />
+                </Template>
+            </DxFormLayoutItem>
+
+
+            @* <DxFormLayoutItem Caption="CFT : " ColSpanMd="3">
+                    <DxSpinEdit Enabled="false" @bind-Value="@addChamberVM.CFT" />
+            </DxFormLayoutItem> *@
+
+
+            <DxFormLayoutItem ColSpanMd="4">
+                <CaptionTemplate>
+                    Actual Size : <span style="color:red">*</span>
+                </CaptionTemplate>
+                <Template>
+                    <DxSpinEdit @bind-Value="@addChamberVM.ActualSize" />
+                    <ValidationMessage For="@(() => addChamberVM.ActualSize)" />
+                </Template>
+            </DxFormLayoutItem>
+
+
+            <DxFormLayoutItem ColSpanMd="4">
+                <CaptionTemplate>
+                    Usable Size : <span style="color:red" class="me-2">*</span>
+                </CaptionTemplate>
+                <Template>
+                    <DxSpinEdit @bind-Value="@addChamberVM.UsableSize" />
+                    <ValidationMessage For="@(() => addChamberVM.UsableSize)" />
+                </Template>
+            </DxFormLayoutItem>
+
+            <DxFormLayoutItem ColSpanMd="4">
+                <CaptionTemplate>
+                    Floor : <span style="color:red">*</span>
+                </CaptionTemplate>
+                <Template>
+                    <DxSpinEdit @bind-Value="@addChamberVM.Floor" />
+                    <ValidationMessage For="@(() => addChamberVM.Floor)" />
+                </Template>
+            </DxFormLayoutItem>
+
+            @* <DxFormLayoutItem Caption="Square Feet :" ColSpanMd="3">
+                <DxSpinEdit Enabled="false" @bind-Value="@addChamberVM.SquareFeet" />
+            </DxFormLayoutItem> *@
+        </DxFormLayoutGroup>
+
+        <DxFormLayoutItem Context="FormLayoutContext">
+            <div class="text-right">
+                <DxButton RenderStyle="ButtonRenderStyle.Primary" SubmitFormOnClick="true" Text="@((chamberId!=0)?"Update":"Save")" />
+                <DxButton RenderStyle="ButtonRenderStyle.Primary" @onclick="@(() => navigationManager.NavigateTo("/viewchambersingrid"))" Text="Back" />
+            </div>
+        </DxFormLayoutItem>
+        
+           
+        
+    </DxFormLayout>
+</EditForm>
+
+
+@code{
+
+        private AddChamberVM addChamberVM = new();
+
+        private IEnumerable<string> buildingNames;
+
+        private IEnumerable<string> unitNames;
+        private IEnumerable<string> chamberTypes = new List<string> { "Frozen (CA)", "Chilled (CS)", "High Density (HD)" };
+        private IEnumerable<string> BinOrMeznine = new List<string> { "Bin Chamber", "Meznine" };
+        ListSearchMode SearchMode { get; set; } = ListSearchMode.AutoSearch;
+        ListSearchFilterCondition SearchFilterCondition { get; set; } = ListSearchFilterCondition.Contains;
+        ListSearchTextParseMode SearchTextParseMode { get; set; } = ListSearchTextParseMode.GroupWordsByAnd;
+
+
+        [Parameter]
+        public int chamberId { get; set; }
+        private Chamber chamberInfo;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // if (chamberId != 0)
+        // {
+        //     var chamberInfo = await GetChamberInfo(chamberId);
+
+        //     if (chamberInfo != null)
+        //     {
+        //         // Get Building Name
+        //         string buildingName = null;
+        //         if (chamberInfo.BuildingId.HasValue)
+        //         {
+        //             buildingName = await GetBuildingNameById(chamberInfo.BuildingId.Value);
+        //         }
+
+        //         // Get Unit Name
+        //         string unitName = null;
+        //         if (chamberInfo.UnitId.HasValue)
+        //         {
+        //             unitName = await GetUnitNameById(chamberInfo.UnitId.Value);
+        //         }
+
+        //         addChamberVM = new AddChamberVM
+        //         {
+        //             ChamberId = chamberId,
+        //             ChamberName = chamberInfo.chambername,
+        //             ChamberCapacity = chamberInfo.MaxQuantity,
+        //             BuildingName = buildingName,
+        //             UnitName = unitName,
+        //             BinOrMeznineChamber = chamberInfo.IsActualChamber == true ? "Bin Chamber" :
+        //                                   chamberInfo.IsMeznineChamber == true ? "Meznine" : null,
+        //             ChamberLocked = chamberInfo.IsLocked,
+        //             Status = chamberInfo.Status,
+        //             Type = chamberInfo.ChamberType,
+        //             Length = chamberInfo.Length,
+        //             Width = chamberInfo.Width,
+        //             Height = chamberInfo.Height,
+        //             ActualSize = chamberInfo.ActualSize,
+        //             UsableSize = chamberInfo.UsableSize,
+        //             Floor = chamberInfo.Floor
+        //         };
+        //     }
+        // }
+        // else
+        // {
+        //     addChamberVM = new AddChamberVM(); // blank form for Add
+        // }
+
+        // await GetBuildings(); // also loads buildingNames for dropdown
+        // await GetUnits(); // also loads unitNames for dropdown
+    }
+
+    // Helper method to get Building Name by ID
+    private async Task<string> GetBuildingNameById(int buildingId)
+    {
+        using (var connection = new SqlConnection("server=DESKTOP-3F92UR5\\SQLEXPRESS;database=NewStoreProject_DB;Trusted_Connection=true;TrustServerCertificate=true;MultipleActiveResultSets=true"))
+        {
+            await connection.OpenAsync();
+
+            string query = "SELECT BuildingName FROM Buildings WHERE Id = @BuildingId";
+
+            using (var command = new SqlCommand(query, connection))
+            {
+                command.Parameters.AddWithValue("@BuildingId", buildingId);
+
+                var result = await command.ExecuteScalarAsync();
+                return result?.ToString();
+            }
+        }
+    }
+
+    // Helper method to get Unit Name by ID
+    private async Task<string> GetUnitNameById(int unitId)
+    {
+        using (var connection = new SqlConnection("server=DESKTOP-3F92UR5\\SQLEXPRESS;database=NewStoreProject_DB;Trusted_Connection=true;TrustServerCertificate=true;MultipleActiveResultSets=true"))
+        {
+            await connection.OpenAsync();
+
+            string query = "SELECT UnitName FROM UnitMasters WHERE id = @UnitId";
+
+            using (var command = new SqlCommand(query, connection))
+            {
+                command.Parameters.AddWithValue("@UnitId", unitId);
+
+                var result = await command.ExecuteScalarAsync();
+                return result?.ToString();
+            }
+        }
+    }
+
+    public async Task GetBuildings()
+    {
+        var buildingList = new List<string>();
+
+        using (var connection = new SqlConnection("server=DESKTOP-3F92UR5\\SQLEXPRESS;database=NewStoreProject_DB;Trusted_Connection=true;TrustServerCertificate=true;MultipleActiveResultSets=true"))
+        {
+            await connection.OpenAsync();
+
+            string query = "SELECT BuildingName FROM Buildings";
+
+            using (var command = new SqlCommand(query, connection))
+            {
+                using (var reader = await command.ExecuteReaderAsync())
+                {
+                    while (await reader.ReadAsync())
+                    {
+                        if (!reader.IsDBNull(reader.GetOrdinal("BuildingName")))
+                        {
+                            buildingList.Add(reader.GetString(reader.GetOrdinal("BuildingName")));
+                        }
+                    }
+                }
+            }
+        }
+
+        buildingNames = buildingList;
+    }
+
+    public async Task GetUnits()
+    {
+        var unitList = new List<string>();
+
+        using (var connection = new SqlConnection("server=DESKTOP-3F92UR5\\SQLEXPRESS;database=NewStoreProject_DB;Trusted_Connection=true;TrustServerCertificate=true;MultipleActiveResultSets=true"))
+        {
+            await connection.OpenAsync();
+
+            string query = "SELECT UnitName FROM UnitMasters";
+
+            using (var command = new SqlCommand(query, connection))
+            {
+                using (var reader = await command.ExecuteReaderAsync())
+                {
+                    while (await reader.ReadAsync())
+                    {
+                        if (!reader.IsDBNull(reader.GetOrdinal("UnitName")))
+                        {
+                            unitList.Add(reader.GetString(reader.GetOrdinal("UnitName")));
+                        }
+                    }
+                }
+            }
+        }
+
+        unitNames = unitList;
+    }
+
+    public async Task<Chamber> GetChamberInfo(int chamberId)
+    {
+        using (var connection = new SqlConnection("server=DESKTOP-3F92UR5\\SQLEXPRESS;database=NewStoreProject_DB;Trusted_Connection=true;TrustServerCertificate=true;MultipleActiveResultSets=true"))
+        {
+            await connection.OpenAsync();
+
+            string query = @"
+            SELECT
+                chamberid,
+                chambername,
+                MaxQuantity,
+                IsLocked,
+                Status,
+                ChamberType,
+                Length,
+                Width,
+                Height,
+                CFT,
+                ActualSize,
+                UsableSize,
+                Floor,
+                FlagDeleted,
+                QuantityBalanced,
+                QuantityConsumed,
+                SquareFeet,
+                IsMeznineChamber,
+                IsActualChamber,
+                BuildingId,
+                UnitId
+            FROM chamber
+            WHERE chamberid = @chamberId AND FlagDeleted = 0";
+
+            using (var command = new SqlCommand(query, connection))
+            {
+                command.Parameters.AddWithValue("@chamberId", chamberId);
+
+                using (var reader = await command.ExecuteReaderAsync())
+                {
+                    if (await reader.ReadAsync())
+                    {
+                        var chamber = new Chamber
+                        {
+                            chamberid = reader.GetInt32(reader.GetOrdinal("chamberid")),
+                            chambername = reader.GetString(reader.GetOrdinal("chambername")),
+                            MaxQuantity = reader.GetInt32(reader.GetOrdinal("MaxQuantity")),
+                            IsLocked = reader.GetBoolean(reader.GetOrdinal("IsLocked")),
+                            Status = reader.GetBoolean(reader.GetOrdinal("Status")),
+                            FlagDeleted = reader.GetBoolean(reader.GetOrdinal("FlagDeleted")),
+                            QuantityBalanced = reader.GetInt32(reader.GetOrdinal("QuantityBalanced")),
+                            QuantityConsumed = reader.GetInt32(reader.GetOrdinal("QuantityConsumed")),
+                            IsMeznineChamber = reader.GetBoolean(reader.GetOrdinal("IsMeznineChamber")),
+                            IsActualChamber = reader.GetBoolean(reader.GetOrdinal("IsActualChamber"))
+                        };
+
+                        // Handle nullable fields
+                        chamber.ChamberType = reader.IsDBNull(reader.GetOrdinal("ChamberType")) ?
+                            null : reader.GetString(reader.GetOrdinal("ChamberType"));
+
+                        chamber.Length = reader.IsDBNull(reader.GetOrdinal("Length")) ?
+                            null : (float?)reader.GetFloat(reader.GetOrdinal("Length"));
+
+                        chamber.Width = reader.IsDBNull(reader.GetOrdinal("Width")) ?
+                            null : (float?)reader.GetFloat(reader.GetOrdinal("Width"));
+
+                        chamber.Height = reader.IsDBNull(reader.GetOrdinal("Height")) ?
+                            null : (float?)reader.GetFloat(reader.GetOrdinal("Height"));
+
+                        chamber.CFT = reader.IsDBNull(reader.GetOrdinal("CFT")) ?
+                            null : (float?)reader.GetFloat(reader.GetOrdinal("CFT"));
+
+                        chamber.ActualSize = reader.IsDBNull(reader.GetOrdinal("ActualSize")) ?
+                            null : (float?)reader.GetFloat(reader.GetOrdinal("ActualSize"));
+
+                        chamber.UsableSize = reader.IsDBNull(reader.GetOrdinal("UsableSize")) ?
+                            null : (float?)reader.GetFloat(reader.GetOrdinal("UsableSize"));
+
+                        chamber.Floor = reader.IsDBNull(reader.GetOrdinal("Floor")) ?
+                            null : (float?)reader.GetFloat(reader.GetOrdinal("Floor"));
+
+                        chamber.SquareFeet = reader.IsDBNull(reader.GetOrdinal("SquareFeet")) ?
+                            null : (float?)reader.GetFloat(reader.GetOrdinal("SquareFeet"));
+
+                        chamber.BuildingId = reader.IsDBNull(reader.GetOrdinal("BuildingId")) ?
+                            null : (int?)reader.GetInt32(reader.GetOrdinal("BuildingId"));
+
+                        chamber.UnitId = reader.IsDBNull(reader.GetOrdinal("UnitId")) ?
+                            null : (int?)reader.GetInt32(reader.GetOrdinal("UnitId"));
+
+                        return chamber;
+                    }
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        using (var connection = new SqlConnection("server=DESKTOP-3F92UR5\\SQLEXPRESS;database=NewStoreProject_DB;Trusted_Connection=true;TrustServerCertificate=true;MultipleActiveResultSets=true"))
+        {
+            await connection.OpenAsync();
+
+            // Get Building ID
+            int? buildingId = null;
+            string buildingQuery = "SELECT Id FROM Buildings WHERE BuildingName = @BuildingName";
+            using (var buildingCommand = new SqlCommand(buildingQuery, connection))
+            {
+                buildingCommand.Parameters.AddWithValue("@BuildingName", addChamberVM.BuildingName);
+                var result = await buildingCommand.ExecuteScalarAsync();
+                if (result != null)
+                {
+                    buildingId = Convert.ToInt32(result);
+                }
+            }
+
+            // Get Unit ID
+            int? unitId = null;
+            string unitQuery = "SELECT id FROM UnitMasters WHERE UnitName = @UnitName";
+            using (var unitCommand = new SqlCommand(unitQuery, connection))
+            {
+                unitCommand.Parameters.AddWithValue("@UnitName", addChamberVM.UnitName);
+                var result = await unitCommand.ExecuteScalarAsync();
+                if (result != null)
+                {
+                    unitId = Convert.ToInt32(result);
+                }
+            }
+
+            // Initialize flags
+            bool isActualChamber = false;
+            bool isMeznineChamber = false;
+            if (addChamberVM.BinOrMeznineChamber != null)
+            {
+                if (addChamberVM.BinOrMeznineChamber == "Bin Chamber")
+                {
+                    isActualChamber = true;
+                    isMeznineChamber = false;
+                }
+                else
+                {
+                    isActualChamber = false;
+                    isMeznineChamber = true;
+                }
+            }
+
+            // Calculate derived values
+            float? cft = addChamberVM.Length + addChamberVM.Width + addChamberVM.Height;
+            float? squareFeet = addChamberVM.ActualSize + addChamberVM.UsableSize + addChamberVM.Floor;
+            int quantityBalanced = addChamberVM.ChamberCapacity;
+            int quantityConsumed = 0;
+
+            // ADD CASE
+            if (chamberId == 0 || chamberId == null)
+            {
+                string insertQuery = @"
+                INSERT INTO chamber (
+                    chambername, MaxQuantity, IsLocked, Status, ChamberType,
+                    Length, Width, Height, CFT, ActualSize, UsableSize, Floor,
+                    FlagDeleted, QuantityBalanced, QuantityConsumed, SquareFeet,
+                    IsMeznineChamber, IsActualChamber, BuildingId, UnitId
+                ) VALUES (
+                    @chambername, @MaxQuantity, @IsLocked, @Status, @ChamberType,
+                    @Length, @Width, @Height, @CFT, @ActualSize, @UsableSize, @Floor,
+                    @FlagDeleted, @QuantityBalanced, @QuantityConsumed, @SquareFeet,
+                    @IsMeznineChamber, @IsActualChamber, @BuildingId, @UnitId
+                )";
+
+                using (var insertCommand = new SqlCommand(insertQuery, connection))
+                {
+                    insertCommand.Parameters.AddWithValue("@chambername", addChamberVM.ChamberName);
+                    insertCommand.Parameters.AddWithValue("@MaxQuantity", addChamberVM.ChamberCapacity);
+                    insertCommand.Parameters.AddWithValue("@IsLocked", addChamberVM.ChamberLocked);
+                    insertCommand.Parameters.AddWithValue("@Status", addChamberVM.Status);
+                    insertCommand.Parameters.AddWithValue("@ChamberType", addChamberVM.Type ?? (object)DBNull.Value);
+                    insertCommand.Parameters.AddWithValue("@Length", addChamberVM.Length ?? (object)DBNull.Value);
+                    insertCommand.Parameters.AddWithValue("@Width", addChamberVM.Width ?? (object)DBNull.Value);
+                    insertCommand.Parameters.AddWithValue("@Height", addChamberVM.Height ?? (object)DBNull.Value);
+                    insertCommand.Parameters.AddWithValue("@CFT", cft ?? (object)DBNull.Value);
+                    insertCommand.Parameters.AddWithValue("@ActualSize", addChamberVM.ActualSize ?? (object)DBNull.Value);
+                    insertCommand.Parameters.AddWithValue("@UsableSize", addChamberVM.UsableSize ?? (object)DBNull.Value);
+                    insertCommand.Parameters.AddWithValue("@Floor", addChamberVM.Floor ?? (object)DBNull.Value);
+                    insertCommand.Parameters.AddWithValue("@FlagDeleted", false);
+                    insertCommand.Parameters.AddWithValue("@QuantityBalanced", quantityBalanced);
+                    insertCommand.Parameters.AddWithValue("@QuantityConsumed", quantityConsumed);
+                    insertCommand.Parameters.AddWithValue("@SquareFeet", squareFeet ?? (object)DBNull.Value);
+                    insertCommand.Parameters.AddWithValue("@IsMeznineChamber", isMeznineChamber);
+                    insertCommand.Parameters.AddWithValue("@IsActualChamber", isActualChamber);
+                    insertCommand.Parameters.AddWithValue("@BuildingId", buildingId ?? (object)DBNull.Value);
+                    insertCommand.Parameters.AddWithValue("@UnitId", unitId ?? (object)DBNull.Value);
+
+                    await insertCommand.ExecuteNonQueryAsync();
+                }
+            }
+            else // UPDATE CASE
+            {
+                string updateQuery = @"
+                UPDATE chamber SET
+                    chambername = @chambername,
+                    MaxQuantity = @MaxQuantity,
+                    QuantityBalanced = @QuantityBalanced,
+                    IsLocked = @IsLocked,
+                    Status = @Status,
+                    ChamberType = @ChamberType,
+                    Length = @Length,
+                    Width = @Width,
+                    Height = @Height,
+                    CFT = @CFT,
+                    ActualSize = @ActualSize,
+                    UsableSize = @UsableSize,
+                    Floor = @Floor,
+                    SquareFeet = @SquareFeet,
+                    IsMeznineChamber = @IsMeznineChamber,
+                    IsActualChamber = @IsActualChamber,
+                    BuildingId = @BuildingId,
+                    UnitId = @UnitId
+                WHERE chamberid = @chamberid";
+
+                using (var updateCommand = new SqlCommand(updateQuery, connection))
+                {
+                    updateCommand.Parameters.AddWithValue("@chamberid", chamberId);
+                    updateCommand.Parameters.AddWithValue("@chambername", addChamberVM.ChamberName);
+                    updateCommand.Parameters.AddWithValue("@MaxQuantity", addChamberVM.ChamberCapacity);
+                    updateCommand.Parameters.AddWithValue("@QuantityBalanced", addChamberVM.ChamberCapacity); // Simplified calculation
+                    updateCommand.Parameters.AddWithValue("@IsLocked", addChamberVM.ChamberLocked);
+                    updateCommand.Parameters.AddWithValue("@Status", addChamberVM.Status);
+                    updateCommand.Parameters.AddWithValue("@ChamberType", addChamberVM.Type ?? (object)DBNull.Value);
+                    updateCommand.Parameters.AddWithValue("@Length", addChamberVM.Length ?? (object)DBNull.Value);
+                    updateCommand.Parameters.AddWithValue("@Width", addChamberVM.Width ?? (object)DBNull.Value);
+                    updateCommand.Parameters.AddWithValue("@Height", addChamberVM.Height ?? (object)DBNull.Value);
+                    updateCommand.Parameters.AddWithValue("@CFT", cft ?? (object)DBNull.Value);
+                    updateCommand.Parameters.AddWithValue("@ActualSize", addChamberVM.ActualSize ?? (object)DBNull.Value);
+                    updateCommand.Parameters.AddWithValue("@UsableSize", addChamberVM.UsableSize ?? (object)DBNull.Value);
+                    updateCommand.Parameters.AddWithValue("@Floor", addChamberVM.Floor ?? (object)DBNull.Value);
+                    updateCommand.Parameters.AddWithValue("@SquareFeet", squareFeet ?? (object)DBNull.Value);
+                    updateCommand.Parameters.AddWithValue("@IsMeznineChamber", isMeznineChamber);
+                    updateCommand.Parameters.AddWithValue("@IsActualChamber", isActualChamber);
+                    updateCommand.Parameters.AddWithValue("@BuildingId", buildingId ?? (object)DBNull.Value);
+                    updateCommand.Parameters.AddWithValue("@UnitId", unitId ?? (object)DBNull.Value);
+
+                    await updateCommand.ExecuteNonQueryAsync();
+                }
+            }
+        }
+
+        navigationManager.NavigateTo("/viewChambersInGrid");
+    }
+
+
+        public class AddChamberVM
+        {
+            [Required(ErrorMessage = "Building Name is required")]
+            public string BuildingName { get; set; }
+
+            [Required(ErrorMessage = "Unit Name is required")]
+            public string UnitName { get; set; }
+
+            [Required(ErrorMessage = "Chamber Name is required")]
+            [UniqueChamberName(ErrorMessage = "This chamber name already exists.")]
+            public string ChamberName { get; set; }
+            public int ChamberId { get; set; }
+
+            [Range(1, int.MaxValue, ErrorMessage = "Chamber Capacity must be a positive number")]
+            [QuantityCheck]
+            public int ChamberCapacity { get; set; }
+            public int ChamberCapacityBalanced { get; set; }    //for db purpose
+
+            public bool ChamberLocked { get; set; }
+
+            [Required(ErrorMessage = "BinOrMeznineChamber Name is required")]
+            public string BinOrMeznineChamber { get; set; }
+
+            [Required(ErrorMessage = "Type is required")]
+            public string Type { get; set; }
+
+            public bool Status { get; set; }
+
+            [Range(1, int.MaxValue, ErrorMessage = "Length must be a greater than zero")]
+            public float? Length { get; set; }
+
+            [Range(1, int.MaxValue, ErrorMessage = "Height must be a greater than zero")]
+            public float? Height { get; set; }
+
+            [Range(1, int.MaxValue, ErrorMessage = "Width must be a greater than zero")]
+            public float? Width { get; set; }
+
+            public float? CFT { get; set; }
+
+            [Range(1, int.MaxValue, ErrorMessage = "ActualSize must be a greater than zero")]
+            public float? ActualSize { get; set; }
+
+            [Range(1, int.MaxValue, ErrorMessage = "UsableSize must be a greater than zero")]
+            public float? UsableSize { get; set; }
+
+            [Range(1, int.MaxValue, ErrorMessage = "Floor must be a greater than zero")]
+            public float? Floor { get; set; }
+
+            public float? SquareFeet { get; set; }
+        }
+    }

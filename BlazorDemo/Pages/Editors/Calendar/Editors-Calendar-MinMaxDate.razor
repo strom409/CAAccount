@@ -1,0 +1,21 @@
+﻿<DemoPageSectionComponent Id="Editors-Calendar-MinMaxDate" ShowSizeMode="true">
+    <ChildContentWithParameters Context="Params">
+        <DxCalendar T="DateTime" MinDate="@MinDate" MaxDate="@MaxDate" SizeMode="Params.SizeMode" CssClass="demo-calendar" />
+    </ChildContentWithParameters>
+
+    @code {
+        DateTime MinDate { get; set; }
+        DateTime MaxDate { get; set; }
+
+        protected override void OnInitialized() {
+            DateTime currentDateTime = DateTime.Now;
+
+            MinDate = new DateTime(currentDateTime.Year, currentDateTime.Month, 1);
+            MaxDate = new DateTime(
+                currentDateTime.Year,
+                currentDateTime.Month,
+                DateTime.DaysInMonth(currentDateTime.Year, currentDateTime.Month)
+            );
+        }
+    }
+</DemoPageSectionComponent>

@@ -1,0 +1,1176 @@
+﻿@page "/calenderslot"
+@using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
+@using DevExpress.XtraReports.UI
+@using DevExpress.Blazor.Reporting
+@using Microsoft.AspNetCore.Components.Web
+@using System.IO
+@using System.Text.RegularExpressions;
+@inject EmployeeAdoNetService EmployeeService
+@using BlazorDemo.Pages.Definitions;
+@using BlazorDemo.Services;
+@* @implements IAsyncDisposable *@
+@* @using Microsoft.AspNetCore.SignalR.Client *@
+@using BlazorDemo;
+@inject ProtectedLocalStorage ProtectedLocalStore
+@inject UserSessionService userSessionService
+
+@inject UserSessionService UserSessionService
+@inject IJSRuntime JS
+@inject NavigationManager NavigationManager
+
+<PageTitle>Calendar</PageTitle>
+<style>
+    .centered-field {
+        display: flex;
+        flex-direction: column;
+        align-items: center; /* centers children horizontally */
+    }
+
+        .centered-field label {
+            text-align: center; /* centers the label’s text */
+            width: 100%; /* ensure the label fills the container */
+            margin-bottom: .5rem;
+        }
+
+        .centered-field input {
+            width: 200px; /* or whatever width you like */
+        }
+
+    /* Slightly darker but still subtle placeholder */
+    .input-placeholder-dim::placeholder {
+        color: rgba(130, 130, 130, 0.3) !important; /* dim gray, 30% opacity */
+        opacity: 1 !important;
+    }
+
+    /* Dark gray border on focus, no shadow */
+    .input-focus-dark:focus {
+        border-color: #343a40; /* dark gray */
+        box-shadow: none !important;
+        outline: none;
+    }
+
+    .table-responsive {
+        overflow-x: auto;
+        width: 100%;
+    }
+
+    .table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.875rem; /* optional small font */
+    }
+
+        .table th, .table td {
+            padding: 0.5rem;
+            text-align: left;
+        }
+
+    .zebra-table tbody tr:nth-child(odd) {
+        background-color: white;
+    }
+
+    .zebra-table tbody tr:nth-child(even) {
+        background-color: #f9f9f9;
+    }
+
+
+
+
+    /* Custom small font */
+    .small-font {
+        font-size: 0.82rem;
+    }
+
+    .control-wrapper {
+        max-width: 250px;
+        margin: 0 auto;
+        padding: 50px 0px 0px;
+    }
+
+    .example-label {
+        font-size: 14px;
+        margin-bottom: 6px;
+        /* Standardize form control styles for horizontal alignment */
+        input .form-control, .e-input-group, .e-control-wrapper, .e-autocomplete, .e-input
+
+    {
+        min-height: 38px; /* Bootstrap default */
+        line-height: 1.5;
+        font-size: 14px;
+        font-family: 'Source Sans Pro', sans-serif;
+        padding: 6px 12px;
+        box-sizing: border-box;
+    }
+
+    /* Optional: Align content inside Syncfusion AutoComplete */
+    .e-autocomplete .e-input {
+        padding: 6px 12px !important;
+    }
+
+    /* Remove extra bottom spacing in SfAutoComplete wrapper */
+    .e-autocomplete.e-control-wrapper {
+        margin-bottom: 0 !important;
+    }
+
+    /* Align labels consistently */
+    label.form-label {
+        font-size: 14px;
+        margin-bottom: 4px;
+        font-family: 'Source Sans Pro', sans-serif;
+    }
+
+    /* Remove extra vertical margin if any Syncfusion adds it */
+    .e-control-wrapper {
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
+    }
+
+</style>
+
+
+<style>
+    .alt-item {
+        background-color: rgba(243, 244, 245, 1) !important;
+    }
+
+        .alt-item > td {
+            --dxbl-grid-bg: rgba(243, 244, 245, 1) !important;
+            background-color: rgba(243, 244, 245, 1) !important;
+        }
+</style>
+
+
+
+<style>
+ .calendar-wrapper {
+        width: 100%;
+        max-width: 100%;
+        padding: 10px;
+        box-sizing: border-box;
+    }
+
+    .demo-calendar {
+        width: 100%;
+    }
+
+    .calendar-scroll-container {
+        overflow-x: auto;
+        width: 100%;
+    }
+
+    .calendar-inner {
+        min-width: 700px; /* Force content to be wider than small screens */
+    }
+
+    .dx-calendar, 
+    .dx-calendar .dx-widget {
+        width: 100% !important;
+    }
+
+    .dx-calendar .dx-calendar-cell {
+        box-sizing: border-box;
+    }
+
+    .selected-date-text {
+        margin-top: 10px;
+        font-size: 1rem;
+    }
+
+    @@media (max-width: 600px) {
+        .dx-calendar .dx-calendar-cell div {
+            min-width: 60px;
+            min-height: 60px;
+            font-size: 0.8rem;
+        }
+    }
+
+    .dxbl-calendar table td {
+        border-width: 1px; /* Change this value for a thinner or thicker border */
+    }
+
+    .calendar-wrapper {
+        width: 100%;
+        max-width: 100%;
+        padding: 10px;
+        box-sizing: border-box;
+    }
+    html, body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+    }
+
+    .calendar-page {
+        height: 100vh;
+
+        display: flex;
+        flex-direction: column;
+        background-color: #f9f9f9;
+    }
+
+    ::deep .dxbl-calendar-header {
+        font-weight: bold;
+        width:100px;
+    }
+
+    .calendar-wrapper {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        padding: 1rem;
+    }
+
+    .demo-calendar {
+        flex: 1;
+        width: 100%;
+    }
+
+    /* Core styling to stretch the calendar table */
+    .dx-calendar-body {
+        height: 100% !important;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .dxbs-calendar-day {
+        border: 1px solid lightgrey;
+    }
+    .dx-calendar-table {
+        flex: 1;
+        width: 100%;
+        height: 100%;
+        table-layout: fixed !important;
+    }
+
+    .dx-calendar-row {
+        flex: 1;
+    }
+
+    .dx-calendar-cell {
+        border: 1px solid #ccc;
+        height: 100%;
+        vertical-align: middle;
+        text-align: center;
+        font-size: 3rem;
+        padding: 10px;
+    }
+
+    /* Styling special dates */
+    .personal-day {
+        background-color: #e1f5fe;
+    }
+
+    .dx-calendar {  
+    min-height: 30px!important;  
+}  
+
+    .holiday {
+        background-color: #ffcdd2;
+    }
+
+    .birth-date {
+        background-color: #fff9c4;
+    }
+
+    .selected-date-text {
+        margin-top: 1rem;
+        font-size: 1.25rem;
+        text-align: center;
+    }
+</style>
+
+
+    <div class="calendar-wrapper">
+    <div class="calendar-scroll-container">
+         @* <DxCalendar DayCellTemplate="@DayCellTemplateContent" @bind-SelectedDate="@SelectedDate" *@
+        <DxCalendar DayCellTemplate="@DayCellTemplateContent" @bind-SelectedDate="@SelectedDate" 
+                    CssClass="demo-calendar">
+@* 
+            <DayCellTemplate  >
+                <div style="min-width: 160px;border:solid;border-color:lightgray; min-height: 60px ;display: flex; align-items: center; justify-content: center;">
+                    @context.Date.Day
+                </div>
+            </DayCellTemplate> *@
+        </DxCalendar>
+
+       @*  <p class="selected-date-text">
+            Selected date: <b>@SelectedDate.ToString("dddd, MMMM dd, yyyy")</b>
+        </p> *@
+    </div>
+</div>
+
+
+<DxPopup @bind-Visible="@Addnewchallan"
+         HeaderText="Add New Challan"
+         Width="750px">
+          <HeaderTemplate>
+        <div style="background-color:#7B7575; color: white; padding: 10px; width: 100%;">
+            Date Selected::@calendarDisplayDate
+        </div>
+    </HeaderTemplate>
+
+
+
+    <Content>
+       
+
+
+            <!-- First Row -->
+        <!-- First Row (3 inputs in one horizontal line) -->
+        <!-- First Row (4 inputs total, one hidden) -->
+        <div class="row">
+            <!-- Input 1: Dated (hidden) -->
+            <div class="col-md-3"  >
+                <label for="lastName" class="form-label">Dated</label>
+                <DxDateEdit @bind-Date="EditModel.calendardate"
+                            CssClass="custom-input-height"
+                            InputId="deOverview"
+                            MaxDate="@DateTime.Today" />
+            </div>
+
+            <!-- Input 2: Grower Group -->
+            <div class="col-md-4">
+                <label class="form-label">Grower Group</label>
+                <DxComboBox @key="GrowerGroupKey"
+                            Data="@GetgrowerList"
+                            SearchMode="@SearchMode"
+                            @onblur="@OnLostFocus"
+                            SearchFilterCondition="@SearchFilterCondition"
+                            SearchTextParseMode="@SearchTextParseMode"
+                            ValueChanged="@(async (string? newValue) => await OnGrowerGroupChanged(newValue))"
+                            TextFieldName="GrowerName"
+                            DropDownVisibleChanged="OnDropDownVisibleChanged"
+                            @onfocus="HandleFocus"
+                            ValueFieldName="GrowerName"
+                            CssClass="custom-input-height"
+                            Value="@EditModel.GrowerGroupName"
+                            InputId="cbFiltering"
+                            class="form-control input-placeholder-dim input-focus-dark"
+                            ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+            </div>
+
+            <!-- Input 3: Grower Name -->
+            <div class="col-md-4">
+                <label class="form-label">Grower Name</label>
+                <DxComboBox @key="GrowerNameKey"
+                            Data="@GetSubGrowerGroup"
+                            SearchMode="@SearchMode"
+                            SearchFilterCondition="@SearchFilterCondition"
+                            SearchTextParseMode="@SearchTextParseMode"
+                            Value="@EditModel.GrowerName"
+                            ValueChanged="@(async (string? newValue) => await OnSubgrowerChanged(newValue))"
+                            TextFieldName="GrowerName"
+                            ValueFieldName="GrowerName"
+                            DropDownVisibleChanged="OnSubDropDownChanged"
+                            @onfocus="HandleFocusSub"
+                            CssClass="custom-input-height"
+                            class="form-control input-placeholder-dim input-focus-dark"
+                            InputId="cbFiltering"
+                            ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+            </div>
+        </div>
+
+        <!-- Input 4: Contact No -->
+        <div class="row">
+            <!-- Input 1: Dated (hidden) -->
+            <div class="col-md-3">
+                <label class="form-label">Contact No</label>
+                <input type="text"
+                       inputmode="numeric"
+                       maxlength="10"
+                       style="font-size: 14px; font-family: 'Source Sans Pro', sans-serif;"
+                       class="form-control input-placeholder-dim input-focus-dark"
+                       @bind="FilteredPhoneNumberchallan"
+                       @bind:event="oninput"
+                       placeholder="Phone No 10 Digits" />
+            </div>
+
+            <!-- Slot Qty -->
+            <div class="col-md-3">
+                <label class="form-label">Slot Qty</label>
+                <InputNumber id="remarks" min="0"
+                             style="font-size: 14px; height: 30px; font-family: 'Source Sans Pro', sans-serif;"
+                             class="form-control input-placeholder-dim input-focus-dark"
+                             @bind-Value="EditModel.SlotQty"
+                             placeholder="Slot Qty" />
+            </div>
+
+            <!-- Time -->
+            <div class="col-md-3">
+                <label for="timeInput" class="form-label">Time</label>
+                <DxTimeEdit @bind-Time="EditModel.calendartime"
+                            CssClass="form-control input-placeholder-dim input-focus-dark"
+                            InputId="timeInput"
+                            DisplayFormat="HH:mm" />
+            </div>
+
+        </div>
+
+            <!-- Footer -->
+        <div class="modal-footer" style="display: flex; justify-content: space-between; flex-direction: row-reverse;">
+            <div class="d-flex gap-2">
+
+                @if (SaveButton == true)
+                {
+                <DxButton style="background-color:#008D4C; color:white;"
+                          class="btn btn-primary btn-sm"
+                          Text="Save"
+                          @onclick="SaveUnit" />
+
+                    <DxButton class="btn btn-primary btn-sm" Text="Close" @onclick="HideNewchallan" />
+
+
+                }
+                       
+                
+                
+@if (UpdateButton==true)
+                          {
+                    <DxButton style="background-color:red; color:white;"
+                              class="btn btn-primary btn-sm"
+                              Text="Save"
+                              @onclick="UpdateUnit" />
+
+
+                    <DxButton class="btn btn-primary btn-sm" Text="Cancel" @onclick="togglebutton" />
+
+
+
+                }
+                          
+                      
+            </div>
+        </div>
+
+                 <div style="overflow-x:auto; width:100%;">
+        
+    <DxGrid Data="@GetGroweralslot" PageSize="10" ShowSearchBox="false"
+        
+            ShowGroupPanel="false"  FilterMenuButtonDisplayMode="GridFilterMenuButtonDisplayMode.Always"
+            ColumnResizeMode="GridColumnResizeMode.NextColumn" CustomizeElement="Grid_CustomizeElement" TextWrapEnabled="true"
+          >
+
+    <Columns>
+                    <DxGridDataColumn FieldName=@nameof(CompanyModel.Slotno) Visible="false" MinWidth="100" Caption="Chamber" Width="10%" />
+            
+                    <DxGridDataColumn FieldName=@nameof(CompanyModel.GrowerGroupName) MinWidth="100" Caption="Group" Width="50%" />
+                    <DxGridDataColumn FieldName=@nameof(CompanyModel.GrowerName) MinWidth="100" Caption="Grower" Width="10%" />
+                    <DxGridDataColumn FieldName=@nameof(CompanyModel.GrowerContact) MinWidth="100" Caption="Contact" Width="10%" />
+                    <DxGridDataColumn FieldName=@nameof(CompanyModel.calendartime) MinWidth="100" DisplayFormat="HH:mm tt" Caption="Time" Width="10%" />
+                    <DxGridDataColumn FieldName=@nameof(CompanyModel.SlotQty) MinWidth="100" DisplayFormat="f0" Caption="Qty" Width="10%" />
+
+
+
+
+
+
+
+
+                    <DxGridCommandColumn Width="15%">
+                <HeaderTemplate>
+                   <strong>Actions</strong>
+                   <a class="oi oi-action"  style="text-decoration: none;" href="javascript:void(0);"></a>
+                </HeaderTemplate>
+                <CellDisplayTemplate>
+                   
+            
+                    
+                    <a title="Edit Id" class="oi oi-pencil" @onclick="@(() => EditItem(context.DataItem))"
+
+                        style="cursor: pointer;">
+                    </a>
+            
+             
+                  <a title="Delete Id" class="fa fa-trash text-red" @onclick="@(() => DeleteAllocation(((CompanyModel)context.DataItem).Slotno))" style="cursor: pointer;"></a>
+                   
+            
+
+
+                </CellDisplayTemplate>
+            </DxGridCommandColumn>
+
+
+
+            <style>
+                @@media (max-width: 768px) {
+                    .dxbl-grid {
+                        width: 768px; /* Force minimum width */
+                    }
+                }
+
+                .alt-item {
+                    background-color: rgba(243, 244, 245, 1) !important;
+                }
+
+                    .alt-item > td {
+                        --dxbl-grid-bg: rgba(243, 244, 245, 1) !important;
+                        background-color: rgba(243, 244, 245, 1) !important;
+                    }
+            </style>
+
+
+        
+        </Columns>
+        
+      <TotalSummary>
+            <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum" FieldName="@nameof(EditModel.SlotQty)" />
+               
+        </TotalSummary>
+
+
+</DxGrid>
+
+   </div> 
+    </Content>
+</DxPopup>
+
+
+
+
+@if (ShowEmptyFieldDialog)
+{
+    <DxPopup @bind-Visible="@ShowEmptyFieldDialog"
+             HeaderText="Validation Error"
+             ShowCloseButton="true"
+             CssClass="validation-dialog">
+        <Content>
+            <p>@DialogMessage</p>
+            <DxButton Text="OK" Click="@(() => ShowEmptyFieldDialog = false)" />
+        </Content>
+    </DxPopup>
+}
+
+
+<DxPopup @bind-Visible="@DeleteDialog"
+         HeaderText="Confirmation"
+         ShowCloseButton="true"
+         CssClass="validation-dialog">
+    <Content>
+        Are you sure you want to delete the  Item Id: <strong>@selectedGrowerId</strong>?
+        <div>
+            <DxButton RenderStyle="ButtonRenderStyle.Primary" Click="@OnConfirmYesDelete">Yes</DxButton>
+            <DxButton RenderStyle="ButtonRenderStyle.Secondary" Click="@OnConfirmNoDelete">No</DxButton>
+        </div>
+    </Content>
+
+</DxPopup>
+
+<style>
+    .custom-cell {
+        position: relative;
+    }
+
+    .qty-display {
+        position: absolute;
+        bottom: 2px;
+        right: 2px;
+        font-size: 0.90em;
+        font-weight: bold;
+    }
+
+    .red-highlight {
+        background-color: red; /* Light red */
+        color: white;
+        font-weight: 600;
+    }
+
+    .yellow-highlight {
+        background-color: yellow; /* Light yellow */
+        color: black;
+        font-weight: 600;
+    }
+
+</style>
+@code {
+    
+   // private DateTime? SelectedDate { get; set; } = DateTime.Today;
+    private RenderFragment<DateTime> DayCellTemplateContent => (date) => @<div style="min-width: 160px; border: solid; border-color: lightgray; min-height: 60px; display: flex; align-items: center; justify-content: center;" class="custom-cell @GetCellClass(date)">
+        <div style="text-align: center;">
+            <div>@date.Day</div>
+            @if (TryGetQuantity(date, out var quantity))
+        {
+            <div class="qty-display">@quantity</div>
+        }
+        </div>
+    </div>;
+
+    private string GetCellClass(DateTime date)
+    {
+        var data = Getallslot.FirstOrDefault(d => d.calendardate.Value == date.Date);
+        if (data != null)
+        {
+            return data.SlotQty > 4000 ? "red-highlight" : "yellow-highlight";
+        }
+        return "";
+    }
+    private bool TryGetQuantity(DateTime date, out int quantity)
+    {
+        var data = Getallslot.FirstOrDefault(d => d.calendardate.Value == date.Date);
+        if (data != null)
+        {
+            quantity = data.SlotQty;
+            return true;
+        }
+        quantity = 0;
+        return false;
+    }
+    
+    
+    
+    
+    
+    
+    
+    
+    private bool Addnewchallan { get; set; } = false;
+    string selectedPurchase = "";
+    CalendarData Data { get; set; } = new CalendarData();
+    //DateTime SelectedDate { get; set; } = DateTime.Today;
+    string GrowerGroupKey = Guid.NewGuid().ToString();
+    string GrowerNameKey = Guid.NewGuid().ToString();
+    string ChallanKey = Guid.NewGuid().ToString();
+    List<CompanyModel> GetgrowerList = new List<CompanyModel>();
+    ListSearchMode SearchMode { get; set; } = ListSearchMode.AutoSearch;
+    ListSearchFilterCondition SearchFilterCondition { get; set; } = ListSearchFilterCondition.Contains;
+    ListSearchTextParseMode SearchTextParseMode { get; set; } = ListSearchTextParseMode.GroupWordsByAnd;
+    List<CompanyModel> GetSubGrowerGroup = new List<CompanyModel>();
+
+
+    List<CompanyModel> Getallslot = new List<CompanyModel>();
+    private bool UpdateButton = false;
+    private bool SaveButton = true;
+    private string AvailsubGrower = "";
+    private decimal AvailableGrower = 0;
+    private decimal AvailableSubGrower = 0;
+    string AvailGrower = "";
+    private bool isDropDownVisible = false;
+    private bool dataLoaded = false;
+    bool showReport = false;
+    bool ShowSave = false;
+    bool ShowUpdate = false;
+    List<CompanyModel> GetGroweralslot = new List<CompanyModel>();
+    void Grid_CustomizeElement(GridCustomizeElementEventArgs e)
+    {
+        if (e.ElementType == GridElementType.DataRow && e.VisibleIndex % 2 == 1)
+        {
+            e.CssClass = "alt-item";
+        }
+        if (e.ElementType == GridElementType.HeaderCell)
+        {
+            e.Style = "background-color: var(--DS-color-surface-neutral-default-selected)";
+            e.CssClass = "header-bold";
+        }
+    }
+    private bool DeleteDialog = false;
+
+
+
+
+    private int selectedGrowerId;
+
+       protected override async Task OnInitializedAsync()
+    {
+
+       Getallslot = await EmployeeService.GetallSlots();
+       
+    
+    }
+
+
+    private  void DeleteAllocation(int Slotno)
+    {
+        selectedGrowerId = Slotno;
+
+
+
+        DeleteDialog = true;
+
+
+
+
+    }
+
+    private async Task OnSubDropDownChanged(bool isVisible)
+    {
+        // Exit if dropdown is closing or EditModel is null
+        if (!isVisible || EditModel == null)
+            return;
+
+        // Early exit if GrowerGroupName is null/empty (before any other logic)
+        if (string.IsNullOrWhiteSpace(EditModel.GrowerGroupName))
+        {
+            return;
+        }
+
+        // Debug alert (remove in production)
+        ///   await JS.InvokeVoidAsync("alert", EditModel.GrowerGroupName);
+
+        string selectedPurchase = EditModel.GrowerGroupName.Trim();
+        AvailGrower = selectedPurchase;
+
+        await Task.Delay(500); // Simulate async data fetch
+
+        GetSubGrowerGroup = await EmployeeService.GetSubGrowerByGroup(selectedPurchase);
+        AvailGrower = selectedPurchase;
+
+        StateHasChanged();
+    }
+    protected async Task OnConfirmYesDelete()
+    {
+
+
+
+
+
+
+        var result = await EmployeeService.DeleteSlot(selectedGrowerId);
+
+
+
+
+
+
+        GetGroweralslot = await EmployeeService.GetSlotbydate(EditModel.calendardate ?? DateTime.Today);
+
+
+
+        Getallslot = await EmployeeService.GetallSlots();
+
+
+
+
+
+
+
+        StateHasChanged();
+        DeleteDialog = false;
+
+    }
+    private void OnConfirmNoDelete()
+    {
+        DeleteDialog = false;
+    }
+    private async Task OnDropDownVisibleChanged(bool isVisible)
+    {
+        if (isVisible)
+        {
+            await Task.Delay(500); // Simulate async data fetch
+
+            GetgrowerList = await EmployeeService.GetallGrowerlist();
+            StateHasChanged(); // Force re-render
+        }
+
+    }
+    private async Task EditItem(object dataItem)
+    {
+        if (dataItem is CompanyModel companyModel)
+        {
+            SaveButton = false;
+            UpdateButton = true;
+            selectedGrowerId = companyModel.Slotno;
+
+
+
+            EditModel = await EmployeeService.GetSlotdet(selectedGrowerId);
+            GetgrowerList = await EmployeeService.GetallGrowerlist();
+
+            GetSubGrowerGroup = await EmployeeService.GetSubGrowerByGroup(EditModel.GrowerGroupName);
+
+
+
+            AvailsubGrower = EditModel.GrowerName;
+
+
+            StateHasChanged();
+
+        }
+    }
+
+
+    private async Task HandleFocus(FocusEventArgs e)
+    {
+        if (!isDropDownVisible)
+        {
+            isDropDownVisible = true;
+        }
+
+        if (!dataLoaded)
+        {
+            await Task.Delay(500); // Simulate async delay
+            GetgrowerList = await EmployeeService.GetallGrowerlist();
+        }
+    }
+
+    private async Task OnSubgrowerChanged(string? newCountryId)
+    {
+        AvailsubGrower = newCountryId;
+
+
+    }
+
+
+    private async Task OnGrowerGroupChanged(string? newCountryId)
+    {
+        string selectedPurchase = "";
+        selectedPurchase = newCountryId;
+        GetSubGrowerGroup.Clear();
+        EditModel.GrowerName = String.Empty;
+        EditModel.ChallanName = String.Empty;
+
+        StateHasChanged();
+        if (!string.IsNullOrWhiteSpace(selectedPurchase))
+
+        {
+
+            // GetSubGrowerGroup = await EmployeeService.GetSubGrowerByGroup(selectedPurchase);
+            AvailGrower = selectedPurchase;
+            EditModel.GrowerGroupName = AvailGrower;
+
+
+
+        }
+    }
+
+
+
+
+    private async Task OnLostFocus()
+    {
+        // Explicitly set to null if empty
+        if (string.IsNullOrWhiteSpace(EditModel.GrowerGroupName))
+        {
+            EditModel.GrowerGroupName = null;
+            StateHasChanged();
+        }
+        string GetCssClassNames(DateTime date)
+        {
+            if (Data.PersonalDays.Exists(d => DaysEqual(d, date)))
+                return "fw-bold personal-day";
+            if (Data.Holidays.Exists(d => DaysEqual(d, date)))
+                return "holiday";
+            if (Data.BirthDates.Exists(d => DaysEqual(d, date)))
+                return "fw-bold birth-date";
+            return null;
+        }
+
+    }
+
+    private async Task HandleFocusSub(FocusEventArgs e)
+    {
+        // Early exit if EditModel or GrowerGroupName is invalid
+        if (EditModel == null || string.IsNullOrWhiteSpace(EditModel.GrowerGroupName))
+        {
+            return;
+        }
+
+        // Only proceed if dropdown isn't already visible
+        if (!isDropDownVisible)
+        {
+            isDropDownVisible = true;
+        }
+
+        // Load data only if not already loaded
+        if (!dataLoaded)
+        {
+            try
+            {
+                await Task.Delay(500); // Simulate async delay
+                GetSubGrowerGroup = await EmployeeService.GetSubGrowerByGroup(EditModel.GrowerGroupName.Trim());
+                dataLoaded = true; // Remember to set this flag after successful load
+            }
+            catch (Exception ex)
+            {
+                // Handle errors (log, show message, etc.)
+                Console.WriteLine($"Error loading sub-grower groups: {ex.Message}");
+            }
+        }
+    }
+
+
+    // If you need to execute logic when the date changes,
+    // you can override the setter or use a separate method
+    private DateTime? _selectedDate;
+    private DateTime? SelectedDate
+    {
+        get => _selectedDate;
+        set
+        {
+            if (_selectedDate != value)
+            {
+                _selectedDate = value;
+                OnDateChanged(value);
+            }
+        }
+    }
+
+    private DateTime calendarDisplayDate = DateTime.Today;
+    private async void OnDateChanged(DateTime? newDate)
+    {
+
+        if (newDate == null)
+            return;
+        EditModel.calendardate = newDate;
+
+
+
+
+        GetGroweralslot = await EmployeeService.GetSlotbydate(EditModel.calendardate ?? DateTime.Today);
+        EditModel.GrowerGroupName = String.Empty;
+        EditModel.GrowerName = String.Empty;
+        // EditModel.CrissueMark = String.Empty;
+        EditModel.calendartime = null;
+        EditModel.SlotQty = 0;
+
+        EditModel.GrowerContact = String.Empty;
+
+
+
+
+        Addnewchallan = true;
+        //  calendarDisplayDate = DateTime.Today;
+        calendarDisplayDate = SelectedDate ?? DateTime.Today;
+        SelectedDate = null;
+        StateHasChanged();
+    }
+
+
+    private string DialogMessage { get; set; } = "";
+    private bool ShowEmptyFieldDialogError { get; set; }
+    private bool ShowEmptyFieldDialog { get; set; }
+
+
+    private bool isProcessing = false;
+
+    async Task SaveUnit()
+    {
+        if (isProcessing) return;
+        isProcessing = true;
+
+        try
+
+
+        {
+
+            if (string.IsNullOrWhiteSpace(EditModel.GrowerGroupName))
+            {
+                DialogMessage = "Please Select  valid Grower Group Name";
+                ShowEmptyFieldDialog = true;
+                return;
+
+            }
+
+            EditModel.GrowerName = AvailsubGrower;
+
+            if (string.IsNullOrWhiteSpace(EditModel.GrowerName))
+            {
+                DialogMessage = "Please Select  valid Grower  Name";
+                ShowEmptyFieldDialog = true;
+                return;
+
+            }
+
+
+            if (EditModel.calendartime == default(DateTime) || EditModel.calendartime == DateTime.MinValue)
+            {
+                DialogMessage = "Please enter a valid time";
+                ShowEmptyFieldDialog = true;
+                return;
+            }
+           
+            if (string.IsNullOrWhiteSpace(EditModel.GrowerContact))
+            {
+                EditModel.GrowerContact = "";
+
+                }
+
+            if (EditModel.SlotQty <= 0)
+            {
+                DialogMessage = "Please enter a valid quantity greater than 0.";
+                ShowEmptyFieldDialog = true;
+                return;
+            }
+
+
+
+                var result = await EmployeeService.AddSlot(EditModel);
+                if (result != null && result.RetFlag.Trim() == "TRUE" && !string.IsNullOrEmpty(result.RetMessage))
+                {
+                    DialogMessage = result.RetMessage;
+                GetGroweralslot = await EmployeeService.GetSlotbydate(EditModel.calendardate ?? DateTime.Today);
+                EditModel.GrowerGroupName = String.Empty;
+                EditModel.GrowerName = String.Empty;
+                // EditModel.CrissueMark = String.Empty;
+                EditModel.calendartime = null;
+                EditModel.SlotQty = 0;
+               
+                EditModel.GrowerContact  = String.Empty;
+                Getallslot = await EmployeeService.GetallSlots();
+              
+
+
+                    ShowEmptyFieldDialogError = true;
+                }
+                if (result != null && result.RetFlag.Trim() == "FALSE")
+                {
+
+                    DialogMessage = result.RetMessage ?? "Failed to add Master Group.";
+                    ShowEmptyFieldDialog = true;
+
+                    return;
+                }
+
+
+            }
+    finally
+        {
+            isProcessing = false;
+        }
+    }
+
+    async Task UpdateUnit()
+    {
+        if (isProcessing) return;
+        isProcessing = true;
+
+        try
+
+
+        {
+
+            if (string.IsNullOrWhiteSpace(EditModel.GrowerGroupName))
+            {
+                DialogMessage = "Please Select  valid Grower Group Name";
+                ShowEmptyFieldDialog = true;
+                return;
+
+            }
+
+            EditModel.GrowerName = AvailsubGrower;
+
+            if (string.IsNullOrWhiteSpace(EditModel.GrowerName))
+            {
+                DialogMessage = "Please Select  valid Grower  Name";
+                ShowEmptyFieldDialog = true;
+                return;
+
+            }
+
+
+            if (EditModel.calendartime == default(DateTime) || EditModel.calendartime == DateTime.MinValue)
+            {
+                DialogMessage = "Please enter a valid time";
+                ShowEmptyFieldDialog = true;
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(EditModel.GrowerContact))
+            {
+                EditModel.GrowerContact = "";
+
+            }
+
+            if (EditModel.SlotQty <= 0)
+            {
+                DialogMessage = "Please enter a valid quantity greater than 0.";
+                ShowEmptyFieldDialog = true;
+                return;
+            }
+
+
+        
+            var result = await EmployeeService.UpdateSlot(EditModel);
+            if (result != null && result.RetFlag.Trim() == "TRUE" && !string.IsNullOrEmpty(result.RetMessage))
+            {
+                DialogMessage = result.RetMessage;
+                GetGroweralslot = await EmployeeService.GetSlotbydate(EditModel.calendardate ?? DateTime.Today);
+                EditModel.GrowerGroupName = String.Empty;
+                EditModel.GrowerName = String.Empty;
+                // EditModel.CrissueMark = String.Empty;
+                EditModel.calendartime = null;
+                EditModel.SlotQty = 0;
+
+                EditModel.GrowerContact = String.Empty;
+                Getallslot = await EmployeeService.GetallSlots();
+                UpdateButton=false;
+
+                SaveButton = true;
+
+
+                ShowEmptyFieldDialogError = true;
+            }
+            if (result != null && result.RetFlag.Trim() == "FALSE")
+            {
+
+                DialogMessage = result.RetMessage ?? "Failed to add Master Group.";
+                ShowEmptyFieldDialog = true;
+
+                return;
+            }
+
+
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+
+
+    
+
+    private async void togglebutton()
+
+
+
+    {
+        UpdateButton = false;
+        SaveButton = true;
+
+    }
+
+    private async void HideNewchallan()
+
+
+
+    {
+        
+        Addnewchallan = false;
+
+        }
+
+    public string FilteredPhoneNumber
+    {
+        get => EditModel.GrowerContact;
+        set => EditModel.GrowerContact = string.IsNullOrEmpty(value) ? "" : new string(value.Where(char.IsDigit).ToArray());
+    }
+
+
+    // public string FilteredPhoneNumbergrower
+    // {
+    //     get => EditModel.GrowerContact;
+    //     set => EditModel.GrowerContact = string.IsNullOrEmpty(value) ? "" : new string(value.Where(char.IsDigit).ToArray());
+    // }
+
+    public string FilteredPhoneNumberchallan
+    {
+        get => EditModel.GrowerContact;
+        set => EditModel.GrowerContact = string.IsNullOrEmpty(value) ? "" : new string(value.Where(char.IsDigit).ToArray());
+    }
+
+
+
+
+    private CompanyModel EditModel = new();
+    bool DaysEqual(DateTime date1, DateTime date2)
+    {
+        return date1.Date == date2.Date;
+    }
+
+    public class CalendarData
+    {
+        public List<DateTime> PersonalDays { get; set; } = new();
+        public List<DateTime> Holidays { get; set; } = new();
+        public List<DateTime> BirthDates { get; set; } = new();
+    }
+}
+}
