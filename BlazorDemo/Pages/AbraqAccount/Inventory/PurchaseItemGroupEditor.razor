@@ -1,0 +1,11 @@
+@page "/abraq/inventory/item-groups/create"
+@page "/abraq/inventory/item-groups/edit/{Id:int}"
+@using BlazorDemo.Pages.AbraqAccount.Inventory.SubComponents
+
+<div class="p-0">
+    <PurchaseItemGroupForm Id="@Id" />
+</div>
+
+@code {
+    [Parameter] public int? Id { get; set; }
+}

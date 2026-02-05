@@ -1,0 +1,11 @@
+@page "/abraq/inventory/purchase-receives/create"
+@page "/abraq/inventory/purchase-receives/edit/{Id:int}"
+@using BlazorDemo.Pages.AbraqAccount.Inventory.SubComponents
+
+<div class="container-fluid py-4">
+    <PurchaseReceiveForm Id="@Id" />
+</div>
+
+@code {
+    [Parameter] public int? Id { get; set; }
+}

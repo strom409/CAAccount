@@ -1,0 +1,13 @@
+@page "/abraq/"
+@inject NavigationManager NavigationManager
+
+@layout MainLayout
+
+@code {
+    protected override void OnInitialized()
+    {
+        // Redirect to AbraqAccount dashboard
+        // Main project authentication will handle access control
+        NavigationManager.NavigateTo("/abraq/dashboard");
+    }
+}

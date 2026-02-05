@@ -1,0 +1,9 @@
+@page "/abraq/inventory/packing-recipes/create"
+@page "/abraq/inventory/packing-recipes/edit/{Id:long}"
+@using BlazorDemo.Pages.AbraqAccount.Inventory.SubComponents
+
+<PackingRecipeForm Id="@Id" />
+
+@code {
+    [Parameter] public long? Id { get; set; }
+}

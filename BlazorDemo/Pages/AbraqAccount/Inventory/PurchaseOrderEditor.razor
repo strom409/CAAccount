@@ -1,0 +1,12 @@
+@page "/abraq/inventory/purchase-orders/create"
+@page "/abraq/inventory/purchase-orders/edit/{Id:int}"
+@layout MainLayout
+@using BlazorDemo.Pages.AbraqAccount.Inventory.SubComponents
+
+<div class="container-fluid py-4">
+    <PurchaseOrderForm Id="@Id" />
+</div>
+
+@code {
+    [Parameter] public int? Id { get; set; }
+}

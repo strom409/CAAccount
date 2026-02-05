@@ -1,0 +1,16 @@
+@page "/abraq/inventory/packing-special-rates/create"
+@page "/abraq/inventory/packing-special-rates/edit/{Id:int}"
+@using BlazorDemo.Pages.AbraqAccount.Inventory.SubComponents
+@rendermode InteractiveServer
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <PackingSpecialRateForm Id="@Id" />
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int? Id { get; set; }
+}

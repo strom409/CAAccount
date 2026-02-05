@@ -333,6 +333,73 @@
                     </Nodes>
                 </DxTreeViewNode>
             }
+
+            <!-- AbraqAccount Module -->
+            <DxTreeViewNode Text="AbraqAccount" IconCssClass="fas fa-chart-line">
+                <Nodes>
+                    <!-- Dashboard -->
+                    <DxTreeViewNode Text="DashBoard" NavigateUrl="abraq/dashboard"
+                                   IconCssClass="fas fa-tachometer-alt"
+                                   CssClass="@GetActiveClass("abraq/dashboard")" />
+
+                    <!-- Master -->
+                    <DxTreeViewNode Text="Master" IconCssClass="fas fa-th">
+                        <Nodes>
+                             <DxTreeViewNode Text="UOM Master" NavigateUrl="abraq/master/uom" CssClass="@GetActiveClass("abraq/master/uom")" />
+                        </Nodes>
+                    </DxTreeViewNode>
+
+                    <!-- Account Master -->
+                    <DxTreeViewNode Text="Account Master" IconCssClass="fas fa-folder">
+                        <Nodes>
+                             <DxTreeViewNode Text="Master Group" NavigateUrl="abraq/account-master/master-group" CssClass="@GetActiveClass("abraq/account-master/master-group")" />
+                             <DxTreeViewNode Text="Master Sub Group" NavigateUrl="abraq/account-master/master-sub-group" CssClass="@GetActiveClass("abraq/account-master/master-sub-group")" />
+                             <DxTreeViewNode Text="Sub Group Ledger" NavigateUrl="abraq/account-master/sub-group-ledger" CssClass="@GetActiveClass("abraq/account-master/sub-group-ledger")" />
+                        </Nodes>
+                    </DxTreeViewNode>
+
+                    <!-- Transactions -->
+                    <DxTreeViewNode Text="Transactions" IconCssClass="fas fa-list-alt">
+                        <Nodes>
+                             <DxTreeViewNode Text="Ledger Creation" NavigateUrl="abraq/master/bank-master" CssClass="@GetActiveClass("abraq/master/bank-master")" />
+                             <DxTreeViewNode Text="Transaction Entries" NavigateUrl="abraq/transactions/entries" CssClass="@GetActiveClass("abraq/transactions/entries")" />
+                             <DxTreeViewNode Text="Expense Entry" NavigateUrl="abraq/transactions/expense-entry" CssClass="@GetActiveClass("abraq/transactions/expense-entry")" />
+                             <DxTreeViewNode Text="Grower Book" NavigateUrl="abraq/grower-book" CssClass="@GetActiveClass("abraq/grower-book")" />
+                        </Nodes>
+                    </DxTreeViewNode>
+
+                    <!-- Direct Reports -->
+                    <DxTreeViewNode Text="Ledger Report" NavigateUrl="abraq/reports/ledger" IconCssClass="fas fa-calculator" CssClass="@GetActiveClass("abraq/reports/ledger")" />
+                    <DxTreeViewNode Text="Balance Sheet" NavigateUrl="abraq/reports/balance-sheet" IconCssClass="fas fa-landmark" CssClass="@GetActiveClass("abraq/reports/balance-sheet")" />
+
+                    <!-- Inventory -->
+                    <DxTreeViewNode Text="Inventory" IconCssClass="fas fa-box">
+                        <Nodes>
+                             <DxTreeViewNode Text="Purchase Item Group" NavigateUrl="abraq/inventory/item-groups" CssClass="@GetActiveClass("abraq/inventory/item-groups")" />
+                             <DxTreeViewNode Text="Purchase Item" NavigateUrl="abraq/inventory/items" CssClass="@GetActiveClass("abraq/inventory/items")" />
+                             <DxTreeViewNode Text="Packing Special Rate" NavigateUrl="abraq/inventory/packing-special-rates" CssClass="@GetActiveClass("abraq/inventory/packing-special-rates")" />
+                             <DxTreeViewNode Text="Purchase Order T & C" NavigateUrl="abraq/inventory/po-terms" CssClass="@GetActiveClass("abraq/inventory/po-terms")" />
+                             <DxTreeViewNode Text="Packing Recipe" NavigateUrl="abraq/inventory/packing-recipes" CssClass="@GetActiveClass("abraq/inventory/packing-recipes")" />
+                             <DxTreeViewNode Text="Purchase Order" NavigateUrl="abraq/inventory/purchase-orders" CssClass="@GetActiveClass("abraq/inventory/purchase-orders")" />
+                             <DxTreeViewNode Text="Purchase Request" NavigateUrl="abraq/inventory/purchase-requests" CssClass="@GetActiveClass("abraq/inventory/purchase-requests")" />
+                             <DxTreeViewNode Text="Purchase Receive" NavigateUrl="abraq/inventory/purchase-receives" CssClass="@GetActiveClass("abraq/inventory/purchase-receives")" />
+                             <DxTreeViewNode Text="Purchase Order Report" NavigateUrl="abraq/inventory/reports/purchase-order-report" CssClass="@GetActiveClass("abraq/inventory/reports/purchase-order-report")" />
+                             <DxTreeViewNode Text="Packing Material Issue" NavigateUrl="abraq/inventory/packing-material-issue" CssClass="@GetActiveClass("abraq/inventory/packing-material-issue")" />
+                             <DxTreeViewNode Text="Material Issue" NavigateUrl="abraq/inventory/material-issues" CssClass="@GetActiveClass("abraq/inventory/material-issues")" />
+                             <DxTreeViewNode Text="Material Stock Ledger" NavigateUrl="abraq/inventory/reports/stock-ledger" CssClass="@GetActiveClass("abraq/inventory/reports/stock-ledger")" />
+                        </Nodes>
+                    </DxTreeViewNode>
+
+                    <!-- Settings -->
+                    <DxTreeViewNode Text="Settings" IconCssClass="fas fa-cog">
+                        <Nodes>
+                             <DxTreeViewNode Text="Profiles (Entry For)" NavigateUrl="abraq/settings/entry-for" CssClass="@GetActiveClass("abraq/settings/entry-for")" />
+                             <DxTreeViewNode Text="Transaction Rules" NavigateUrl="abraq/settings/transaction-rules" CssClass="@GetActiveClass("abraq/settings/transaction-rules")" />
+                             <DxTreeViewNode Text="Payment Types" NavigateUrl="abraq/settings/payment-types" CssClass="@GetActiveClass("abraq/settings/payment-types")" />
+                        </Nodes>
+                    </DxTreeViewNode>
+                </Nodes>
+            </DxTreeViewNode>
         </Nodes>
     </DxTreeView>
 </div>

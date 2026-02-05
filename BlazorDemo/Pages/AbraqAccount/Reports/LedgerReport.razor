@@ -1,0 +1,337 @@
+@page "/abraq/reports/ledger"
+@using BlazorDemo.AbraqAccount.Models
+@using BlazorDemo.AbraqAccount.Services.Interfaces
+@using BlazorDemo.Components.AbraqAccount.Common
+@inject IGeneralEntryService GenService
+@inject NavigationManager Navigation
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">Account Ledger</h2>
+        <div class="actions">
+            <button class="btn btn-outline-success me-2" @onclick="ExportExcel">
+                <i class="bi bi-file-earmark-excel"></i> Export Excel
+            </button>
+            <button class="btn btn-outline-danger" @onclick="ExportPdf">
+                <i class="bi bi-file-earmark-pdf"></i> Export PDF
+            </button>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Sub Group Ledger</label>
+                    <AccountSearch 
+                        Placeholder="Search Owner..." 
+                        SearchFunc="SearchOwners"
+                        OnAccountSelected="OnOwnerSelected"
+                        InitialValue="@selectedOwnerName" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Account</label>
+                    <AccountSearch 
+                        Placeholder="Search Account..." 
+                        SearchFunc="SearchAccounts"
+                        OnAccountSelected="OnAccountSelected"
+                        InitialValue="@selectedAccountName" />
+                </div>
+                <div class="col-md-4">
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <label class="form-label">From Date</label>
+                            <input type="date" @bind="fromDate" class="form-control" />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">To Date</label>
+                            <input type="date" @bind="toDate" class="form-control" />
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button class="btn btn-primary w-100" @onclick="GenerateReport" disabled="@(selectedAccountId == 0)">
+                         Get Report
+                    </button>
+                </div>
+            </div>
+            <div class="mt-2">
+                <button class="btn btn-sm btn-outline-secondary" @onclick="ResetFilters">
+                    <i class="bi bi-x-circle"></i> Reset All Filters
+                </button>
+            </div>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (reportResult == null)
+    {
+         <div class="alert alert-light text-center border">Select an owner, account and dates to view the ledger.</div>
+    }
+    else
+    {
+        <div class="card shadow-sm">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="min-width: 100px;">
+                                <ColumnFilter TItem="LedgerEntryViewModel" TValue="string" 
+                                    Title="Date" Items="reportResult.Entries" Property='e => e.Date.ToString("dd-MM-yyyy")' 
+                                    OnFilter="vals => { filteredDates = vals; StateHasChanged(); }" Align="left" />
+                            </th>
+                            <th style="min-width: 150px;">
+                                <ColumnFilter TItem="LedgerEntryViewModel" TValue="string" 
+                                    Title="Voucher No" Items="reportResult.Entries" Property="e => e.VoucherNo" 
+                                    OnFilter="vals => { filteredVoucherNos = vals; StateHasChanged(); }" Align="left" />
+                            </th>
+                            <th style="min-width: 100px;">
+                                <ColumnFilter TItem="LedgerEntryViewModel" TValue="string" 
+                                    Title="Unit" Items="reportResult.Entries" Property="e => e.Unit ?? string.Empty" 
+                                    OnFilter="vals => { filteredUnits = vals; StateHasChanged(); }" Align="left" />
+                            </th>
+                            <th style="min-width: 180px;">
+                                <ColumnFilter TItem="LedgerEntryViewModel" TValue="string" 
+                                    Title="Particulars" Items="reportResult.Entries" Property="e => e.Particulars" 
+                                    OnFilter="vals => { filteredParticulars = vals; StateHasChanged(); }" Align="left" />
+                            </th>
+                            <th style="min-width: 130px;">
+                                <ColumnFilter TItem="LedgerEntryViewModel" TValue="string" 
+                                    Title="Voucher Type" Items="reportResult.Entries" Property="e => e.VoucherType ?? string.Empty" 
+                                    OnFilter="vals => { filteredVoucherTypes = vals; StateHasChanged(); }" Align="left" />
+                            </th>
+                            <th style="min-width: 120px;">
+                                <ColumnFilter TItem="LedgerEntryViewModel" TValue="string" 
+                                    Title="Entry For" Items="reportResult.Entries" Property="e => e.EntryFor ?? string.Empty" 
+                                    OnFilter="vals => { filteredEntryFors = vals; StateHasChanged(); }" Align="left" />
+                            </th>
+                            <th style="min-width: 150px;">
+                                <ColumnFilter TItem="LedgerEntryViewModel" TValue="string" 
+                                    Title="Narration" Items="reportResult.Entries" Property="e => e.Narration ?? string.Empty" 
+                                    OnFilter="vals => { filteredNarrations = vals; StateHasChanged(); }" Align="left" />
+                            </th>
+                            <th style="min-width: 130px;">
+                                <ColumnFilter TItem="LedgerEntryViewModel" TValue="string" 
+                                    Title="Payment Type" Items="reportResult.Entries" Property="e => e.PaymentType ?? string.Empty" 
+                                    OnFilter="vals => { filteredPaymentTypes = vals; StateHasChanged(); }" Align="left" />
+                            </th>
+                            <th class="text-end" style="min-width: 100px;">Debit</th>
+                            <th class="text-end" style="min-width: 100px;">Credit</th>
+                            <th class="text-end" style="min-width: 120px;">Balance</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @{
+                            decimal runningBalance = reportResult.OpeningBalance;
+                        }
+                        <tr class="table-info fw-bold">
+                            <td colspan="10" class="text-end">OPENING BALANCE</td>
+                            <td class="text-end fw-bold @(runningBalance < 0 ? "text-danger" : "text-primary")">
+                                @(Math.Abs(runningBalance).ToString("N2")) @(runningBalance < 0 ? "Dr" : "Cr")
+                            </td>
+                        </tr>
+                        @foreach (var entry in reportResult.Entries)
+                        {
+                            decimal debit = entry.DebitAmount;
+                            decimal credit = entry.CreditAmount;
+                            runningBalance += (credit - debit);
+
+                            // Apply column filters
+                            if (filteredDates != null && !filteredDates.Contains(entry.Date.ToString("dd-MM-yyyy"))) continue;
+                            if (filteredVoucherNos != null && !filteredVoucherNos.Contains(entry.VoucherNo)) continue;
+                            if (filteredUnits != null && !filteredUnits.Contains(entry.Unit ?? "")) continue;
+                            if (filteredParticulars != null && !filteredParticulars.Contains(entry.Particulars)) continue;
+                            if (filteredVoucherTypes != null && !filteredVoucherTypes.Contains(entry.VoucherType ?? "")) continue;
+                            if (filteredEntryFors != null && !filteredEntryFors.Contains(entry.EntryFor ?? "")) continue;
+                            if (filteredNarrations != null && !filteredNarrations.Contains(entry.Narration ?? "")) continue;
+                            if (filteredPaymentTypes != null && !filteredPaymentTypes.Contains(entry.PaymentType ?? "")) continue;
+
+                            <tr>
+                                <td>@entry.Date.ToString("dd-MM-yyyy")</td>
+                                <td>
+                                    <span class="badge bg-secondary">@entry.VoucherNo</span>
+                                </td>
+                                <td>@entry.Unit</td>
+                                <td>
+                                    @entry.Particulars
+                                </td>
+                                <td><small class="text-muted">@entry.VoucherType</small></td>
+                                <td><small class="text-muted">@entry.EntryFor</small></td>
+                                <td>@entry.Narration</td>
+                                <td>@entry.PaymentType</td>
+                                <td class="text-end text-danger">@(debit > 0 ? debit.ToString("N2") : "-")</td>
+                                <td class="text-end text-success">@(credit > 0 ? credit.ToString("N2") : "-")</td>
+                                <td class="text-end fw-bold @(runningBalance < 0 ? "text-danger" : "text-primary")">
+                                    @(Math.Abs(runningBalance).ToString("N2")) @(runningBalance < 0 ? "Dr" : "Cr")
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot class="table-light fw-bold">
+                        <tr class="table-info">
+                            <td colspan="7" class="text-end">Total / Closing</td>
+                            <td class="text-end text-danger">@reportResult.Entries.Sum(e => e.DebitAmount).ToString("N2")</td>
+                            <td class="text-end text-success">@reportResult.Entries.Sum(e => e.CreditAmount).ToString("N2")</td>
+                            <td class="text-end fw-bold @(reportResult.ClosingBalance < 0 ? "text-danger" : "text-primary")">
+                                @(Math.Abs(reportResult.ClosingBalance).ToString("N2")) @(reportResult.ClosingBalance < 0 ? "Dr" : "Cr")
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private LedgerReportResult? reportResult;
+    private bool isLoading;
+    
+    private string accountType = AccountTypes.BankMaster;
+    private int selectedOwnerId;
+    private string? selectedOwnerName;
+    private int selectedAccountId;
+    private string? selectedAccountName;
+    private DateTime fromDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+    private DateTime toDate = DateTime.Now;
+
+    private List<string>? filteredVoucherNos;
+    private List<string>? filteredUnits;
+    private List<string>? filteredVoucherTypes;
+    private List<string>? filteredEntryFors;
+    private List<string>? filteredPaymentTypes;
+    private List<string>? filteredDates;
+    private List<string>? filteredParticulars;
+    private List<string>? filteredNarrations;
+
+    private string GetParticulars(GeneralEntry entry)
+    {
+        bool isOurDebit = (entry.DebitAccountId == selectedAccountId && entry.DebitAccountType == accountType);
+        if (isOurDebit)
+        {
+            return entry.CreditBankMasterInfo?.AccountName ?? entry.CreditAccountName ?? "N/A";
+        }
+        else
+        {
+            return entry.DebitBankMasterInfo?.AccountName ?? entry.DebitAccountName ?? "N/A";
+        }
+    }
+
+
+    private void OnOwnerSelected(LookupItem lookup)
+    {
+        selectedOwnerId = lookup.Id;
+        selectedOwnerName = lookup.Name;
+        // Reset account when owner changes
+        selectedAccountId = 0;
+        selectedAccountName = null;
+    }
+
+    private void OnAccountSelected(LookupItem lookup)
+    {
+        selectedAccountId = lookup.Id;
+        selectedAccountName = lookup.Name;
+        if (!string.IsNullOrEmpty(lookup.Type))
+        {
+            accountType = lookup.Type;
+        }
+        else
+        {
+            // Default to BankMaster if type is not specified (e.g. from general search)
+            accountType = AccountTypes.BankMaster;
+        }
+    }
+
+    private async Task<IEnumerable<LookupItem>> SearchOwners(string searchTerm)
+    {
+        var ledgers = await GenService.GetSubGroupLedgersAsync(null, searchTerm);
+        return ledgers.Select(l => {
+            // Using reflection to handle anonymous object return from service
+            var propId = l.GetType().GetProperty("id");
+            var propName = l.GetType().GetProperty("name");
+            return new LookupItem { 
+                Id = (int)(propId?.GetValue(l) ?? 0), 
+                Name = (string)(propName?.GetValue(l) ?? "") 
+            };
+        });
+    }
+
+    private async Task<IEnumerable<LookupItem>> SearchAccounts(string searchTerm)
+    {
+        if (selectedOwnerId == 0) return new List<LookupItem>();
+
+        // 1. Search BankMaster accounts for this owner group
+        var accounts = await GenService.GetAccountsByGroupIdAsync(selectedOwnerId);
+        var items = accounts.Select(a => {
+            var propId = a.GetType().GetProperty("id");
+            var propName = a.GetType().GetProperty("name");
+            return new LookupItem { 
+                Id = (int)(propId?.GetValue(a) ?? 0), 
+                Name = (string)(propName?.GetValue(a) ?? "")
+                // Type implicit null (visually hides badge), defaults to BankMaster on select
+            };
+        }).ToList();
+
+        // 2. Also search Farmers if the owner name suggests growers
+        // Since we don't have a direct link from Owner to Farmer table in a way that's easy to query here,
+        // we'll check if the owner name contains "Grower" or "Farmer"
+        if (selectedOwnerName != null && (selectedOwnerName.Contains("Grower", StringComparison.OrdinalIgnoreCase) || selectedOwnerName.Contains("Farmer", StringComparison.OrdinalIgnoreCase)))
+        {
+            var farmers = await GenService.GetFarmersByGroupAsync(null, searchTerm);
+            items.AddRange(farmers.Select(f => {
+                dynamic d = f;
+                return new LookupItem { Id = d.id, Name = d.name, Type = AccountTypes.Farmer };
+            }));
+        }
+        
+        // 3. Apply search term filter for BankMaster (Farmers are already filtered by searchTerm in GetFarmersByGroupAsync)
+        if (!string.IsNullOrEmpty(searchTerm))
+        {
+             items = items.Where(i => i.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)).ToList();
+        }
+
+        return items.OrderBy(i => i.Name).Take(100);
+    }
+
+    private async Task GenerateReport()
+    {
+        if (selectedAccountId == 0) return;
+        
+        isLoading = true;
+        // Reset column filters for the new data
+        filteredVoucherNos = null;
+        filteredUnits = null;
+        filteredVoucherTypes = null;
+        filteredPaymentTypes = null;
+
+        reportResult = await GenService.GetLedgerReportAsync(selectedAccountId, accountType, fromDate, toDate);
+        isLoading = false;
+    }
+
+    private void ExportExcel() { /* TODO */ }
+    private void ExportPdf() { /* TODO */ }
+
+    private void ResetFilters()
+    {
+        selectedOwnerId = 0;
+        selectedOwnerName = null;
+        selectedAccountId = 0;
+        selectedAccountName = null;
+        accountType = AccountTypes.BankMaster;
+        fromDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+        toDate = DateTime.Now;
+        reportResult = null;
+        
+        filteredVoucherNos = null;
+        filteredUnits = null;
+        filteredVoucherTypes = null;
+        filteredPaymentTypes = null;
+    }
+}

@@ -1,0 +1,453 @@
+@using BlazorDemo.AbraqAccount.Models
+@using BlazorDemo.AbraqAccount.Services.Interfaces
+@using BlazorDemo.Components.AbraqAccount.Common
+@using Microsoft.AspNetCore.Mvc.Rendering
+@inject ICreditNoteService CreditNoteService
+@inject IJSRuntime JS
+
+
+<style>
+    .table-notes tbody tr:nth-child(even) {
+        background-color: #e9ecef !important;
+    }
+</style>
+
+<div class="filter-section">
+    <div class="filter-group">
+        <label>Unit</label>
+        <select @bind="filter.Unit">
+            <option value="">All Units</option>
+            @if (units != null)
+            {
+                @foreach (var u in units)
+                {
+                    <option value="@u">@u</option>
+                }
+            }
+        </select>
+    </div>
+    <div class="filter-group">
+        <label>Credit Note No</label>
+        <input type="text" @bind="filter.NoteNo" placeholder="Search by Credit No" />
+    </div>
+    <div class="filter-group">
+        <label>Account Name</label>
+        <input type="text" @bind="filter.AccountName" placeholder="Search by Account Name" />
+    </div>
+    <div class="filter-group">
+        <label>Status</label>
+        <select @bind="filter.Status">
+            <option value="Unapproved">Unapproved</option>
+            <option value="Approved">Approved</option>
+            <option value="Rejected">Rejected</option>
+            <option value="Deleted">Deleted</option>
+        </select>
+    </div>
+    <div class="filter-group">
+        <label>From Date</label>
+        <input type="date" @bind="filter.FromDate" />
+    </div>
+    <div class="filter-group">
+        <label>To Date</label>
+        <input type="date" @bind="filter.ToDate" />
+    </div>
+    <div class="filter-actions">
+        <button class="btn-search" @onclick="LoadData">
+            <i class="bi bi-search"></i> Search
+        </button>
+        <button class="btn-clear" @onclick="ClearFilters">Clear</button>
+    </div>
+</div>
+
+<div class="table-card">
+    <div class="table-wrapper">
+        <table class="table-notes table-striped">
+            <thead>
+                <tr>
+                    <th>
+                        <ColumnFilter Title="Credit No" TItem="CreditNote" TValue="string" Items="originalCreditNotes" Property="@(x => x.CreditNoteNo)" OnFilter="@(v => HandleColumnFilter("CreditNoteNo", v))" Align="left" />
+                    </th>
+                    <th>
+                        <ColumnFilter Title="Unit" TItem="CreditNote" TValue="string" Items="originalCreditNotes" Property="@(x => x.Unit)" OnFilter="@(v => HandleColumnFilter("Unit", v))" Align="left" />
+                    </th>
+                    <th>
+                        <ColumnFilter Title="Date" TItem="CreditNote" TValue="string" Items="originalCreditNotes" Property="@(x => x.CreditNoteDate.ToString("dd/MM/yyyy"))" OnFilter="@(v => HandleColumnFilter("Date", v))" Align="left" />
+                    </th>
+                    <th>
+                        <ColumnFilter Title="Entry For" TItem="CreditNote" TValue="string" Items="originalCreditNotes" Property="@(x => x.EntryForName ?? "-")" OnFilter="@(v => HandleColumnFilter("EntryForName", v))" Align="left" />
+                    </th>
+                    <th>
+                        <ColumnFilter Title="Credit/Debit" TItem="CreditNote" TValue="string" Items="originalCreditNotes" Property="@(x => GetAccountDisplay(x))" OnFilter="@(v => HandleColumnFilter("Account", v))" />
+                    </th>
+                    <th>
+                        <ColumnFilter Title="Amount" TItem="CreditNote" TValue="decimal?" Items="originalCreditNotes" Property="@(x => x.Amount)" OnFilter="@(v => HandleColumnFilter("Amount", v))" />
+                    </th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            
+            <tbody>
+                @if (creditNotes == null)
+                {
+                    <tr><td colspan="6" class="text-center">Loading...</td></tr>
+                }
+                else if (!creditNotes.Any())
+                {
+                    <tr><td colspan="6" class="text-center">No credit notes found.</td></tr>
+                }
+                else
+                {
+                    @foreach (var item in creditNotes)
+                    {
+                        <tr>
+                            <td>@item.CreditNoteNo</td>
+                            <td>@item.Unit</td>
+                            <td>@item.CreditNoteDate.ToString("dd/MM/yyyy")</td>
+                            <td>@(item.EntryForName ?? "-")</td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(item.CreditAccountName) && item.CreditAccountName != "-")
+                                {
+                                    <div><span class="amount-credit">@item.CreditAccountName Cr</span></div>
+                                }
+                                @if (!string.IsNullOrEmpty(item.DebitAccountName) && item.DebitAccountName != "-")
+                                {
+                                    <div><span class="amount-debit">@item.DebitAccountName Dr</span></div>
+                                }
+                            </td>
+                            <td class="@GetAmountClass(item)">@(item.Amount?.ToString("N2") ?? "0.00")</td>
+                            <td>
+                                <div class="action-icons">
+                                    @if (item.IsActive)
+                                    {
+                                        @if (item.Status != "Approved")
+                                        {
+                                            <button class="action-icon edit-icon" type="button" @onclick="() => OnEdit.InvokeAsync(item.CreditNoteNo)" title="Edit">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                        }
+                                        <NavLink href="@($"transactions/credit-note/details/{item.Id}")" class="action-icon view-icon" title="View Details">
+                                            <i class="bi bi-eye"></i>
+                                        </NavLink>
+                                        <button class="action-icon history-icon" type="button" @onclick="() => ShowHistory(item.CreditNoteNo)" title="History">
+                                            <i class="bi bi-info-circle"></i>
+                                        </button>
+                                        @if (item.Status == "Approved")
+                                        {
+                                            <button class="action-icon approved-icon" @onclick="() => ConfirmUnapprove(item.Id)" title="Unapprove">
+                                                <i class="bi bi-check-circle-fill"></i>
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button class="action-icon approve-icon" @onclick="() => ConfirmApprove(item.Id)" title="Approve">
+                                                <i class="bi bi-hand-thumbs-up"></i>
+                                            </button>
+                                            <button class="action-icon delete-icon" @onclick="() => ConfirmDelete(item.Id)" title="Delete">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <NavLink href="@($"transactions/credit-note/details/{item.Id}")" class="action-icon view-icon" title="View Details">
+                                            <i class="bi bi-eye"></i>
+                                        </NavLink>
+                                        <button class="action-icon history-icon" type="button" @onclick="() => ShowHistory(item.CreditNoteNo)" title="History">
+                                            <i class="bi bi-info-circle"></i>
+                                        </button>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination-section">
+        <div class="pagination-info">
+            <span>Showing @(startRecord) - @(endRecord) of @(totalCount) Display</span>
+            <input type="number" @bind="pageSize" min="1" max="100" />
+            <button class="btn-go" @onclick="LoadData">Go</button>
+        </div>
+        <div class="pagination-controls">
+            <button class="pagination-btn" @onclick="() => GoToPage(1)" disabled="@(currentPage == 1)">K</button>
+            <button class="pagination-btn" @onclick="() => GoToPage(currentPage - 1)" disabled="@(currentPage == 1)">&lt;</button>
+            <span>Page</span>
+            <select @onchange="OnPageChange">
+                @for (int i = 1; i <= totalPages; i++)
+                {
+                    <option value="@i" selected="@(i == currentPage)">@i</option>
+                }
+            </select>
+            <span>of @totalPages</span>
+            <button class="pagination-btn" @onclick="() => GoToPage(currentPage + 1)" disabled="@(currentPage >= totalPages)">&gt;</button>
+            <button class="pagination-btn" @onclick="() => GoToPage(totalPages)" disabled="@(currentPage >= totalPages)">K</button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .filter-section {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 1rem;
+        background: white;
+        padding: 1.5rem;
+        border: 1px solid #e0e0e0;
+        border-radius: 4px;
+        margin-bottom: 1.5rem;
+        align-items: flex-end;
+    }
+
+    .filter-group { display: flex; flex-direction: column; }
+    .filter-group label { font-size: 0.9rem; font-weight: 600; color: #333; margin-bottom: 0.5rem; }
+    .filter-group input, .filter-group select { padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem; }
+    .filter-actions { display: flex; gap: 0.5rem; }
+    .btn-search { background-color: #6c757d; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; }
+    .btn-clear { background-color: #e9ecef; color: #333; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; }
+    .table-card { background: white; border: 1px solid #e0e0e0; border-radius: 4px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .table-wrapper { overflow-x: auto; min-height: 400px; }
+    .table-notes { width: 100%; border-collapse: collapse; }
+    .table-notes th { padding: 0.75rem; text-align: left; background: #f8f9fa; border-bottom: 2px solid #dee2e6; }
+    .table-notes td { padding: 0.75rem; border-bottom: 1px solid #dee2e6; }
+    
+    .badge { padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem; }
+    .badge-unapproved { background-color: #ffc107; color: black; }
+    .badge-approved { background-color: #28a745; color: white; }
+    .badge-rejected { background-color: #dc3545; color: white; }
+
+    .action-icons { display: flex; gap: 0.5rem; }
+    .action-icon { color: #6c757d; font-size: 1.1rem; cursor: pointer; text-decoration: none; border: none; background: none; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
+    .action-icon:hover { color: #007bff; }
+    .approved-icon { color: #28a745; border: none; background: none; }
+    .approve-icon { color: #198754; border: none; background: none; }
+    .delete-icon { color: #dc3545; border: none; background: none; }
+
+    .pagination-section { display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; }
+    .pagination-info { display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; }
+    .pagination-info input { width: 60px; padding: 0.25rem; border: 1px solid #ddd; }
+    .pagination-controls { display: flex; gap: 0.25rem; align-items: center; }
+    .pagination-btn { padding: 0.25rem 0.75rem; border: 1px solid #ddd; background: #fff; cursor: pointer; }
+    .pagination-btn:disabled { cursor: not-allowed; opacity: 0.5; }
+
+    /* Amount color coding */
+    .amount-credit { color: #0d6efd; font-weight: 600; }
+    .amount-debit { color: #dc3545; font-weight: 600; }
+</style>
+
+<ConfirmationModal @ref="confirmationModal" OnConfirm="HandleConfirmation" />
+<TransactionHistoryModal @ref="historyModal" />
+
+@code {
+    [Parameter] public EventCallback<string> OnEdit { get; set; }
+    private List<CreditNote>? creditNotes;
+    private List<string> units = new();
+    private int currentPage = 1;
+    private int pageSize = 10;
+    private int totalCount = 0;
+    private int totalPages => (int)Math.Ceiling((double)totalCount / pageSize);
+    private int startRecord => (currentPage - 1) * pageSize + 1;
+    private int endRecord => Math.Min(currentPage * pageSize, totalCount);
+    private CreditNoteFilter filter = new() { Status = "Unapproved" };
+
+    protected override async Task OnInitializedAsync()
+    {
+        units = (await CreditNoteService.GetUnitNamesAsync()).ToList();
+        await LoadDropdowns();
+        await LoadData();
+    }
+
+    private async Task LoadDropdowns()
+    {
+        // Dropdowns for credit note might be different, but keeping the service call if needed for other things
+        var viewBag = new System.Dynamic.ExpandoObject() as dynamic;
+        await CreditNoteService.LoadDropdownsAsync(viewBag);
+    }
+
+    private void FilterLocalData()
+    {
+        if (originalCreditNotes == null) return;
+        
+        var query = originalCreditNotes.AsEnumerable();
+
+        foreach(var kvp in activeColumnFilters)
+        {
+             var col = kvp.Key;
+             var filterValues = kvp.Value as System.Collections.IEnumerable;
+             if (filterValues == null) continue;
+             
+             query = query.Where(item => {
+                 object? val = col switch {
+                     "CreditNoteNo" => item.CreditNoteNo,
+                     "Unit" => item.Unit,
+
+                     "Date" => item.CreditNoteDate.ToString("dd/MM/yyyy"),
+                     "EntryForName" => item.EntryForName ?? "-",
+                     "Account" => GetAccountDisplay(item),
+                     "Amount" => item.Amount,
+                     _ => null
+                 };
+                 
+                 foreach(var f in filterValues) {
+                     if (object.Equals(f, val)) return true;
+                 }
+                 return false;
+             });
+        }
+        
+        creditNotes = query.ToList();
+    }
+
+    private Dictionary<string, object> activeColumnFilters = new();
+
+    private void HandleColumnFilter<T>(string column, List<T> selectedValues)
+    {
+        if (selectedValues == null || !selectedValues.Any()) 
+            activeColumnFilters.Remove(column);
+        else 
+            activeColumnFilters[column] = selectedValues;
+
+        FilterLocalData();
+    }
+
+    private List<CreditNote> originalCreditNotes = new();
+
+    private async Task LoadData()
+    {
+        try
+        {
+            var result = await CreditNoteService.GetCreditNotesAsync(
+                filter.Unit,
+                filter.NoteNo,
+                filter.AccountName,
+                filter.Status,
+                filter.FromDate,
+                filter.ToDate,
+                currentPage,
+                pageSize
+            );
+            originalCreditNotes = result.notes ?? new List<CreditNote>();
+            creditNotes = originalCreditNotes.ToList();
+            totalCount = result.totalCount;
+            
+            if (activeColumnFilters.Any()) FilterLocalData();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading Credit Notes: {ex.Message}");
+            creditNotes = new List<CreditNote>();
+            originalCreditNotes = new List<CreditNote>();
+        }
+    }
+
+    private async Task ClearFilters()
+    {
+        filter = new() { Status = "Unapproved" };
+        currentPage = 1;
+        await LoadData();
+    }
+
+    private async Task GoToPage(int page)
+    {
+        if (page >= 1 && page <= totalPages)
+        {
+            currentPage = page;
+            await LoadData();
+        }
+    }
+
+    private async Task OnPageChange(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int page))
+        {
+            await GoToPage(page);
+        }
+    }
+
+
+    private async Task ShowHistory(string vNo)
+    {
+        if (historyModal != null) await historyModal.Show(vNo);
+    }
+
+    private TransactionHistoryModal? historyModal;
+    private ConfirmationModal? confirmationModal;
+    private int pendingId;
+    private string pendingAction = "";
+
+    private void ConfirmApprove(int id)
+    {
+        pendingId = id;
+        pendingAction = "Approve";
+        confirmationModal?.Show("Approve Credit Note", "Are you sure you want to approve this credit note?", "Approve", "btn-success");
+    }
+
+    private void ConfirmUnapprove(int id)
+    {
+        pendingId = id;
+        pendingAction = "Unapprove";
+        confirmationModal?.Show("Unapprove Credit Note", "Are you sure you want to unapprove this credit note?", "Unapprove", "btn-warning");
+    }
+
+    private void ConfirmDelete(int id)
+    {
+        pendingId = id;
+        pendingAction = "Delete";
+        confirmationModal?.Show("Delete Credit Note", "Are you sure you want to delete this credit note?", "Delete", "btn-danger");
+    }
+
+    private async Task HandleConfirmation()
+    {
+        if (pendingAction == "Approve")
+        {
+            await CreditNoteService.ApproveCreditNoteAsync(pendingId);
+        }
+        else if (pendingAction == "Unapprove")
+        {
+            await CreditNoteService.UnapproveCreditNoteAsync(pendingId);
+        }
+        else if (pendingAction == "Delete")
+        {
+            await CreditNoteService.DeleteCreditNoteAsync(pendingId);
+        }
+        await LoadData();
+    }
+
+    private string GetStatusClass(string? status) => status?.ToLower() switch
+    {
+        "approved" => "badge-approved",
+        "rejected" => "badge-rejected",
+        _ => "badge-unapproved"
+    };
+
+    private string GetAccountDisplay(CreditNote item)
+    {
+        var parts = new List<string>();
+        if (!string.IsNullOrEmpty(item.CreditAccountName) && item.CreditAccountName != "-") parts.Add(item.CreditAccountName);
+        if (!string.IsNullOrEmpty(item.DebitAccountName) && item.DebitAccountName != "-") parts.Add(item.DebitAccountName);
+        return string.Join(" ", parts);
+    }
+
+    private string GetAmountClass(CreditNote item)
+    {
+        // Blue for Credit, Red for Debit
+        if (!string.IsNullOrEmpty(item.CreditAccountName) && item.CreditAccountName != "-")
+            return "amount-credit";
+        if (!string.IsNullOrEmpty(item.DebitAccountName) && item.DebitAccountName != "-")
+            return "amount-debit";
+        return "";
+    }
+
+    public class CreditNoteFilter
+    {
+        public string? Unit { get; set; }
+        public string? NoteNo { get; set; }
+        public string? AccountName { get; set; }
+        public string Status { get; set; } = "Unapproved";
+        public DateTime? FromDate { get; set; }
+        public DateTime? ToDate { get; set; }
+    }
+}

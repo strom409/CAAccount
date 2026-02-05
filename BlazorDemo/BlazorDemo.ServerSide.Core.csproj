@@ -27,6 +27,7 @@
     <PackageReference Include="DevExpress.Blazor.Reporting.Viewer" Version="24.2.6" />
     <PackageReference Include="Markdig" Version="0.23.0" />
     <PackageReference Include="DevExtreme.AspNet.Data" Version="4.0.1" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.10" />
     <PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
     <PackageReference Include="ReportViewerCore.NETCore" Version="15.1.26" />
     <PackageReference Include="Syncfusion.Blazor" Version="29.2.4" />

@@ -1,0 +1,510 @@
+@using BlazorDemo.AbraqAccount.Models
+@using BlazorDemo.AbraqAccount.Services.Interfaces
+@using BlazorDemo.Components.AbraqAccount.Common
+@using Microsoft.AspNetCore.Mvc.Rendering
+@using System.ComponentModel.DataAnnotations
+@inject IExpensesIncurredService ExpenseService
+@inject NavigationManager Navigation
+@inject INotificationService NotificationService
+
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body p-4">
+        <h5 class="card-title fw-bold mb-4 text-secondary">Basic Information <small class="text-muted fw-normal">— @(IsEdit ? "Edit Entry" : "New Entry")</small></h5>
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger mb-3">@errorMessage</div>
+        }
+
+        <!-- Header Row 1 -->
+        <div class="row g-3 mb-3">
+            <div class="col-md-3">
+                <label class="form-label text-uppercase fw-bold fs-7 text-secondary">Received Date <span class="text-danger">*</span></label>
+                <input type="date" @bind="model.ExpenseDate" class="form-control" />
+            </div>
+            <div class="col-md-3">
+                <AccountSearch Label="CREDIT ACCOUNT" 
+                               Placeholder="Search Credit Account" 
+                               SearchFunc="@((s) => ExpenseService.GetAccountsAsync(s, "All"))"
+                               OnAccountSelected="@(item => { model.VendorId = item.Id; model.VendorName = item.Name; })"
+                               InitialValue="@model.VendorName"
+                               Required="true"
+                               CssClass="form-control" />
+            </div>
+            <div class="col-md-3">
+                <AccountSearch Label="DEBIT ACCOUNT" 
+                               Placeholder="Search Debit Account" 
+                               SearchFunc="@((s) => ExpenseService.GetAccountsAsync(s, "All"))"
+                               OnAccountSelected="@(item => { model.DebitAccountId = item.Id; model.DebitAccountName = item.Name; })"
+                               InitialValue="@model.DebitAccountName"
+                               Required="true"
+                               CssClass="form-control" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label text-uppercase fw-bold fs-7 text-secondary">Unit <span class="text-danger">*</span></label>
+                <select @bind="model.Unit" class="form-select">
+                    <option value="">Select</option>
+                    @foreach (var unit in unitList)
+                    {
+                        <option value="@unit">@unit</option>
+                    }
+                </select>
+            </div>
+        </div>
+
+        <!-- Header Row 2 -->
+        <div class="row g-3 mb-3">
+            <div class="col-md-3">
+                <label class="form-label text-uppercase fw-bold fs-7 text-secondary">PO Type <span class="text-danger">*</span></label>
+                <select @bind="model.POType" class="form-select">
+                    <option value="Non-PO">Non-PO</option>
+                    <option value="PO">PO</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label text-uppercase fw-bold fs-7 text-secondary">Bill Date <span class="text-danger">*</span></label>
+                <input type="date" @bind="model.BillDate" class="form-control" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label text-uppercase fw-bold fs-7 text-secondary">Bill No <span class="text-danger">*</span></label>
+                <input type="text" @bind="model.BillNo" class="form-control" placeholder="Ref/Bill No" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label text-uppercase fw-bold fs-7 text-secondary">Vehicle No <span class="text-danger">*</span></label>
+                <select @bind="model.VehicleNo" class="form-select">
+                    <option value="">SELECT VEHICLE</option>
+                    @foreach (var v in vehicleList)
+                    {
+                        <option value="@v.VehNo">@v.VehNo</option>
+                    }
+                </select>
+            </div>
+        </div>
+
+        <!-- Header Row 3 -->
+        <div class="row g-3 mb-3">
+            <div class="col-md-3">
+                <label class="form-label text-uppercase fw-bold fs-7 text-secondary">PAN No</label>
+                <input type="text" @bind="model.PANNo" class="form-control" placeholder="PAN No" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label text-uppercase fw-bold fs-7 text-secondary">Firm Type</label>
+                <input type="text" @bind="model.FirmType" class="form-control" placeholder="Firm Type" />
+            </div>
+            <div class="col-md-3">
+                <AccountSearch Label="EXPENSE LEDGER" 
+                               Placeholder="Search Ledger" 
+                               SearchFunc="@((s) => ExpenseService.GetAccountsAsync(s, "Expense"))"
+                               OnAccountSelected="@(item => { model.ExpenseLedgerId = item.Id; /* Assuming model has mapping */ })"
+                               InitialValue="" 
+                               Required="true"
+                               CssClass="form-control" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label text-uppercase fw-bold fs-7 text-secondary">Bill File</label>
+                <div class="input-group">
+                    <button class="btn btn-outline-secondary" type="button">Upload</button>
+                    <span class="input-group-text bg-transparent border-0">None</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Remarks -->
+        <div class="mb-3">
+            <label class="form-label text-uppercase fw-bold fs-7 text-secondary">Remarks</label>
+            <textarea @bind="model.Remarks" class="form-control" rows="2" placeholder="Short Remarks (Optional)"></textarea>
+        </div>
+    </div>
+</div>
+
+<!-- Items Section -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body p-4">
+        <h5 class="card-title fw-bold mb-4 text-secondary">Items</h5>
+
+        <div class="card p-3 mb-3 bg-light border-0">
+            <div class="row g-2 mb-2">
+                <div class="col-md-3">
+                    <label class="form-label fw-bold fs-7 text-secondary">ITEM GROUP <span class="text-danger">*</span></label>
+                    <select @bind="tempItem.ItemGroupId" class="form-select form-select-sm" @onafterupdate="LoadItemsForGroup">
+                        <option value="0">Group</option>
+                        @foreach(var g in itemGroups) { <option value="@g.Id">@g.Name</option> }
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold fs-7 text-secondary">ITEM NAME <span class="text-danger">*</span></label>
+                    <select @bind="tempItem.ItemId" class="form-select form-select-sm">
+                        <option value="0">Item</option>
+                        @foreach(var i in itemsList) { <option value="@i.Id">@i.Name</option> }
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-bold fs-7 text-secondary">DESCRIPTION</label>
+                    <input type="text" @bind="tempItem.Description" class="form-control form-control-sm" placeholder="Description" />
+                </div>
+                 <div class="col-md-2">
+                    <label class="form-label fw-bold fs-7 text-secondary">UOM</label>
+                    <input type="text" @bind="tempItem.UOM" class="form-control form-control-sm" />
+                </div>
+            </div>
+            <div class="row g-2 align-items-end">
+                <div class="col-md-1">
+                    <label class="form-label fw-bold fs-7 text-secondary">QTY</label>
+                    <input type="number" @bind="tempItem.Qty" class="form-control form-control-sm text-center" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold fs-7 text-secondary">UNIT PRICE</label>
+                    <input type="number" @bind="tempItem.UnitPrice" class="form-control form-control-sm text-end" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold fs-7 text-secondary">AMOUNT</label>
+                    <input type="text" value="@((tempItem.Qty * tempItem.UnitPrice).ToString("N2"))" class="form-control form-control-sm text-end" readonly />
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label fw-bold fs-7 text-secondary">DISC.</label>
+                    <input type="number" @bind="tempItem.Discount" class="form-control form-control-sm text-center" />
+                </div>
+                 <div class="col-md-1">
+                    <label class="form-label fw-bold fs-7 text-secondary">GST%</label>
+                    <select @bind="tempItem.GST" class="form-select form-select-sm">
+                        <option value="NA">NA</option>
+                        <option value="5%">5%</option>
+                        <option value="12%">12%</option>
+                        <option value="18%">18%</option>
+                        <option value="28%">28%</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold fs-7 text-secondary">GST AMT</label>
+                    <input type="number" @bind="tempItem.GSTAmount" class="form-control form-control-sm text-end" />
+                </div>
+                <div class="col-md-3 text-end">
+                    <button class="btn btn-success btn-sm px-4" @onclick="AddItemToGrid"><i class="bi bi-plus-lg"></i> Add</button>
+                    <button class="btn btn-outline-secondary btn-sm px-3" @onclick="ClearTempItem">Clear</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-bordered align-middle">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="fw-bold fs-7 text-secondary uppercase">ITEM GROUP</th>
+                        <th class="fw-bold fs-7 text-secondary uppercase">ITEM NAME</th>
+                        <th class="fw-bold fs-7 text-secondary uppercase text-center">QTY</th>
+                        <th class="fw-bold fs-7 text-secondary uppercase text-end">UNIT PRICE</th>
+                        <th class="fw-bold fs-7 text-secondary uppercase text-end">AMOUNT</th>
+                        <th class="fw-bold fs-7 text-secondary uppercase text-end">TOTAL AMOUNT</th>
+                        <th class="fw-bold fs-7 text-secondary uppercase text-center" style="width: 80px;">ACTION</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (model.Items.Any())
+                    {
+                        @foreach (var item in model.Items)
+                        {
+                            <tr>
+                                <td>@GetGroupName(item.ItemGroupId)</td>
+                                <td>@GetItemName(item.ItemId)</td>
+                                <td class="text-center">@item.Qty</td>
+                                <td class="text-end">@item.UnitPrice.ToString("N2")</td>
+                                <td class="text-end">@item.Amount.ToString("N2")</td>
+                                <td class="text-end">@item.TotalAmount.ToString("N2")</td>
+                                <td class="text-center">
+                                    <button class="btn btn-link text-danger p-0" @onclick="() => RemoveItem(item)"><i class="bi bi-trash"></i></button>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="7" class="text-center text-danger py-4">No Items found!!</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Miscellaneous Charges Section -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body p-4">
+        <h5 class="card-title fw-bold mb-4 text-secondary">Miscellaneous Charges</h5>
+
+        <div class="card p-3 mb-3 bg-light border-0">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label fw-bold fs-7 text-secondary">EXPENSE TYPE <span class="text-danger">*</span></label>
+                    <select @bind="tempMisc.ExpenseType" class="form-select">
+                        <option value="">Select Expense Type</option>
+                        @foreach(var et in expenseTypes) { <option value="@et.Text">@et.Text</option> } 
+                        @* Storing Text directly since model is string and we want readability if no ID lookup exists. 
+                           Or if Value is ID, we can store Value. Assuming Text (Name) is better for string field without navigation property. *@
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold fs-7 text-secondary">AMOUNT <span class="text-danger">*</span></label>
+                    <input type="number" @bind="tempMisc.Amount" class="form-control text-end" />
+                </div>
+                 <div class="col-md-2">
+                    <label class="form-label fw-bold fs-7 text-secondary">TAX(%)</label>
+                    <select @bind="tempMisc.Tax" class="form-select">
+                        <option value="NA">NA</option>
+                        <option value="5%">5%</option>
+                        <option value="12%">12%</option>
+                        <option value="18%">18%</option>
+                        <option value="28%">28%</option>
+                    </select>
+                </div>
+                <div class="col-md-3 text-end">
+                    <button class="btn btn-success px-4" @onclick="AddMiscToGrid"><i class="bi bi-plus-lg"></i> Add</button>
+                    <button class="btn btn-outline-secondary px-3" @onclick="ClearTempMisc">Clear</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-bordered align-middle">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="fw-bold fs-7 text-secondary uppercase">EXPENSE TYPE</th>
+                        <th class="fw-bold fs-7 text-secondary uppercase text-end">AMOUNT</th>
+                        <th class="fw-bold fs-7 text-secondary uppercase text-center">GST(%)</th>
+                        <th class="fw-bold fs-7 text-secondary uppercase text-end">GST AMOUNT</th>
+                        <th class="fw-bold fs-7 text-secondary uppercase text-end">TOTAL AMOUNT</th>
+                        <th class="fw-bold fs-7 text-secondary uppercase text-center" style="width: 80px;">ACTION</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (model.MiscCharges.Any())
+                    {
+                        @foreach (var misc in model.MiscCharges)
+                        {
+                            <tr>
+                                <td>@misc.ExpenseType</td>
+                                <td class="text-end">@misc.Amount.ToString("N2")</td>
+                                <td class="text-center">@misc.Tax</td>
+                                <td class="text-end">@misc.GSTAmount.ToString("N2")</td>
+                                <td class="text-end">@misc.TotalAmount.ToString("N2")</td>
+                                <td class="text-center">
+                                    <button class="btn btn-link text-danger p-0" @onclick="() => RemoveMisc(misc)"><i class="bi bi-trash"></i></button>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                         <tr>
+                            <td colspan="6" class="text-center text-danger py-4">No Miscellaneous Charges found!!</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Footer Actions -->
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-4">
+        <div class="row align-items-center">
+             <div class="col-md-3">
+                 <div class="border rounded p-2">
+                     <label class="d-block text-secondary fs-7 fw-bold mb-1">GROSS TOTAL</label>
+                     <div class="fs-4 fw-bold text-dark">@CalculateGrossTotal().ToString("N3")</div>
+                 </div>
+             </div>
+             <div class="col-md-3">
+                 <div class="border rounded p-2">
+                     <label class="d-block text-secondary fs-7 fw-bold mb-1">DISCOUNT</label>
+                     <div class="fs-4 fw-bold text-dark">@model.TotalDiscount.ToString("N0")</div>
+                 </div>
+             </div>
+             <div class="col-md-3">
+                 <div class="border rounded p-2">
+                     <label class="d-block text-secondary fs-7 fw-bold mb-1">NET TOTAL</label>
+                     <div class="fs-4 fw-bold text-dark">@((model.Amount ?? 0).ToString("N3"))</div>
+                 </div>
+             </div>
+             <div class="col-md-3 text-end">
+                 <button class="btn btn-secondary btn-lg px-4 me-2" @onclick="Cancel">Cancel</button>
+                 <button class="btn btn-secondary btn-lg px-4" style="background-color: #6c757d; border-color: #6c757d;" @onclick="Save" disabled="@isSubmitting">
+                     <i class="bi bi-check-circle me-2"></i> Save Entry
+                 </button>
+             </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .fs-7 { font-size: 0.75rem; }
+    .uppercase { text-transform: uppercase; }
+    .btn-lg { font-size: 1rem; padding: 0.75rem 1.5rem; }
+</style>
+
+@code {
+    [Parameter] public int? Id { get; set; }
+
+    private ExpensesIncurred model = new();
+    private ExpenseItem tempItem = new();
+    private ExpenseMiscCharge tempMisc = new();
+
+    private bool IsEdit => Id.HasValue && Id.Value > 0;
+    private bool isSubmitting = false;
+    private string errorMessage = "";
+
+    // Lists
+    private List<string> unitList = new();
+    private List<VehInfo> vehicleList = new();
+    private List<LookupItem> itemGroups = new();
+    private List<LookupItem> itemsList = new();
+    private List<SelectListItem> expenseTypes = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        unitList = (await ExpenseService.GetUnitNamesAsync()).ToList();
+        vehicleList = (await ExpenseService.GetVehiclesListAsync()).ToList();
+        itemGroups = (await ExpenseService.GetItemGroupsAsync("")).ToList();
+        expenseTypes = await ExpenseService.GetPaymentModeListAsync(); 
+
+        if (IsEdit)
+        {
+            var existing = await ExpenseService.GetExpenseByIdAsync(Id.Value, includeItems: true, includeMiscCharges: true);
+            if (existing != null) model = existing;
+            else errorMessage = "Entry not found.";
+        }
+        else
+        {
+             model.ExpenseDate = DateTime.Now;
+             model.BillDate = DateTime.Now;
+             model.Unit = "Select";
+        }
+    }
+
+    private async Task LoadItemsForGroup()
+    {
+        if (tempItem.ItemGroupId > 0)
+        {
+            itemsList = (await ExpenseService.GetItemNamesAsync(tempItem.ItemGroupId, "")).ToList();
+        }
+        else
+        {
+            itemsList.Clear();
+        }
+    }
+
+    private void AddItemToGrid()
+    {
+        if (tempItem.ItemId == 0) return;
+
+        // Calc
+        tempItem.Amount = tempItem.Qty * tempItem.UnitPrice;
+        // GST Logic
+        decimal gstPercent = 0;
+        if (tempItem.GST != "NA") decimal.TryParse(tempItem.GST.Replace("%", ""), out gstPercent);
+        if (tempItem.GSTAmount == 0 && gstPercent > 0) tempItem.GSTAmount = (tempItem.Amount - tempItem.Discount) * (gstPercent / 100);
+        
+        tempItem.TotalAmount = tempItem.Amount - tempItem.Discount + tempItem.GSTAmount;
+
+        model.Items.Add(new ExpenseItem 
+        { 
+            ItemGroupId = tempItem.ItemGroupId, 
+            ItemId = tempItem.ItemId, 
+            Description = tempItem.Description, 
+            UOM = tempItem.UOM, 
+            Qty = tempItem.Qty, 
+            UnitPrice = tempItem.UnitPrice, 
+            Amount = tempItem.Amount, 
+            Discount = tempItem.Discount, 
+            GST = tempItem.GST, 
+            GSTAmount = tempItem.GSTAmount,
+            TotalAmount = tempItem.TotalAmount
+        });
+
+        ClearTempItem();
+        CalculateTotals();
+    }
+
+    private void ClearTempItem()
+    {
+        tempItem = new ExpenseItem { UOM = "", Qty = 0, UnitPrice = 0, GST = "NA" };
+    }
+
+    private void RemoveItem(ExpenseItem item)
+    {
+        model.Items.Remove(item);
+        CalculateTotals();
+    }
+
+    private void AddMiscToGrid()
+    {
+        if (string.IsNullOrEmpty(tempMisc.ExpenseType)) return;
+
+        decimal gstPercent = 0;
+        if (tempMisc.Tax != "NA") decimal.TryParse(tempMisc.Tax.Replace("%", ""), out gstPercent);
+        
+        decimal gst = 0;
+        if (gstPercent > 0) gst = tempMisc.Amount * (gstPercent / 100);
+        
+        tempMisc.GSTAmount = gst;
+        tempMisc.TotalAmount = tempMisc.Amount + gst;
+
+        model.MiscCharges.Add(new ExpenseMiscCharge
+        {
+            ExpenseType = tempMisc.ExpenseType,
+            Amount = tempMisc.Amount,
+            Tax = tempMisc.Tax,
+            GSTAmount = tempMisc.GSTAmount,
+            TotalAmount = tempMisc.TotalAmount
+        });
+
+        ClearTempMisc();
+        CalculateTotals();
+    }
+
+    private void ClearTempMisc()
+    {
+        tempMisc = new ExpenseMiscCharge { Amount = 0, Tax = "NA", ExpenseType = "" };
+    }
+
+    private void RemoveMisc(ExpenseMiscCharge m)
+    {
+        model.MiscCharges.Remove(m);
+        CalculateTotals();
+    }
+
+    private void CalculateTotals()
+    {
+        decimal itemTotal = model.Items.Sum(i => i.TotalAmount);
+        decimal miscTotal = model.MiscCharges.Sum(m => m.TotalAmount);
+        model.Amount = itemTotal + miscTotal; 
+    }
+    
+    private decimal CalculateGrossTotal()
+    {
+        return (model.Items.Sum(i => i.Amount) + model.MiscCharges.Sum(m => m.Amount));
+    }
+
+    private string GetGroupName(int id) => itemGroups.FirstOrDefault(g => g.Id == id)?.Name ?? "-";
+    private string GetItemName(int id) => itemsList.FirstOrDefault(i => i.Id == id)?.Name ?? "-"; 
+    
+    private async Task Save()
+    {
+        isSubmitting = true; 
+        CalculateTotals();
+        try 
+        {
+            if (IsEdit) await ExpenseService.UpdateExpenseAsync(model.Id, model);
+            else await ExpenseService.CreateExpenseAsync(model);
+            
+            NotificationService.ShowSuccess("Saved successfully");
+            Navigation.NavigateTo("/abraq/transactions/expense-entry");
+        }
+        catch(Exception ex) { errorMessage = ex.Message; }
+        finally { isSubmitting = false; }
+    }
+
+    private void Cancel() => Navigation.NavigateTo("/abraq/transactions/expense-entry");
+}

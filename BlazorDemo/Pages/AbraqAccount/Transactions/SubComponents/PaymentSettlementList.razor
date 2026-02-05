@@ -1,0 +1,424 @@
+@using BlazorDemo.AbraqAccount.Models
+@using BlazorDemo.AbraqAccount.Services.Interfaces
+@inject IPaymentSettlementService PaymentSettlementService
+@inject IJSRuntime JS
+@using BlazorDemo.Components.AbraqAccount.Common
+
+<div class="filter-section">
+    <div class="filter-group">
+        <label>Unit</label>
+        <select @bind="filter.Unit">
+            <option value="">All Units</option>
+            @if (units != null)
+            {
+                @foreach (var u in units)
+                {
+                    <option value="@u">@u</option>
+                }
+            }
+        </select>
+    </div>
+    <div class="filter-group">
+        <label>PA Number</label>
+        <input type="text" @bind="filter.PANumber" placeholder="PA Number" />
+    </div>
+    <div class="filter-group">
+        <label>Status</label>
+        <select @bind="filter.Status">
+            <option value="Unapproved">Unapproved</option>
+            <option value="Approved">Approved</option>
+            <option value="Deleted">Deleted</option>
+        </select>
+    </div>
+    <div class="filter-group">
+        <label>From Date</label>
+        <input type="date" @bind="filter.FromDate" />
+    </div>
+    <div class="filter-group">
+        <label>To Date</label>
+        <input type="date" @bind="filter.ToDate" />
+    </div>
+    <div class="filter-actions">
+        <button class="btn-search" @onclick="LoadData">
+            <i class="bi bi-search"></i> Search
+        </button>
+        <button class="btn-clear" @onclick="ClearFilters">Clear</button>
+    </div>
+</div>
+
+<div class="table-card">
+    <div class="table-wrapper">
+        <table class="table-notes table-striped">
+            <thead>
+                <tr>
+                    <th>
+                        <ColumnFilter Title="Unit" TItem="PaymentSettlementGroupViewModel" TValue="string" Items="originalSettlementGroups" Property="@(x => x.Unit)" OnFilter="@(v => HandleColumnFilter("Unit", v))" Align="left" />
+                    </th>
+                    <th>
+                        <ColumnFilter Title="PA. No." TItem="PaymentSettlementGroupViewModel" TValue="string" Items="originalSettlementGroups" Property="@(x => x.PANumber)" OnFilter="@(v => HandleColumnFilter("PANumber", v))" Align="left" />
+                    </th>
+                    <th>
+                        <ColumnFilter Title="Date" TItem="PaymentSettlementGroupViewModel" TValue="string" Items="originalSettlementGroups" Property="@(x => x.SettlementDate.ToString("dd/MM/yyyy"))" OnFilter="@(v => HandleColumnFilter("Date", v))" Align="left" />
+                    </th>
+                    <th>
+                        <ColumnFilter Title="Entry For" TItem="PaymentSettlementGroupViewModel" TValue="string" Items="originalSettlementGroups" Property="@(x => x.EntryForName ?? "-")" OnFilter="@(v => HandleColumnFilter("EntryForName", v))" Align="left" />
+                    </th>
+                    <th>
+                        <ColumnFilter Title="Credit/Debit" TItem="PaymentSettlementGroupViewModel" TValue="string" Items="originalSettlementGroups" Property="@(x => (x.CreditEntry?.AccountName ?? "") + (x.DebitEntry != null ? " / " + x.DebitEntry.AccountName : ""))" OnFilter="@(v => HandleColumnFilter("VendorName", v))" />
+                    </th>
+                    <th>
+                        <ColumnFilter Title="Amount" TItem="PaymentSettlementGroupViewModel" TValue="decimal" Items="originalSettlementGroups" Property="@(x => x.PaymentAmount)" OnFilter="@(v => HandleColumnFilter("PaymentAmount", v))" />
+                    </th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (settlementGroups == null)
+                {
+                    <tr><td colspan="8" class="text-center">Loading...</td></tr>
+                }
+                else if (!settlementGroups.Any())
+                {
+                    <tr><td colspan="8" class="text-center">No payment settlements found.</td></tr>
+                }
+                else
+                {
+                    @foreach (var item in settlementGroups)
+                    {
+                        <tr>
+                            <td>@(item.Unit ?? "")</td>
+                            <td>
+                                <button class="btn-link" @onclick="() => ShowDetails(item.PANumber)">
+                                    @item.PANumber
+                                </button>
+                            </td>
+                            <td>@item.SettlementDate.ToString("dd/MM/yyyy")</td>
+                            <td>@(item.EntryForName ?? "-")</td>
+                            <td>
+                                <div>
+                                    @if (!string.IsNullOrEmpty(item.CreditAccountNames))
+                                    {
+                                        <div class="text-primary">@item.CreditAccountNames (Cr)</div>
+                                    }
+                                    @if (!string.IsNullOrEmpty(item.DebitAccountNames))
+                                    {
+                                        <div class="text-danger">@item.DebitAccountNames (Dr)</div>
+                                    }
+                                </div>
+                            </td>
+                            <td>@item.PaymentAmount.ToString("N2")</td>
+                            <td>
+                                <div class="action-icons">
+                                    @if (item.ApprovalStatus != "Deleted")
+                                    {
+                                        @if (item.ApprovalStatus == "Approved")
+                                        {
+                                            <button class="action-icon approved-icon" @onclick="() => ConfirmUnapprove(item.CreditEntryId > 0 ? item.CreditEntryId : item.DebitEntryId)" title="Unapprove">
+                                                <i class="bi bi-check-circle-fill"></i>
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button class="action-icon approve-icon" @onclick="() => ConfirmApprove(item.CreditEntryId > 0 ? item.CreditEntryId : item.DebitEntryId)" title="Approve">
+                                                <i class="bi bi-hand-thumbs-up"></i>
+                                            </button>
+                                        }
+                                        
+                                        @if (item.CreditEntryId > 0)
+                                        {
+                                            @if (item.ApprovalStatus != "Approved")
+                                            {
+                                                <button class="action-icon edit-icon" type="button" @onclick='async () => await OnEdit.InvokeAsync((item.PANumber, item.Unit ?? ""))' title="Edit">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                            }
+                                            <NavLink href="@($"transactions/payment-settlement/details/{item.PANumber}")" class="action-icon view-icon" title="View Details">
+                                                <i class="bi bi-eye"></i>
+                                            </NavLink>
+                                        }
+                                    }
+                                    
+                                    <button class="action-icon history-icon" type="button" @onclick="() => ShowHistory(item.PANumber)" title="History">
+                                        <i class="bi bi-info-circle"></i>
+                                    </button>
+
+                                    @if (item.ApprovalStatus != "Deleted")
+                                    {
+                                        @if (item.CreditEntryId > 0 || item.DebitEntryId > 0)
+                                        {
+                                            @if (item.ApprovalStatus != "Approved")
+                                            {
+                                                <button class="action-icon delete-icon" @onclick="() => ConfirmDelete(item.CreditEntryId > 0 ? item.CreditEntryId : item.DebitEntryId)" title="Delete">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted ms-2">Deleted</span>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination-section">
+        <div class="pagination-info">
+            <span>Showing @(startRecord) - @(endRecord) of @(totalCount) Display</span>
+            <input type="number" @bind="pageSize" min="1" max="100" />
+            <button class="btn-go" @onclick="LoadData">Go</button>
+        </div>
+        <div class="pagination-controls">
+            <button class="pagination-btn" @onclick="() => GoToPage(1)" disabled="@(currentPage == 1)">K</button>
+            <button class="pagination-btn" @onclick="() => GoToPage(currentPage - 1)" disabled="@(currentPage == 1)">&lt;</button>
+            <span>Page</span>
+            <select @onchange="OnPageChange">
+                @for (int i = 1; i <= totalPages; i++)
+                {
+                    <option value="@i" selected="@(i == currentPage)">@i</option>
+                }
+            </select>
+            <span>of @totalPages</span>
+            <button class="pagination-btn" @onclick="() => GoToPage(currentPage + 1)" disabled="@(currentPage >= totalPages)">&gt;</button>
+            <button class="pagination-btn" @onclick="() => GoToPage(totalPages)" disabled="@(currentPage >= totalPages)">K</button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .filter-section { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem; background: white; padding: 1.5rem; border: 1px solid #e0e0e0; border-radius: 4px; margin-bottom: 1.5rem; align-items: flex-end; }
+    .filter-group { display: flex; flex-direction: column; }
+    .filter-group label { font-size: 0.9rem; font-weight: 600; color: #333; margin-bottom: 0.5rem; }
+    .filter-group input, .filter-group select { padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem; }
+    .filter-actions { display: flex; gap: 0.5rem; }
+    .btn-search { background-color: #6c757d; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; }
+    .btn-clear { background-color: #e9ecef; color: #333; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; }
+    .btn-link { background: none; border: none; color: #007bff; text-decoration: underline; cursor: pointer; padding: 0; font-size: inherit; text-align: left; }
+    
+    .table-card { background: white; border: 1px solid #e0e0e0; border-radius: 4px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .table-wrapper { overflow-x: auto; min-height: 400px; }
+    .table-notes { width: 100%; border-collapse: collapse; }
+    .table-notes th { padding: 0.75rem; text-align: left; background: #f8f9fa; border-bottom: 2px solid #dee2e6; }
+    .table-notes td { padding: 0.75rem; border-bottom: 1px solid #dee2e6; }
+    
+    .badge { padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem; }
+    .badge-unapproved { background-color: #ffc107; color: black; }
+    .badge-approved { background-color: #28a745; color: white; }
+    .badge-pending { background-color: #17a2b8; color: white; }
+    
+    .text-primary { color: #007bff; }
+    .text-danger { color: #dc3545; }
+
+    .action-icons { display: flex; gap: 0.5rem; }
+    .action-icon { color: #6c757d; font-size: 1.1rem; cursor: pointer; text-decoration: none; border: none; background: none; padding: 0; }
+    .action-icon:hover { color: #007bff; }
+    .approved-icon { color: #28a745; }
+    .approve-icon { color: #198754; }
+    .delete-icon { color: #dc3545; }
+
+    .pagination-section { display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; }
+    .pagination-info { display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; }
+    .pagination-info input { width: 60px; padding: 0.25rem; border: 1px solid #ddd; }
+    .pagination-controls { display: flex; gap: 0.25rem; align-items: center; }
+    .pagination-btn { padding: 0.25rem 0.75rem; border: 1px solid #ddd; background: #fff; cursor: pointer; }
+    .pagination-btn:disabled { cursor: not-allowed; opacity: 0.5; }
+</style>
+
+
+<ConfirmationModal @ref="confirmationModal" OnConfirm="HandleConfirmation" />
+<TransactionHistoryModal @ref="historyModal" />
+
+@code {
+    [Parameter] public EventCallback<(string voucher, string unit)> OnEdit { get; set; }
+    private List<PaymentSettlementGroupViewModel>? settlementGroups;
+    private List<string> units = new();
+    private int currentPage = 1;
+    private int pageSize = 10;
+    private int totalCount = 0;
+    private int totalPages => (int)Math.Ceiling((double)totalCount / pageSize);
+    private int startRecord => (currentPage - 1) * pageSize + 1;
+    private int endRecord => Math.Min(currentPage * pageSize, totalCount);
+
+    private SettlementFilter filter = new() { Status = "Unapproved" };
+
+    protected override async Task OnInitializedAsync()
+    {
+        units = (await PaymentSettlementService.GetUnitNamesAsync()).ToList();
+        await LoadData();
+    }
+
+    private void FilterLocalData()
+    {
+        if (originalSettlementGroups == null) return;
+        
+        var query = originalSettlementGroups.AsEnumerable();
+
+        foreach(var kvp in activeColumnFilters)
+        {
+             var col = kvp.Key;
+             var filterValues = kvp.Value as System.Collections.IEnumerable;
+             if (filterValues == null) continue;
+             
+             query = query.Where(item => {
+                 object? val = col switch {
+                     "Unit" => item.Unit,
+                     "PANumber" => item.PANumber,
+                     "Date" => item.SettlementDate.ToString("dd/MM/yyyy"),
+                     "EntryForName" => item.EntryForName ?? "-",
+                     "VendorName" => (item.CreditEntry?.AccountName ?? "") + (item.DebitEntry != null ? " / " + item.DebitEntry.AccountName : ""),
+                     "PaymentAmount" => item.PaymentAmount,
+                     "ApprovalStatus" => item.ApprovalStatus,
+                     "PaymentStatus" => item.PaymentStatus,
+                     _ => null
+                 };
+                 
+                 foreach(var f in filterValues) {
+                     if (object.Equals(f, val)) return true;
+                 }
+                 return false;
+             });
+        }
+        
+        settlementGroups = query.ToList();
+    }
+
+    private Dictionary<string, object> activeColumnFilters = new();
+
+    private void HandleColumnFilter<T>(string column, List<T> selectedValues)
+    {
+        if (selectedValues == null || !selectedValues.Any()) 
+            activeColumnFilters.Remove(column);
+        else 
+            activeColumnFilters[column] = selectedValues;
+
+        FilterLocalData();
+    }
+
+    private List<PaymentSettlementGroupViewModel> originalSettlementGroups = new();
+
+    private async Task LoadData()
+    {
+        var result = await PaymentSettlementService.GetSettlementsAsync(
+            filter.PANumber,
+            filter.FromDate,
+            filter.ToDate,
+            null, // vendorGroup
+            null, // vendorName
+            filter.Unit,
+            filter.Status,
+            null, // paymentStatus
+            currentPage,
+            pageSize
+        );
+        originalSettlementGroups = result.groups ?? new List<PaymentSettlementGroupViewModel>();
+        settlementGroups = originalSettlementGroups.ToList();
+        totalCount = result.totalCount;
+        
+        if (activeColumnFilters.Any()) FilterLocalData();
+    }
+
+    private async Task ClearFilters()
+    {
+        filter = new() { Status = "Unapproved" };
+        currentPage = 1;
+        await LoadData();
+    }
+
+    private async Task GoToPage(int page)
+    {
+        if (page >= 1 && page <= totalPages)
+        {
+            currentPage = page;
+            await LoadData();
+        }
+    }
+
+    private async Task OnPageChange(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int page))
+        {
+            await GoToPage(page);
+        }
+    }
+
+    private async Task ShowDetails(string paNumber)
+    {
+        // Implement modal or navigation
+    }
+
+    private async Task ShowHistory(string paNo)
+    {
+        if (historyModal != null) await historyModal.Show(paNo);
+    }
+
+    private TransactionHistoryModal? historyModal;
+
+    private ConfirmationModal? confirmationModal;
+    private int pendingId;
+    private string pendingAction = "";
+
+    private void ConfirmApprove(int id)
+    {
+        pendingId = id;
+        pendingAction = "Approve";
+        confirmationModal?.Show("Approve Settlement", "Are you sure you want to approve this settlement?", "Approve", "btn-success");
+    }
+
+    private void ConfirmUnapprove(int id)
+    {
+        pendingId = id;
+        pendingAction = "Unapprove";
+        confirmationModal?.Show("Unapprove Settlement", "Are you sure you want to unapprove this settlement?", "Unapprove", "btn-warning");
+    }
+
+    private void ConfirmDelete(int id)
+    {
+        pendingId = id;
+        pendingAction = "Delete";
+        confirmationModal?.Show("Delete Settlement", "Are you sure you want to delete this settlement?", "Delete", "btn-danger");
+    }
+
+    private async Task HandleConfirmation()
+    {
+        if (pendingAction == "Approve")
+        {
+            await PaymentSettlementService.ApproveSettlementAsync(pendingId);
+        }
+        else if (pendingAction == "Unapprove")
+        {
+            await PaymentSettlementService.UnapproveSettlementAsync(pendingId);
+        }
+        else if (pendingAction == "Delete")
+        {
+            await PaymentSettlementService.DeleteSettlementAsync(pendingId);
+        }
+        await LoadData();
+    }
+
+    private string GetApprovalStatusClass(string? status) => status?.ToLower() switch
+    {
+        "approved" => "badge-approved",
+        "pending" => "badge-pending",
+        _ => "badge-unapproved"
+    };
+
+    public class SettlementFilter
+    {
+        public string? Unit { get; set; }
+        public string? PANumber { get; set; }
+        public string Status { get; set; } = "Unapproved";
+        public DateTime? FromDate { get; set; }
+        public DateTime? ToDate { get; set; }
+    }
+}
+<style>
+    .table-notes tbody tr:nth-child(even) {
+        background-color: #e9ecef !important;
+    }
+</style>

@@ -1,0 +1,12 @@
+@page "/abraq/transactions/expense-entry/create"
+@page "/abraq/transactions/expense-entry/edit/{Id:int}"
+@using BlazorDemo.Pages.AbraqAccount.Transactions.SubComponents
+@layout MainLayout
+
+<div class="p-0">
+    <ExpenseEntryForm Id="@Id" />
+</div>
+
+@code {
+    [Parameter] public int? Id { get; set; }
+}

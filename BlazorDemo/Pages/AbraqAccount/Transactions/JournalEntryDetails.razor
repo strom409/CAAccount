@@ -1,0 +1,15 @@
+@page "/abraq/transactions/general-entry/details/{*VoucherNo}"
+@page "/abraq/transactions/journal-entry/details/{*VoucherNo}"
+@using BlazorDemo.Pages.AbraqAccount.Transactions.SubComponents
+
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <JournalEntryForm VoucherNo="@VoucherNo" IsReadOnly="true" />
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string? VoucherNo { get; set; }
+}

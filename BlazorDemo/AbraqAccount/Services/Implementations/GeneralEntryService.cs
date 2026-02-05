@@ -1,0 +1,2077 @@
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Hosting; // For IWebHostEnvironment
+using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
+using BlazorDemo.AbraqAccount.Data;
+using BlazorDemo.AbraqAccount.Models;
+using BlazorDemo.AbraqAccount.Services.Interfaces;
+using BlazorDemo.AbraqAccount.Models.Common;
+using Microsoft.Data.SqlClient;
+using System.Data;
+using System.Linq;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using System.IO;
+
+namespace BlazorDemo.AbraqAccount.Services.Implementations;
+
+public class GeneralEntryService : IGeneralEntryService
+{
+    private readonly AppDbContext _context;
+    private readonly IWebHostEnvironment _webHostEnvironment;
+    private readonly ITransactionEntriesService _transactionService;
+    private readonly UserSessionService _userSessionService;
+
+    public GeneralEntryService(AppDbContext context, IWebHostEnvironment webHostEnvironment, ITransactionEntriesService transactionService, UserSessionService userSessionService)
+    {
+        _context = context;
+        _webHostEnvironment = webHostEnvironment;
+        _transactionService = transactionService;
+        _userSessionService = userSessionService;
+    }
+
+    private string GetCurrentUsername()
+    {
+        try
+        {
+            return _userSessionService.Usernamel ?? "Admin";
+        }
+        catch
+        {
+            return "Admin";
+        }
+    }
+
+    #region Retrieval
+    public async Task<(List<GeneralEntry> entries, int totalCount, int totalPages)> GetGeneralEntriesAsync(
+        string? voucherNo,
+        DateTime? fromDate,
+        DateTime? toDate,
+        string? debitAccount,
+        string? creditAccount,
+        string? type,
+        string? unit,
+        string? status,
+        int page,
+        int pageSize)
+    {
+        try
+        {
+            var query = _context.GeneralEntries.Where(g => g.IsActive).AsQueryable();
+
+            if (!string.IsNullOrEmpty(unit) && unit != "ALL")
+            {
+                query = query.Where(g => g.Unit == unit);
+            }
+
+            if (!string.IsNullOrEmpty(voucherNo))
+            {
+                query = query.Where(g => g.VoucherNo.Contains(voucherNo));
+            }
+
+            if (fromDate.HasValue)
+            {
+                query = query.Where(g => g.EntryDate >= fromDate.Value);
+            }
+
+            if (toDate.HasValue)
+            {
+                query = query.Where(g => g.EntryDate <= toDate.Value);
+            }
+
+            if (!string.IsNullOrEmpty(type))
+            {
+                query = query.Where(g => g.Type == type);
+            }
+
+            if (!string.IsNullOrEmpty(status))
+            {
+                query = query.Where(g => g.Status == status);
+            }
+
+            var totalCount = await query.CountAsync();
+            var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+
+            var entries = await query
+                .OrderByDescending(g => g.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            // Load navigation properties manually
+            foreach (var entry in entries)
+            {
+                await LoadAccountNamesAsync(entry);
+
+            }
+
+            return (entries, totalCount, totalPages);
+        }
+        catch (Exception)
+        {
+            throw;
+        }
+    }
+
+    public async Task<(List<GeneralEntryGroupViewModel> groups, int totalCount, int totalPages)> GetJournalGroupsAsync(
+        string? unit,
+        string? noteNo,
+        string? status,
+        DateTime? fromDate,
+        DateTime? toDate,
+        int page,
+        int pageSize)
+    {
+        try
+        {
+            var query = _context.GeneralEntries.AsQueryable();
+
+            if (status == "Deleted")
+            {
+                query = query.Where(g => !g.IsActive);
+            }
+            else
+            {
+                query = query.Where(g => g.IsActive);
+                if (!string.IsNullOrEmpty(status) && status != "All") query = query.Where(g => g.Status == status);
+            }
+
+            if (!string.IsNullOrEmpty(unit) && unit != "ALL") query = query.Where(g => g.Unit == unit);
+            if (!string.IsNullOrEmpty(noteNo)) query = query.Where(g => g.VoucherNo.Contains(noteNo));
+            if (fromDate.HasValue) query = query.Where(g => g.EntryDate >= fromDate.Value);
+            if (fromDate.HasValue) query = query.Where(g => g.EntryDate >= fromDate.Value);
+            if (toDate.HasValue) query = query.Where(g => g.EntryDate <= toDate.Value);
+
+            // Only include Journal Entry Book types
+            // Explicitly exclude other types that have their own tabs
+            query = query.Where(g => g.VoucherType == "Journal Entry Book" || 
+                                     g.VoucherType == "Journal" || 
+                                     (string.IsNullOrEmpty(g.VoucherType) && 
+                                      !g.VoucherNo.StartsWith("GBK/") && 
+                                      !g.VoucherNo.StartsWith("PA") && 
+                                      !g.VoucherNo.StartsWith("RE") && 
+                                      !g.VoucherNo.StartsWith("DN") && 
+                                      !g.VoucherNo.StartsWith("CN")));
+
+            // Fetch all matching entries to group effectively (pagination is tricky with grouping, so filtering first is key)
+            var allEntries = await query.OrderByDescending(g => g.CreatedAt).ToListAsync();
+
+            var groupedEntries = allEntries
+                .GroupBy(g => g.VoucherNo)
+                .Select(g => new GeneralEntryGroupViewModel
+                {
+                    VoucherNo = g.Key,
+                    Date = g.First().EntryDate,
+                    Entries = g.ToList(),
+                    TotalDebit = g.Where(e => e.DebitAccountId.HasValue).Sum(e => e.Amount),
+                    Status = !g.First().IsActive ? "Deleted" : g.First().Status,
+                    Unit = g.First().Unit,
+                    Id = g.First().Id
+                })
+                .ToList();
+
+            var totalCount = groupedEntries.Count;
+            var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+
+            var pagedGroups = groupedEntries
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            // Load account names
+            foreach (var group in pagedGroups)
+            {
+                foreach (var entry in group.Entries)
+                {
+                    await LoadAccountDetailsAsync(entry);
+                    await LoadAccountDetailsAsync(entry, isCredit: true);
+                }
+            }
+
+            return (pagedGroups, totalCount, totalPages);
+        }
+        catch (Exception)
+        {
+            throw;
+        }
+    }
+    #endregion
+
+    #region Helpers
+    private async Task LoadAccountDetailsAsync(GeneralEntry entry, bool isCredit = false)
+    {
+        try
+        {
+            string type = isCredit ? entry.CreditAccountType : entry.DebitAccountType;
+            int id = isCredit ? (entry.CreditAccountId ?? 0) : (entry.DebitAccountId ?? 0);
+
+            if (type == AccountTypes.MasterGroup)
+            {
+                var mg = await _context.MasterGroups.FindAsync(id);
+                if(isCredit) entry.CreditMasterGroup = mg; else entry.DebitMasterGroup = mg;
+            }
+            else if (type == AccountTypes.MasterSubGroup)
+            {
+                var msg = await _context.MasterSubGroups.Include(m => m.MasterGroup).FirstOrDefaultAsync(m => m.Id == id);
+                if(isCredit) entry.CreditMasterSubGroup = msg; else entry.DebitMasterSubGroup = msg;
+            }
+            else if (type == AccountTypes.SubGroupLedger)
+            {
+                var sgl = await _context.SubGroupLedgers.Include(s => s.MasterGroup).Include(s => s.MasterSubGroup).FirstOrDefaultAsync(s => s.Id == id);
+                 if(isCredit) entry.CreditSubGroupLedger = sgl; else entry.DebitSubGroupLedger = sgl;
+            }
+            else if (type == AccountTypes.BankMaster)
+            {
+                var bm = await _context.BankMasters.FindAsync(id);
+                if (isCredit) entry.CreditBankMasterInfo = bm; else entry.DebitBankMasterInfo = bm;
+            }
+            else if (type == AccountTypes.Farmer)
+            {
+                var farmer = await _context.Farmers.FindAsync(id);
+                if (isCredit) entry.CreditFarmer = farmer; else entry.DebitFarmer = farmer;
+            }
+        }
+        catch (Exception)
+        {
+            throw;
+        }
+    }
+    #endregion
+
+    #region Management
+    public async Task<(bool success, string message)> CreateGeneralEntryAsync(GeneralEntry generalEntry, IFormFile? imageFile)
+    {
+        try
+        {
+            var currentUser = GetCurrentUsername();
+            // Handle image upload
+            string? imagePath = null;
+            if (imageFile != null && imageFile.Length > 0)
+            {
+                // Validate file type
+                var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp" };
+                var fileExtension = Path.GetExtension(imageFile.FileName).ToLowerInvariant();
+                if (!allowedExtensions.Contains(fileExtension))
+                {
+                    return (false, "Invalid image file type. Allowed types: JPG, JPEG, PNG, GIF, BMP, WEBP");
+                }
+
+                // Validate file size (max 5MB)
+                if (imageFile.Length > 5 * 1024 * 1024)
+                {
+                    return (false, "Image size should be less than 5MB.");
+                }
+
+                // Create uploads directory if it doesn't exist
+                var uploadsFolder = Path.Combine(_webHostEnvironment.WebRootPath, "uploads", "generalentries");
+                if (!Directory.Exists(uploadsFolder))
+                {
+                    Directory.CreateDirectory(uploadsFolder);
+                }
+
+                // Generate unique filename
+                var fileName = $"{Guid.NewGuid()}{fileExtension}";
+                var filePath = Path.Combine(uploadsFolder, fileName);
+
+                // Save file
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await imageFile.CopyToAsync(stream);
+                }
+
+                // Store relative path
+                imagePath = $"/uploads/generalentries/{fileName}";
+            }
+
+            // Generate Voucher Number (e.g., JBK/A/24-25/00320)
+            var lastEntry = await _context.GeneralEntries
+                .OrderByDescending(g => g.Id)
+                .FirstOrDefaultAsync();
+            
+            int nextNumber = 1;
+            if (lastEntry != null && !string.IsNullOrEmpty(lastEntry.VoucherNo))
+            {
+                // Extract number from format JBK/A/24-25/00320
+                var parts = lastEntry.VoucherNo.Split('/');
+                if (parts.Length > 0)
+                {
+                    var numberPart = parts[parts.Length - 1];
+                    if (int.TryParse(numberPart, out int lastNum))
+                    {
+                        nextNumber = lastNum + 1;
+                    }
+                }
+            }
+            
+            var currentYear = DateTime.Now.Year;
+            var yearShort = currentYear.ToString().Substring(2);
+            var nextYear = (currentYear + 1).ToString().Substring(2);
+            generalEntry.VoucherNo = $"JBK/A/{yearShort}-{nextYear}/{nextNumber:D5}";
+
+            generalEntry.CreatedAt = DateTime.Now;
+            generalEntry.CreatedBy = GetCurrentUsername();
+            generalEntry.Status = generalEntry.Status ?? "Unapproved";
+            generalEntry.IsActive = true;
+
+            _context.GeneralEntries.Add(generalEntry);
+            await _context.SaveChangesAsync();
+
+            // History Logging
+            try
+            {
+                await _transactionService.LogTransactionHistoryAsync(
+                    generalEntry.VoucherNo, "Journal", "Insert", currentUser, 
+                    remarks: "Voucher Created",
+                    newValues: JsonSerializer.Serialize(generalEntry));
+            }
+            catch { /* Ignore */ }
+
+            // Update ImagePath using raw SQL if column exists and image was uploaded
+            if (!string.IsNullOrEmpty(imagePath))
+            {
+                try
+                {
+                    await _context.Database.ExecuteSqlRawAsync(
+                        "UPDATE [dbo].[GeneralEntries] SET [ImagePath] = {0} WHERE [Id] = {1}",
+                        imagePath, generalEntry.Id);
+                }
+                catch (Exception ex)
+                {
+                    // Column might not exist yet - log but don't fail
+                    Console.WriteLine($"Warning: Could not save ImagePath. Please run ADD_IMAGEPATH_TO_GENERAL_ENTRIES.sql: {ex.Message}");
+                }
+            }
+
+            return (true, "Journal Entry Book created successfully!");
+        }
+        catch (Exception ex)
+        {
+            return (false, "An error occurred while saving: " + ex.Message);
+        }
+    }
+
+    public async Task<(bool success, string message)> CreateMultipleEntriesAsync(GeneralEntryBatchModel model)
+    {
+        var currentUser = GetCurrentUsername();
+
+        if (model == null || model.Entries == null || model.Entries.Count == 0)
+        {
+            return (false, "No entries to save.");
+        }
+
+        try
+        {
+            // Validate that total debit equals total credit
+            decimal totalDebit = 0;
+            decimal totalCredit = 0;
+            foreach (var entry in model.Entries)
+            {
+                if (entry.Type == "Debit")
+                {
+                    totalDebit += entry.Amount;
+                }
+                else if (entry.Type == "Credit")
+                {
+                    totalCredit += entry.Amount;
+                }
+            }
+
+            if (totalDebit != totalCredit)
+            {
+                return (false, $"Entry is not balanced. Total Debit ({totalDebit:F2}) must be equal to Total Credit ({totalCredit:F2}). Difference: {Math.Abs(totalDebit - totalCredit):F2}");
+            }
+
+            // Validate Payment Type and Ref No for 2-account transactions
+            if (model.Entries.Count == 2)
+            {
+                var debitEntry = model.Entries.FirstOrDefault(e => e.Type == "Debit");
+                var creditEntry = model.Entries.FirstOrDefault(e => e.Type == "Credit");
+                
+                if (debitEntry != null && creditEntry != null)
+                {
+                    if (debitEntry.PaymentType != creditEntry.PaymentType || debitEntry.RefNoChequeUTR != creditEntry.RefNoChequeUTR)
+                    {
+                        return (false, "PAYMENT TYPES OR REF. NO'S NOT MATCHED");
+                    }
+                }
+            }
+
+            // Generate Voucher Number (e.g., JBK/A/24-25/00320)
+            var lastEntry = await _context.GeneralEntries
+                .OrderByDescending(g => g.Id)
+                .FirstOrDefaultAsync();
+            
+            int nextNumber = 1;
+            if (lastEntry != null && !string.IsNullOrEmpty(lastEntry.VoucherNo))
+            {
+                var parts = lastEntry.VoucherNo.Split('/');
+                if (parts.Length > 0)
+                {
+                    var numberPart = parts[parts.Length - 1];
+                    if (int.TryParse(numberPart, out int lastNum))
+                    {
+                        nextNumber = lastNum + 1;
+                    }
+                }
+            }
+            
+            var currentYear = DateTime.Now.Year;
+            var yearShort = currentYear.ToString().Substring(2);
+            var nextYear = (currentYear + 1).ToString().Substring(2);
+            var voucherNo = $"JBK/A/{yearShort}-{nextYear}/{nextNumber:D5}";
+
+            // Save entries
+            foreach (var entryData in model.Entries)
+            {
+                var generalEntry = new GeneralEntry
+                {
+                    VoucherNo = voucherNo,
+                    EntryDate = model.EntryDate,
+                    MobileNo = model.MobileNo,
+                    DebitAccountId = entryData.Type == "Debit" ? entryData.AccountId : null,
+                    DebitAccountType = entryData.Type == "Debit" ? entryData.AccountType : null,
+                    CreditAccountId = entryData.Type == "Credit" ? entryData.AccountId : null,
+                    CreditAccountType = entryData.Type == "Credit" ? entryData.AccountType : null,
+                    Amount = entryData.Amount,
+                    Type = entryData.PaymentType,
+                    VoucherType = "Journal Entry Book",
+                    PaymentType = entryData.PaymentType,
+                    Narration = (!string.IsNullOrEmpty(entryData.RefNoChequeUTR) ? $"Ref: {entryData.RefNoChequeUTR}. " : "") + (entryData.Narration ?? ""),
+                    ReferenceNo = entryData.RefNoChequeUTR,
+                    CreatedAt = DateTime.Now,
+                    CreatedBy = currentUser,
+                    Status = "Unapproved",
+                    IsActive = true,
+                    Unit = entryData.Unit,
+                    PaymentFromSubGroupId = entryData.PaymentFromSubGroupId,
+                    PaymentFromSubGroupName = entryData.PaymentFromSubGroupName,
+                    EntryAccountId = entryData.EntryAccountId,
+                    EntryForId = entryData.EntryForId,
+                    EntryForName = entryData.EntryForName
+                };
+
+                _context.GeneralEntries.Add(generalEntry);
+            }
+
+            await _context.SaveChangesAsync();
+
+            // History Logging
+            try
+            {
+                await _transactionService.LogTransactionHistoryAsync(
+                    voucherNo, "Journal", "Insert", currentUser, 
+                    remarks: "Voucher Created",
+                    newValues: JsonSerializer.Serialize(model));
+            }
+            catch { /* Ignore */ }
+
+            return (true, "Journal Entry Book created successfully!");
+        }
+        catch (Exception ex)
+        {
+            return (false, "An error occurred while saving: " + ex.Message);
+        }
+    }
+
+    public async Task<(bool success, string message)> ApproveEntryAsync(int id)
+    {
+        try
+        {
+            var currentUser = GetCurrentUsername();
+            var entry = await _context.GeneralEntries.FindAsync(id);
+            if (entry != null)
+            {
+                // Update all entries with the same VoucherNo to Approved
+                var relatedEntries = await _context.GeneralEntries
+                    .Where(g => g.VoucherNo == entry.VoucherNo && g.IsActive)
+                    .ToListAsync();
+
+                foreach (var rel in relatedEntries)
+                {
+                    rel.Status = "Approved";
+                    rel.UpdatedAt = DateTime.Now;
+                    rel.UpdatedBy = currentUser;
+                }
+
+                await _context.SaveChangesAsync();
+
+                // History Logging
+                try
+                {
+                    await _transactionService.LogTransactionHistoryAsync(
+                        entry.VoucherNo, "Journal", "Approve", currentUser, 
+                        remarks: "Voucher Approved");
+                }
+                catch { /* Ignore */ }
+
+                return (true, "Journal Entry Book approved successfully!");
+            }
+            return (false, "Journal Entry Book not found.");
+        }
+        catch (Exception ex)
+        {
+            return (false, "Error: " + ex.Message);
+        }
+    }
+
+    public async Task<(bool success, string message)> UnapproveEntryAsync(int id)
+    {
+        try
+        {
+            var currentUser = GetCurrentUsername();
+            var entry = await _context.GeneralEntries.FindAsync(id);
+            if (entry != null)
+            {
+                // Update all entries with the same VoucherNo to Unapproved
+                var relatedEntries = await _context.GeneralEntries
+                    .Where(g => g.VoucherNo == entry.VoucherNo && g.IsActive)
+                    .ToListAsync();
+
+                foreach (var rel in relatedEntries)
+                {
+                    rel.Status = "Unapproved";
+                    rel.UpdatedAt = DateTime.Now;
+                    rel.UpdatedBy = currentUser;
+                }
+
+                await _context.SaveChangesAsync();
+
+                // History Logging
+                try
+                {
+                    await _transactionService.LogTransactionHistoryAsync(
+                        entry.VoucherNo, "Journal", "Unapprove", currentUser, 
+                        remarks: "Voucher Unapproved");
+                }
+                catch { /* Ignore */ }
+
+                return (true, "Journal Entry Book unapproved successfully!");
+            }
+            return (false, "Journal Entry Book not found.");
+        }
+        catch (Exception ex)
+        {
+            return (false, "Error: " + ex.Message);
+        }
+    }
+
+    public async Task<(bool success, string message)> DeleteEntryAsync(int id)
+    {
+        var currentUser = GetCurrentUsername();
+        var entry = await _context.GeneralEntries.FindAsync(id);
+        if (entry == null)
+        {
+            return (false, "Entry not found.");
+        }
+
+        try
+        {
+            // Delete all entries with same VoucherNo
+            var relatedEntries = await _context.GeneralEntries
+                .Where(g => g.VoucherNo == entry.VoucherNo)
+                .ToListAsync();
+
+            foreach (var rel in relatedEntries)
+            {
+                rel.IsActive = false;
+                rel.Status = "Deleted";
+                rel.UpdatedAt = DateTime.Now;
+                rel.UpdatedBy = currentUser;
+                _context.Update(rel);
+            }
+
+            await _context.SaveChangesAsync();
+
+            // History Logging
+            try
+            {
+                await _transactionService.LogTransactionHistoryAsync(
+                    entry.VoucherNo, "Journal", "Delete", currentUser, 
+                    remarks: "Voucher Deleted");
+            }
+            catch { /* Ignore */ }
+
+            return (true, "Journal entry deleted successfully!");
+        }
+        catch (Exception ex)
+        {
+            return (false, "Error deleting entry: " + ex.Message);
+        }
+    }
+    #endregion
+
+    #region Specific Retrieval
+    public async Task<GeneralEntry?> GetEntryByIdAsync(int id)
+    {
+         try
+         {
+             var entry = await _context.GeneralEntries.FindAsync(id);
+             if (entry != null)
+             {
+                await LoadAccountNamesAsync(entry);
+             }
+             return entry;
+         }
+         catch (Exception)
+         {
+             throw;
+         }
+    }
+
+    public async Task<List<GeneralEntry>> GetVoucherEntriesAsync(string voucherNo)
+    {
+        try
+        {
+            var entries = await _context.GeneralEntries
+                .Where(g => g.VoucherNo == voucherNo)
+                .OrderBy(g => g.CreatedAt)
+                .ToListAsync();
+                
+            foreach(var entry in entries)
+            {
+                await LoadAccountNamesAsync(entry);
+            }
+            return entries;
+        }
+        catch (Exception)
+        {
+            throw;
+        }
+    }
+    #endregion
+
+    #region Lookups
+    public async Task<IEnumerable<LookupItem>> GetAccountsAsync(string? searchTerm, int? paymentFromId = null, string? type = null)
+    {
+        try
+        {
+            var rules = await _context.AccountRules
+                .Where(r => r.RuleType == "AllowedNature")
+                .ToListAsync();
+
+            string? GetRuleValue(string accountType, int accountId, int? entryId)
+            {
+                if (entryId.HasValue)
+                {
+                    var specificRule = rules.FirstOrDefault(r => r.AccountType == accountType && r.AccountId == accountId && r.EntryAccountId == entryId);
+                    if (specificRule != null) return specificRule.Value;
+                }
+                var defaultRule = rules.FirstOrDefault(r => r.AccountType == accountType && r.AccountId == accountId && r.EntryAccountId == null);
+                if (defaultRule != null) return defaultRule.Value;
+                return null;
+            }
+
+            bool IsAllowed(string accountType, int accountId, string? fallbackType = null, int? fallbackId = null)
+            {
+                string? ruleValue = GetRuleValue(accountType, accountId, paymentFromId);
+                if (ruleValue != null) return CheckRule(ruleValue, type);
+
+                if (fallbackType != null && fallbackId.HasValue)
+                {
+                    string? fallbackRuleValue = GetRuleValue(fallbackType, fallbackId.Value, paymentFromId);
+                    if (fallbackRuleValue != null) return CheckRule(fallbackRuleValue, type);
+                }
+                return true;
+            }
+
+            bool CheckRule(string ruleValue, string? filterType)
+            {
+                if (string.IsNullOrWhiteSpace(ruleValue)) return false;
+                if (ruleValue.Equals("Both", StringComparison.OrdinalIgnoreCase)) return true;
+                if (ruleValue.Equals("Cancel", StringComparison.OrdinalIgnoreCase)) return false;
+                if (string.IsNullOrWhiteSpace(filterType)) return true;
+
+                if (ruleValue.Equals("Debit", StringComparison.OrdinalIgnoreCase) && filterType.Equals("Debit", StringComparison.OrdinalIgnoreCase)) return true;
+                if (ruleValue.Equals("Credit", StringComparison.OrdinalIgnoreCase) && filterType.Equals("Credit", StringComparison.OrdinalIgnoreCase)) return true;
+
+                return false;
+            }
+
+            if (paymentFromId.HasValue)
+            {
+                var profileRules = rules.Where(r => r.EntryAccountId == paymentFromId.Value).ToList();
+
+                var allowedSubGroupIds = profileRules
+                    .Where(r => r.AccountType == "SubGroupLedger" && CheckRule(r.Value, type))
+                    .Select(r => r.AccountId)
+                    .ToHashSet();
+
+                var allowedBankMasterIds = profileRules
+                    .Where(r => r.AccountType == "BankMaster" && CheckRule(r.Value, type))
+                    .Select(r => r.AccountId)
+                    .ToHashSet();
+
+                var allowedFarmerIds = profileRules
+                    .Where(r => r.AccountType == "Farmer" && CheckRule(r.Value, type))
+                    .Select(r => r.AccountId)
+                    .ToHashSet();
+
+                var bankMastersQuery = _context.BankMasters.Where(bm => bm.IsActive);
+                var farmersQuery = _context.Farmers.Where(f => f.IsActive);
+
+                if (!string.IsNullOrEmpty(searchTerm))
+                {
+                    bankMastersQuery = bankMastersQuery.Where(bm => bm.AccountName.Contains(searchTerm));
+                    farmersQuery = farmersQuery.Where(f => f.FarmerName.Contains(searchTerm));
+                }
+
+                var bankMasters = await bankMastersQuery
+                    .Where(bm => allowedBankMasterIds.Contains(bm.Id) || allowedSubGroupIds.Contains(bm.GroupId))
+                    .OrderBy(bm => bm.AccountName)
+                    .Take(50)
+                    .ToListAsync();
+
+                var farmers = await farmersQuery
+                    .Where(f => allowedFarmerIds.Contains(f.Id))
+                    .OrderBy(f => f.FarmerName)
+                    .Take(50)
+                    .ToListAsync();
+
+                var allAccounts = new List<LookupItem>();
+                allAccounts.AddRange(bankMasters.Select(bm => new LookupItem { Id = bm.Id, Name = bm.AccountName, Type = "BankMaster" }));
+                allAccounts.AddRange(farmers.Select(f => new LookupItem { Id = f.Id, Name = f.FarmerName, Type = "Farmer" }));
+
+                return allAccounts.OrderBy(a => a.Name).Take(100).ToList();
+            }
+
+            var globalBankMastersQuery = _context.BankMasters.Where(bm => bm.IsActive);
+            var globalSubGroupLedgersQuery = _context.SubGroupLedgers.Where(s => s.IsActive);
+            var globalFarmersQuery = _context.Farmers.Where(f => f.IsActive);
+
+            if (!string.IsNullOrEmpty(searchTerm))
+            {
+                globalBankMastersQuery = globalBankMastersQuery.Where(bm => bm.AccountName.Contains(searchTerm));
+                globalSubGroupLedgersQuery = globalSubGroupLedgersQuery.Where(s => s.Name.Contains(searchTerm));
+                globalFarmersQuery = globalFarmersQuery.Where(f => f.FarmerName.Contains(searchTerm));
+            }
+
+            var globalBankMasters = await globalBankMastersQuery.OrderBy(bm => bm.AccountName).Take(50).ToListAsync();
+            var globalSubGroupLedgers = await globalSubGroupLedgersQuery.OrderBy(s => s.Name).Take(50).ToListAsync();
+            var globalFarmers = await globalFarmersQuery.OrderBy(f => f.FarmerName).Take(50).ToListAsync();
+
+            var globalAccounts = new List<LookupItem>();
+            globalAccounts.AddRange(globalBankMasters
+                .Where(bm => IsAllowed(AccountTypes.BankMaster, bm.Id, AccountTypes.SubGroupLedger, bm.GroupId))
+                .Select(bm => new LookupItem { Id = bm.Id, Name = bm.AccountName, Type = AccountTypes.BankMaster }));
+            globalAccounts.AddRange(globalSubGroupLedgers
+                .Where(sgl => IsAllowed(AccountTypes.SubGroupLedger, sgl.Id))
+                .Select(sgl => new LookupItem { Id = sgl.Id, Name = sgl.Name, Type = AccountTypes.SubGroupLedger }));
+            globalAccounts.AddRange(globalFarmers
+                .Where(f => IsAllowed(AccountTypes.Farmer, f.Id, AccountTypes.GrowerGroup, f.GroupId))
+                .Select(f => new LookupItem { Id = f.Id, Name = f.FarmerName, Type = AccountTypes.Farmer }));
+
+            return globalAccounts.OrderBy(a => a.Name).Take(100).ToList();
+        }
+        catch (Exception)
+        {
+            throw;
+        }
+    }
+    
+
+    public async Task<IEnumerable<object>> GetExpenseGroupsAsync(string? searchTerm)
+    {
+        try
+        {
+            var query = _context.MasterGroups.AsQueryable();
+            
+            if (!string.IsNullOrEmpty(searchTerm))
+            {
+                query = query.Where(mg => mg.Name.Contains(searchTerm));
+            }
+            
+            return await query
+                .OrderBy(mg => mg.Name)
+                .Take(50)
+                .Select(mg => new { id = mg.Id, name = mg.Name })
+                .ToListAsync();
+        }
+        catch (Exception)
+        {
+            throw;
+        }
+    }
+
+    public async Task<IEnumerable<object>> GetExpenseSubGroupsAsync(int? groupId, string? searchTerm)
+    {
+        try
+        {
+            var query = _context.MasterSubGroups
+                .Include(msg => msg.MasterGroup)
+                .Where(msg => msg.IsActive)
+                .AsQueryable();
+            
+            if (groupId.HasValue)
+            {
+                query = query.Where(msg => msg.MasterGroupId == groupId.Value);
+            }
+            
+            if (!string.IsNullOrEmpty(searchTerm))
+            {
+                query = query.Where(msg => 
+                    msg.Name.Contains(searchTerm) ||
+                    (msg.MasterGroup != null && msg.MasterGroup.Name.Contains(searchTerm)));
+            }
+            
+            return await query
+                .OrderBy(msg => msg.Name)
+                .Take(50)
+                .Select(msg => new { 
+                    id = msg.Id, 
+                    name = msg.MasterGroup != null ? $"{msg.MasterGroup.Name} - {msg.Name}" : msg.Name 
+                })
+                .ToListAsync();
+        }
+        catch (Exception)
+        {
+            throw;
+        }
+    }
+
+    public async Task<IEnumerable<object>> GetVendorGroupsAsync(string? searchTerm)
+    {
+        try
+        {
+            return await GetExpenseGroupsAsync(searchTerm);
+        }
+        catch (Exception)
+        {
+            throw;
+        }
+    }
+    
+    public async Task<List<string>> GetUniqueTypesAsync()
+    {
+        try
+        {
+            return await _context.GeneralEntries
+                .Where(g => !string.IsNullOrEmpty(g.Type))
+                .Select(g => g.Type)
+                .Distinct()
+                .OrderBy(t => t)
+                .ToListAsync();
+        }
+        catch (Exception)
+        {
+            throw;
+        }
+    }
+
+    public async Task<IEnumerable<object>> GetSubGroupLedgersAsync()
+    {
+        try
+        {
+             return await _context.SubGroupLedgers
+                .Where(s => s.IsActive)
+                .OrderBy(s => s.Name)
+                .Select(s => new { Id = s.Id, Name = s.Name })
+                .ToListAsync();
+        }
+        catch (Exception)
+        {
+            throw;
+        }
+    }
+
+    public async Task<IEnumerable<LookupItem>> GetEntryProfilesAsync(string transactionType)
+    {
+        try
+        {
+            var types = new[] { "Global", transactionType };
+            return await _context.EntryForAccounts
+                .Where(e => types.Contains(e.TransactionType))
+                .OrderBy(e => e.AccountName)
+                .Select(e => new LookupItem { Id = e.Id, Name = e.AccountName })
+                .ToListAsync();
+        }
+        catch (Exception)
+        {
+            throw;
+        }
+    }
+    #endregion
+
+    #region Updates
+    public async Task<(bool success, string message)> AddTypeColumnAsync()
+    {
+        try
+        {
+            var sql = @"
+                IF NOT EXISTS (
+                    SELECT * 
+                    FROM INFORMATION_SCHEMA.COLUMNS 
+                    WHERE TABLE_NAME = 'GeneralEntries' 
+                    AND COLUMN_NAME = 'Type'
+                )
+                BEGIN
+                    ALTER TABLE [dbo].[GeneralEntries]
+                    ADD [Type] NVARCHAR(100) NULL;
+                END
+            ";
+            
+            await _context.Database.ExecuteSqlRawAsync(sql);
+            return (true, "Type column added successfully!");
+        }
+        catch (Exception ex)
+        {
+            return (false, "Error: " + ex.Message);
+        }
+    }
+
+    public async Task<(bool success, string message)> UpdateVoucherAsync(string voucherNo, GeneralEntryBatchModel model)
+    {
+        if (model == null || model.Entries == null || model.Entries.Count == 0)
+        {
+            return (false, "No entries to save.");
+        }
+
+        var currentUser = GetCurrentUsername();
+
+        var strategy = _context.Database.CreateExecutionStrategy();
+        return await strategy.ExecuteAsync(async () =>
+        {
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                // 1. Validate Balance
+                decimal totalDebit = model.Entries.Where(e => e.Type == "Debit").Sum(e => e.Amount);
+                decimal totalCredit = model.Entries.Where(e => e.Type == "Credit").Sum(e => e.Amount);
+                
+                if (totalDebit != totalCredit)
+                {
+                    return (false, $"Entry is not balanced. Total Debit ({totalDebit:F2}) must be equal to Total Credit ({totalCredit:F2}). Details: Diff {Math.Abs(totalDebit - totalCredit):F2}");
+                }
+
+                // 2. Validate Payment Type and Ref No for 2-account transactions
+                if (model.Entries.Count == 2)
+                {
+                    var debitEntry = model.Entries.FirstOrDefault(e => e.Type == "Debit");
+                    var creditEntry = model.Entries.FirstOrDefault(e => e.Type == "Credit");
+                    
+                    if (debitEntry != null && creditEntry != null)
+                    {
+                        if (debitEntry.PaymentType != creditEntry.PaymentType || debitEntry.RefNoChequeUTR != creditEntry.RefNoChequeUTR)
+                        {
+                            return (false, "PAYMENT TYPES OR REF. NO'S NOT MATCHED");
+                        }
+                    }
+                }
+
+                // 3. Delete existing active entries for this VoucherNo
+                var existingEntries = await _context.GeneralEntries
+                    .Where(g => g.VoucherNo == voucherNo)
+                    .ToListAsync();
+
+                if (!existingEntries.Any())
+                {
+                    return (false, "Journal Entry not found.");
+                }
+
+                // Capture old state for history (mapped for perfect comparison)
+                string? oldValues = null;
+                try
+                {
+                    var oldModel = new GeneralEntryBatchModel
+                    {
+                        EntryDate = existingEntries.FirstOrDefault()?.EntryDate ?? DateTime.Now,
+                        MobileNo = existingEntries.FirstOrDefault()?.MobileNo,
+                        Entries = existingEntries.Select(ge => new GeneralEntryItemModel
+                        {
+                            Type = ge.DebitAccountId != null ? "Debit" : "Credit",
+                            AccountId = ge.DebitAccountId ?? ge.CreditAccountId ?? 0,
+                            AccountType = ge.DebitAccountType ?? ge.CreditAccountType ?? "",
+                            Amount = ge.Amount,
+                            Narration = ge.Narration,
+                            Unit = ge.Unit,
+                            EntryForId = ge.EntryForId,
+                            EntryForName = ge.EntryForName,
+                            PaymentType = ge.PaymentType ?? "",
+                            RefNoChequeUTR = ge.ReferenceNo ?? ""
+                        }).ToList()
+                    };
+                    oldValues = JsonSerializer.Serialize(oldModel);
+                }
+                catch { }
+
+                // Capture existing Unit to preserve it if not provided
+                var existingUnit = existingEntries.First().Unit;
+
+                // Hard delete or Soft delete? Using Hard delete for update to keep history clean or Soft Delete then Insert?
+                _context.GeneralEntries.RemoveRange(existingEntries);
+                await _context.SaveChangesAsync();
+
+                // 4. Create new entries (strictly single-sided per row)
+                foreach (var entryData in model.Entries)
+                {
+                    var generalEntry = new GeneralEntry
+                    {
+                        VoucherNo = voucherNo,
+                        EntryDate = model.EntryDate,
+                        MobileNo = model.MobileNo,
+                        DebitAccountId = entryData.Type == "Debit" ? entryData.AccountId : null,
+                        DebitAccountType = entryData.Type == "Debit" ? entryData.AccountType : null,
+                        CreditAccountId = entryData.Type == "Credit" ? entryData.AccountId : null,
+                        CreditAccountType = entryData.Type == "Credit" ? entryData.AccountType : null,
+                        Amount = entryData.Amount,
+                        Type = entryData.PaymentType,
+                        VoucherType = "Journal Entry Book",
+                        PaymentType = entryData.PaymentType,
+                        Narration = (!string.IsNullOrEmpty(entryData.RefNoChequeUTR) ? $"Ref: {entryData.RefNoChequeUTR}. " : "") + (entryData.Narration ?? ""),
+                        ReferenceNo = entryData.RefNoChequeUTR,
+                        CreatedAt = DateTime.Now,
+                        CreatedBy = currentUser,
+                        Status = existingEntries.FirstOrDefault()?.Status ?? "Unapproved",
+                        IsActive = true,
+                        Unit = entryData.Unit ?? existingUnit,
+                        PaymentFromSubGroupId = entryData.PaymentFromSubGroupId,
+                        PaymentFromSubGroupName = entryData.PaymentFromSubGroupName,
+                        EntryAccountId = entryData.EntryAccountId,
+                        EntryForId = entryData.EntryForId,
+                        EntryForName = entryData.EntryForName
+                    };
+
+                    _context.GeneralEntries.Add(generalEntry);
+                }
+
+                await _context.SaveChangesAsync();
+
+                // History Logging
+                try
+                {
+                    await _transactionService.LogTransactionHistoryAsync(
+                        voucherNo, "Journal", "Edit", currentUser, 
+                        remarks: "Voucher Updated",
+                        oldValues: oldValues,
+                        newValues: JsonSerializer.Serialize(model));
+                }
+                catch { /* Ignore */ }
+
+                await transaction.CommitAsync();
+
+                return (true, "Journal Entry updated successfully!");
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                return (false, "Error updating voucher: " + ex.Message);
+            }
+        });
+    }
+    #endregion
+
+    #region Helpers II
+    private async Task LoadAccountNamesAsync(GeneralEntry entry)
+    {
+        try
+        {
+            // Load Debit Account
+            if (entry.DebitAccountType == AccountTypes.MasterGroup)
+            {
+                entry.DebitMasterGroup = await _context.MasterGroups.FindAsync(entry.DebitAccountId);
+            }
+            else if (entry.DebitAccountType == AccountTypes.MasterSubGroup)
+            {
+                entry.DebitMasterSubGroup = await _context.MasterSubGroups
+                    .Include(msg => msg.MasterGroup)
+                    .FirstOrDefaultAsync(msg => msg.Id == entry.DebitAccountId);
+            }
+            else if (entry.DebitAccountType == AccountTypes.SubGroupLedger)
+            {
+                entry.DebitSubGroupLedger = await _context.SubGroupLedgers
+                    .Include(sgl => sgl.MasterGroup)
+                    .Include(sgl => sgl.MasterSubGroup)
+                    .FirstOrDefaultAsync(sgl => sgl.Id == entry.DebitAccountId);
+            }
+            else if (entry.DebitAccountType == AccountTypes.BankMaster)
+            {
+                entry.DebitBankMasterInfo = await _context.BankMasters
+                    .Include(b => b.Group)
+                    .FirstOrDefaultAsync(b => b.Id == entry.DebitAccountId);
+            }
+            else if (entry.DebitAccountType == AccountTypes.Farmer)
+            {
+                entry.DebitFarmer = await _context.Farmers
+                    .Include(f => f.GrowerGroup)
+                    .FirstOrDefaultAsync(f => f.Id == entry.DebitAccountId);
+            }
+
+            // Load Credit Account
+            if (entry.CreditAccountType == AccountTypes.MasterGroup)
+            {
+                entry.CreditMasterGroup = await _context.MasterGroups.FindAsync(entry.CreditAccountId);
+            }
+            else if (entry.CreditAccountType == AccountTypes.MasterSubGroup)
+            {
+                entry.CreditMasterSubGroup = await _context.MasterSubGroups
+                    .Include(msg => msg.MasterGroup)
+                    .FirstOrDefaultAsync(msg => msg.Id == entry.CreditAccountId);
+            }
+            else if (entry.CreditAccountType == AccountTypes.SubGroupLedger)
+            {
+                entry.CreditSubGroupLedger = await _context.SubGroupLedgers
+                    .Include(sgl => sgl.MasterGroup)
+                    .Include(sgl => sgl.MasterSubGroup)
+                    .FirstOrDefaultAsync(sgl => sgl.Id == entry.CreditAccountId);
+            }
+            else if (entry.CreditAccountType == AccountTypes.BankMaster)
+            {
+                entry.CreditBankMasterInfo = await _context.BankMasters
+                    .Include(b => b.Group)
+                    .FirstOrDefaultAsync(b => b.Id == entry.CreditAccountId);
+            }
+            else if (entry.CreditAccountType == AccountTypes.Farmer)
+            {
+                 entry.CreditFarmer = await _context.Farmers
+                    .Include(f => f.GrowerGroup)
+                    .FirstOrDefaultAsync(f => f.Id == entry.CreditAccountId);
+            }
+
+            // Load EntryForName if missing
+            if (string.IsNullOrEmpty(entry.EntryForName))
+            {
+                int? profileId = entry.EntryForId ?? entry.EntryAccountId;
+                if (profileId.HasValue && profileId > 0)
+                {
+                    var profile = await _context.EntryForAccounts.FindAsync(profileId.Value);
+                    if (profile != null)
+                    {
+                        entry.EntryForName = profile.AccountName;
+                    }
+                }
+            }
+        }
+        catch (Exception)
+        {
+            throw;
+        }
+    }
+    #endregion
+
+
+    #region Lookups II
+    public async Task<IEnumerable<object>> GetSubGroupLedgersAsync(int? masterSubGroupId, string? searchTerm)
+    {
+        try
+        {
+            var query = _context.SubGroupLedgers
+                .Include(sgl => sgl.MasterGroup)
+                .Include(sgl => sgl.MasterSubGroup)
+                .Where(sgl => sgl.IsActive)
+                .AsQueryable();
+
+            if (masterSubGroupId.HasValue)
+            {
+                query = query.Where(sgl => sgl.MasterSubGroupId == masterSubGroupId.Value);
+            }
+
+            if (!string.IsNullOrEmpty(searchTerm))
+            {
+                query = query.Where(sgl => 
+                    sgl.Name.Contains(searchTerm) ||
+                    (sgl.MasterGroup != null && sgl.MasterGroup.Name.Contains(searchTerm)) ||
+                    (sgl.MasterSubGroup != null && sgl.MasterSubGroup.Name.Contains(searchTerm))
+                );
+            }
+
+            return await query
+                .OrderBy(sgl => sgl.Name)
+                .Take(50)
+                .Select(sgl => new { 
+                    id = sgl.Id, 
+                    name = sgl.Name // Just Name as per user request? Or including group? "Sub Group Ledger & Account".
+                    // User wants "Account" dropdown.
+                })
+                .ToListAsync();
+        }
+        catch (Exception)
+        {
+            throw;
+        }
+    }
+
+    public async Task<IEnumerable<object>> GetAccountsByGroupIdAsync(int groupId)
+    {
+        try
+        {
+            // Fetch BankMaster accounts filtered by SubGroupLedger ID (GroupId)
+            // Filter: Only include accounts with non-zero balance (Credit - Debit != 0)
+            // This implicitly excludes accounts with no entries and accounts that are squared off.
+            // also removed 'bm.IsActive' check to include inactive accounts if they have a remaining balance.
+            var accounts = await _context.BankMasters
+                .Where(bm => bm.GroupId == groupId)
+                .Select(bm => new { 
+                    bm.Id, 
+                    bm.AccountName,
+                    DebitSum = _context.GeneralEntries
+                        .Where(g => g.DebitAccountId == bm.Id && g.DebitAccountType == AccountTypes.BankMaster)
+                        .Sum(g => (decimal?)g.Amount) ?? 0,
+                    CreditSum = _context.GeneralEntries
+                        .Where(g => g.CreditAccountId == bm.Id && g.CreditAccountType == AccountTypes.BankMaster)
+                        .Sum(g => (decimal?)g.Amount) ?? 0
+                })
+                .Where(x => (x.CreditSum - x.DebitSum) != 0)
+                .OrderBy(x => x.AccountName)
+                .Select(x => new { 
+                    id = x.Id, 
+                    name = x.AccountName,
+                    type = AccountTypes.BankMaster
+                })
+                .ToListAsync();
+                
+            return accounts;
+        }
+        catch (Exception)
+        {
+            throw;
+        }
+    }
+    #endregion
+
+    #region Reporting
+
+    public async Task<LedgerReportResult> GetLedgerReportAsync(int accountId, string accountType, DateTime fromDate, DateTime toDate)
+    {
+        try
+        {
+            var result = new LedgerReportResult();
+            var entries = new List<LedgerEntryViewModel>();
+
+            var connectionString = _context.Database.GetDbConnection().ConnectionString;
+
+            using (var conn = new SqlConnection(connectionString))
+            using (var cmd = new SqlCommand("GetLedgerReport", conn))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.AddWithValue("@AccountId", accountId);
+                cmd.Parameters.AddWithValue("@AccountType", accountType);
+                cmd.Parameters.AddWithValue("@FromDate", fromDate);
+                cmd.Parameters.AddWithValue("@ToDate", toDate);
+
+                var pOpeningBalance = new SqlParameter("@OpeningBalance", SqlDbType.Decimal)
+                {
+                    Direction = ParameterDirection.Output,
+                    Precision = 18,
+                    Scale = 2
+                };
+                cmd.Parameters.Add(pOpeningBalance);
+
+                await conn.OpenAsync();
+
+                using (var reader = await cmd.ExecuteReaderAsync())
+                {
+                    while (await reader.ReadAsync())
+                    {
+                        entries.Add(new LedgerEntryViewModel
+                        {
+                            Date = reader.GetDateTime(reader.GetOrdinal("EntryDate")),
+                            VoucherNo = reader.IsDBNull(reader.GetOrdinal("VoucherNo")) ? "" : reader.GetString(reader.GetOrdinal("VoucherNo")),
+                            VoucherType = reader.IsDBNull(reader.GetOrdinal("VoucherType")) ? "General Entry" : reader.GetString(reader.GetOrdinal("VoucherType")),
+                            PaymentType = reader.IsDBNull(reader.GetOrdinal("PaymentType")) ? "" : reader.GetString(reader.GetOrdinal("PaymentType")),
+                            Narration = reader.IsDBNull(reader.GetOrdinal("Narration")) ? "" : reader.GetString(reader.GetOrdinal("Narration")),
+                            Unit = reader.IsDBNull(reader.GetOrdinal("Unit")) ? "" : reader.GetString(reader.GetOrdinal("Unit")),
+                            DebitAmount = reader.GetDecimal(reader.GetOrdinal("DebitAmount")),
+                            CreditAmount = reader.GetDecimal(reader.GetOrdinal("CreditAmount")),
+                            Particulars = reader.IsDBNull(reader.GetOrdinal("Particulars")) ? "" : reader.GetString(reader.GetOrdinal("Particulars")),
+                            EntryFor = reader.IsDBNull(reader.GetOrdinal("EntryForName")) ? "" : reader.GetString(reader.GetOrdinal("EntryForName"))
+                        });
+                    }
+                }
+
+                result.OpeningBalance = pOpeningBalance.Value != DBNull.Value ? (decimal)pOpeningBalance.Value : 0;
+                result.Entries = entries;
+
+                // Calculate Closing Balance
+                result.ClosingBalance = result.OpeningBalance + entries.Sum(e => e.CreditAmount - e.DebitAmount);
+            }
+
+            return result;
+        }
+        catch (Exception)
+        {
+            throw;
+        }
+    }
+
+
+    #endregion
+
+        #region Reporting Helpers
+    private async Task<string> GetAccountNameAsync(int accountId, string accountType)
+    {
+        try
+        {
+            return accountType switch
+            {
+                AccountTypes.BankMaster => (await _context.BankMasters.FindAsync(accountId))?.AccountName ?? "",
+                AccountTypes.MasterGroup => (await _context.MasterGroups.FindAsync(accountId))?.Name ?? "",
+                AccountTypes.MasterSubGroup => (await _context.MasterSubGroups.FindAsync(accountId))?.Name ?? "",
+                AccountTypes.SubGroupLedger => (await _context.SubGroupLedgers.FindAsync(accountId))?.Name ?? "",
+                AccountTypes.Farmer => (await _context.Farmers.FindAsync(accountId))?.FarmerName ?? "",
+                _ => ""
+            };
+        }
+        catch (Exception)
+        {
+            throw;
+        }
+    }
+
+    public async Task<string> GetMediatorAccountNameAsync()
+    {
+        try
+        {
+            var mediator = await _context.MasterGroups
+                .OrderBy(mg => mg.Id)
+                .FirstOrDefaultAsync();
+            return mediator?.Name ?? "ASSETS";
+        }
+        catch (Exception)
+        {
+            throw;
+        }
+    }
+
+    private async Task<Dictionary<int, int>> LoadDebitNoteBankMasterIdMappingsAsync()
+    {
+        try
+        {
+            var basePath = AppContext.BaseDirectory;
+            var projectRoot = Path.GetFullPath(Path.Combine(basePath, "..", "..", "..", ".."));
+            var mappingPath = Path.Combine(projectRoot, "Data", "DebitNoteBankMasterMapping.json");
+            if (System.IO.File.Exists(mappingPath))
+            {
+                var json = await System.IO.File.ReadAllTextAsync(mappingPath);
+                if (!string.IsNullOrEmpty(json)) return JsonSerializer.Deserialize<Dictionary<int, int>>(json) ?? new Dictionary<int, int>();
+            }
+        }
+        catch { }
+        return new Dictionary<int, int>();
+    }
+    private GeneralEntry CreateLedgerEntry(GeneralEntry original, GeneralEntry? opposite, decimal amount, bool isDebit)
+    {
+        var ledgerEntry = new GeneralEntry
+        {
+            Id = original.Id,
+            VoucherNo = original.VoucherNo,
+            EntryDate = original.EntryDate,
+            Amount = amount,
+            Narration = original.Narration,
+            Status = original.Status,
+            Type = original.Type,
+            CreatedAt = original.CreatedAt,
+            DebitAccountId = original.DebitAccountId,
+            DebitAccountType = original.DebitAccountType,
+            CreditAccountId = original.CreditAccountId,
+            CreditAccountType = original.CreditAccountType,
+            VoucherType = "Journal Entry Book",
+            PaymentType = original.EntryForName ?? "Journal",
+            Unit = original.Unit
+        };
+
+        if (opposite != null)
+        {
+            if (isDebit)
+            {
+                ledgerEntry.CreditMasterGroup = opposite.CreditMasterGroup;
+                ledgerEntry.CreditMasterSubGroup = opposite.CreditMasterSubGroup;
+                ledgerEntry.CreditSubGroupLedger = opposite.CreditSubGroupLedger;
+                ledgerEntry.CreditBankMasterInfo = opposite.CreditBankMasterInfo;
+                ledgerEntry.DebitBankMasterInfo = original.DebitBankMasterInfo;
+            }
+            else
+            {
+                ledgerEntry.DebitMasterGroup = opposite.DebitMasterGroup;
+                ledgerEntry.DebitMasterSubGroup = opposite.DebitMasterSubGroup;
+                ledgerEntry.DebitSubGroupLedger = opposite.DebitSubGroupLedger;
+                ledgerEntry.DebitBankMasterInfo = opposite.DebitBankMasterInfo;
+                ledgerEntry.CreditBankMasterInfo = original.CreditBankMasterInfo;
+            }
+        }
+
+        return ledgerEntry;
+    }
+
+    private GeneralEntry CreateReceiptLedgerEntry(ReceiptEntry original, ReceiptEntry? opposite, decimal amount, string oppositeName)
+    {
+        var generalEntry = new GeneralEntry
+        {
+            Id = original.Id * -1,
+            VoucherNo = original.VoucherNo,
+            EntryDate = original.ReceiptDate,
+            Amount = amount,
+            Narration = original.Narration,
+            Status = original.Status,
+            Type = original.PaymentType,
+            CreatedAt = original.CreatedAt,
+            VoucherType = "Receipt Entry",
+            PaymentType = original.PaymentType,
+            Unit = original.Unit
+        };
+
+        if (original.Type == "Debit")
+        {
+            generalEntry.DebitAccountId = original.AccountId;
+            generalEntry.DebitAccountType = original.AccountType;
+            generalEntry.DebitBankMasterInfo = new BankMaster { AccountName = "Self" }; // Handled by display logic
+            
+            if (opposite != null)
+            {
+                generalEntry.CreditAccountId = opposite.AccountId;
+                generalEntry.CreditAccountType = opposite.AccountType;
+                generalEntry.CreditBankMasterInfo = new BankMaster { Id = 0, AccountName = oppositeName };
+            }
+        }
+        else
+        {
+            generalEntry.CreditAccountId = original.AccountId;
+            generalEntry.CreditAccountType = original.AccountType;
+            generalEntry.CreditBankMasterInfo = new BankMaster { AccountName = "Self" };
+
+            if (opposite != null)
+            {
+                generalEntry.DebitAccountId = opposite.AccountId;
+                generalEntry.DebitAccountType = opposite.AccountType;
+                generalEntry.DebitBankMasterInfo = new BankMaster { Id = 0, AccountName = oppositeName };
+            }
+        }
+
+        return generalEntry;
+    }
+    #endregion
+    
+    #region Grower Book Management
+    public async Task<(bool success, string message)> CreateGrowerBookEntryAsync(GeneralEntry entry)
+    {
+        var currentUser = GetCurrentUsername();
+        var strategy = _context.Database.CreateExecutionStrategy();
+        
+        return await strategy.ExecuteAsync(async () =>
+        {
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                // 1. Generate Voucher Number (e.g., GBK/24-25/00001)
+                var currentYear = DateTime.Now.Year;
+                var yearShort = currentYear.ToString().Substring(2);
+                var nextYear = (currentYear + 1).ToString().Substring(2);
+                var prefix = $"GBK/{yearShort}-{nextYear}/";
+
+                var lastEntry = await _context.GeneralEntries
+                    .Where(g => g.VoucherNo.StartsWith("GBK/"))
+                    .OrderByDescending(g => g.Id)
+                    .FirstOrDefaultAsync();
+
+                int nextNumber = 1;
+                if (lastEntry != null && !string.IsNullOrEmpty(lastEntry.VoucherNo))
+                {
+                    var parts = lastEntry.VoucherNo.Split('/');
+                    if (parts.Length > 0)
+                    {
+                        var numberPart = parts[parts.Length - 1];
+                        if (int.TryParse(numberPart, out int lastNum))
+                        {
+                            nextNumber = lastNum + 1;
+                        }
+                    }
+                }
+
+                var voucherNo = $"{prefix}{nextNumber:D5}";
+
+                // 2. Create entry with both Credit and Debit accounts from user selection
+                var growerEntry = new GeneralEntry
+                {
+                    VoucherNo = voucherNo,
+                    EntryDate = entry.EntryDate,
+                    Amount = entry.Amount,
+                    Narration = entry.Narration,
+                    Status = "Unapproved",
+                    IsActive = true,
+                    CreatedAt = DateTime.Now,
+                    CreatedBy = currentUser,
+                    VoucherType = "Grower Book",
+                    Type = entry.Type,
+                    Unit = entry.Unit,
+                    PaymentFromSubGroupId = entry.PaymentFromSubGroupId,
+                    EntryAccountId = entry.EntryAccountId,
+                    EntryForId = entry.EntryForId,
+                    EntryForName = entry.EntryForName,
+                    // Use the accounts directly from the entry (set by controller)
+                    DebitAccountId = entry.DebitAccountId,
+                    DebitAccountType = entry.DebitAccountType,
+                    CreditAccountId = entry.CreditAccountId,
+                    CreditAccountType = entry.CreditAccountType
+                };
+
+                _context.GeneralEntries.Add(growerEntry);
+                await _context.SaveChangesAsync();
+
+                // History
+                try
+                {
+                    await _transactionService.LogTransactionHistoryAsync(
+                        voucherNo, "Grower Book", "Insert", currentUser, 
+                        remarks: "Grower Book Entry Created",
+                        newValues: JsonSerializer.Serialize(growerEntry));
+                }
+                catch { /* Ignore */ }
+
+                await transaction.CommitAsync();
+                return (true, "Grower Book entry created successfully!");
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                var fullMessage = ex.InnerException != null 
+                    ? $"{ex.Message} -> {ex.InnerException.Message}" 
+                    : ex.Message;
+                return (false, "Error creating entry: " + fullMessage);
+            }
+        });
+    }
+
+    public async Task<(bool success, string message)> CreateBatchGrowerBookAsync(GeneralEntryBatchModel model)
+    {
+        var currentUser = GetCurrentUsername();
+        var strategy = _context.Database.CreateExecutionStrategy();
+        
+        return await strategy.ExecuteAsync(async () =>
+        {
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                // 1. Generate Voucher Number (e.g., GBK/24-25/00001)
+                var currentYear = DateTime.Now.Year;
+                var yearShort = currentYear.ToString().Substring(2);
+                var nextYear = (currentYear + 1).ToString().Substring(2);
+                var prefix = $"GBK/{yearShort}-{nextYear}/";
+
+                var lastEntry = await _context.GeneralEntries
+                    .Where(g => g.VoucherNo.StartsWith("GBK/"))
+                    .OrderByDescending(g => g.Id)
+                    .FirstOrDefaultAsync();
+
+                int nextNumber = 1;
+                if (lastEntry != null && !string.IsNullOrEmpty(lastEntry.VoucherNo))
+                {
+                    var parts = lastEntry.VoucherNo.Split('/');
+                    if (parts.Length > 0)
+                    {
+                        var numberPart = parts[parts.Length - 1];
+                        if (int.TryParse(numberPart, out int lastNum))
+                        {
+                            nextNumber = lastNum + 1;
+                        }
+                    }
+                }
+
+                var voucherNo = $"{prefix}{nextNumber:D5}";
+
+                // 2. Create entries from model
+                foreach (var entryData in model.Entries)
+                {
+                    var ge = new GeneralEntry
+                    {
+                        VoucherNo = voucherNo,
+                        EntryDate = model.EntryDate,
+                        MobileNo = model.MobileNo,
+                        Amount = entryData.Amount,
+                        Narration = entryData.Narration,
+                        Status = "Unapproved",
+                        IsActive = true,
+                        CreatedAt = DateTime.Now,
+                        CreatedBy = currentUser,
+                        VoucherType = "Grower Book",
+                        Type = "GrowerBook",
+                        PaymentType = entryData.PaymentType,
+                        Unit = entryData.Unit,
+                        EntryForId = entryData.EntryForId,
+                        EntryForName = entryData.EntryForName,
+                        DebitAccountId = entryData.Type == "Debit" ? entryData.AccountId : null,
+                        DebitAccountType = entryData.Type == "Debit" ? entryData.AccountType : null,
+                        CreditAccountId = entryData.Type == "Credit" ? entryData.AccountId : null,
+                        CreditAccountType = entryData.Type == "Credit" ? entryData.AccountType : null
+                    };
+                    _context.GeneralEntries.Add(ge);
+                }
+
+                await _context.SaveChangesAsync();
+                
+                // History
+                try
+                {
+                    await _transactionService.LogTransactionHistoryAsync(
+                        voucherNo, "Grower Book", "Insert", currentUser, 
+                        remarks: "Grower Book Batch Created",
+                        newValues: JsonSerializer.Serialize(model));
+                }
+                catch { /* Ignore */ }
+
+                await transaction.CommitAsync();
+                return (true, "Grower Book entries created successfully!");
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                return (false, "Error: " + ex.Message);
+            }
+        });
+    }
+
+    public async Task<(bool success, string message)> UpdateBatchGrowerBookAsync(string voucherNo, GeneralEntryBatchModel model)
+    {
+        var currentUser = GetCurrentUsername();
+        var strategy = _context.Database.CreateExecutionStrategy();
+        
+        return await strategy.ExecuteAsync(async () =>
+        {
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                var existingEntries = await _context.GeneralEntries.Where(g => g.VoucherNo == voucherNo).ToListAsync();
+                if (existingEntries.Any(e => e.Status == "Approved")) return (false, "Approved entries cannot be modified.");
+                
+                // Capture old state for history (mapped for perfect comparison)
+                string? oldValues = null;
+                try
+                {
+                    var oldModel = new GeneralEntryBatchModel
+                    {
+                        EntryDate = existingEntries.FirstOrDefault()?.EntryDate ?? DateTime.Now,
+                        MobileNo = existingEntries.FirstOrDefault()?.MobileNo,
+                        Entries = existingEntries.Select(ge => new GeneralEntryItemModel
+                        {
+                            Type = ge.DebitAccountId != null ? "Debit" : "Credit",
+                            AccountId = ge.DebitAccountId ?? ge.CreditAccountId ?? 0,
+                            AccountType = ge.DebitAccountType ?? ge.CreditAccountType ?? "",
+                            Amount = ge.Amount,
+                            Narration = ge.Narration,
+                            Unit = ge.Unit,
+                            EntryForId = ge.EntryForId,
+                            EntryForName = ge.EntryForName,
+                            PaymentType = ge.PaymentType ?? "",
+                            RefNoChequeUTR = ge.ReferenceNo ?? ""
+                        }).ToList()
+                    };
+                    oldValues = JsonSerializer.Serialize(oldModel);
+                }
+                catch { }
+
+                _context.GeneralEntries.RemoveRange(existingEntries);
+                await _context.SaveChangesAsync();
+
+                foreach (var entryData in model.Entries)
+                {
+                    var ge = new GeneralEntry
+                    {
+                        VoucherNo = voucherNo,
+                        EntryDate = model.EntryDate,
+                        MobileNo = model.MobileNo,
+                        Amount = entryData.Amount,
+                        Narration = entryData.Narration,
+                        Status = "Unapproved",
+                        IsActive = true,
+                        CreatedAt = DateTime.Now,
+                        CreatedBy = currentUser,
+                        VoucherType = "Grower Book",
+                        Type = "GrowerBook",
+                        PaymentType = entryData.PaymentType,
+                        Unit = entryData.Unit,
+                        EntryForId = entryData.EntryForId,
+                        EntryForName = entryData.EntryForName,
+                        DebitAccountId = entryData.Type == "Debit" ? entryData.AccountId : null,
+                        DebitAccountType = entryData.Type == "Debit" ? entryData.AccountType : null,
+                        CreditAccountId = entryData.Type == "Credit" ? entryData.AccountId : null,
+                        CreditAccountType = entryData.Type == "Credit" ? entryData.AccountType : null
+                    };
+                    _context.GeneralEntries.Add(ge);
+                }
+
+                await _context.SaveChangesAsync();
+
+                // History
+                try
+                {
+                    await _transactionService.LogTransactionHistoryAsync(
+                        voucherNo, "Grower Book", "Update", currentUser, 
+                        remarks: "Grower Book Batch Updated",
+                        oldValues: oldValues,
+                        newValues: JsonSerializer.Serialize(model));
+                }
+                catch { /* Ignore */ }
+
+                await transaction.CommitAsync();
+                return (true, "Grower Book entries updated successfully!");
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                return (false, "Error: " + ex.Message);
+            }
+        });
+    }
+    #endregion
+
+    #region Grower Book Retrieval
+    public async Task<(List<GeneralEntryGroupViewModel> groups, int totalCount, int totalPages)> GetGrowerBookGroupsAsync(
+        DateTime? fromDate, DateTime? toDate, string? bookNo, string? status, string? unit, int page, int pageSize)
+    {
+        try
+        {
+            var query = _context.GeneralEntries
+                .Where(g => g.VoucherNo.StartsWith("GBK/"))
+                .AsQueryable();
+
+            if (status == "Deleted")
+            {
+                query = query.Where(g => !g.IsActive);
+            }
+            else
+            {
+                query = query.Where(g => g.IsActive);
+                if (!string.IsNullOrEmpty(status) && status != "All") query = query.Where(g => g.Status == status);
+            }
+
+            if (fromDate.HasValue) query = query.Where(g => g.EntryDate >= fromDate.Value);
+            if (toDate.HasValue) query = query.Where(g => g.EntryDate <= toDate.Value);
+            if (!string.IsNullOrEmpty(bookNo)) query = query.Where(g => g.VoucherNo.Contains(bookNo));
+            if (!string.IsNullOrEmpty(unit) && unit != "All") query = query.Where(g => g.Unit == unit);
+
+            var allEntries = await query.OrderByDescending(g => g.CreatedAt).ToListAsync();
+
+            var groupedEntries = allEntries
+                .GroupBy(g => g.VoucherNo)
+                .Select(g => new GeneralEntryGroupViewModel
+                {
+                    VoucherNo = g.Key,
+                    Date = g.First().EntryDate,
+                    Entries = g.ToList(),
+                    TotalDebit = g.Where(e => e.DebitAccountId.HasValue).Sum(e => e.Amount),
+                    Status = !g.First().IsActive ? "Deleted" : g.First().Status,
+                    Unit = g.First().Unit,
+                    Id = g.First().Id
+                })
+                .ToList();
+
+            var totalCount = groupedEntries.Count;
+            var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+
+            var pagedGroups = groupedEntries
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            foreach (var group in pagedGroups)
+            {
+                foreach (var entry in group.Entries)
+                {
+                    await LoadAccountNamesAsync(entry);
+                    await LoadAccountDetailsAsync(entry);
+                    await LoadAccountDetailsAsync(entry, isCredit: true);
+                }
+            }
+
+            return (pagedGroups, totalCount, totalPages);
+        }
+        catch (Exception)
+        {
+            throw;
+        }
+    }
+
+    public async Task<(List<GeneralEntry> entries, int totalCount, int totalPages)> GetGrowerBookEntriesAsync(
+        DateTime? fromDate, DateTime? toDate, string? bookNo, string? fromGrower, string? toGrower, string? status, string? unit, int page, int pageSize)
+    {
+        try
+        {
+            var query = _context.GeneralEntries
+                .Where(g => g.VoucherNo.StartsWith("GBK/"))
+                .AsQueryable();
+
+            if (status == "Deleted")
+            {
+                query = query.Where(g => !g.IsActive);
+            }
+            else
+            {
+                query = query.Where(g => g.IsActive);
+                if (!string.IsNullOrEmpty(status) && status != "All") query = query.Where(g => g.Status == status);
+            }
+
+            if (fromDate.HasValue) query = query.Where(g => g.EntryDate >= fromDate.Value);
+            if (toDate.HasValue) query = query.Where(g => g.EntryDate <= toDate.Value);
+            if (!string.IsNullOrEmpty(bookNo)) query = query.Where(g => g.VoucherNo.Contains(bookNo));
+            if (!string.IsNullOrEmpty(unit) && unit != "All") query = query.Where(g => g.Unit == unit);
+
+            if (!string.IsNullOrEmpty(fromGrower))
+            {
+                // Search BankMasters now
+                var farmerIds = await _context.BankMasters
+                    .Where(b => b.AccountName.Contains(fromGrower))
+                    .Select(b => b.Id)
+                    .ToListAsync();
+                
+                if (farmerIds.Any())
+                {
+                     query = query.Where(g => 
+                        (g.DebitAccountType == "BankMaster" && g.DebitAccountId != null && farmerIds.Contains((int)g.DebitAccountId)) ||
+                        (g.CreditAccountType == "BankMaster" && g.CreditAccountId != null && farmerIds.Contains((int)g.CreditAccountId))
+                    );
+                }
+                else
+                {
+                    return (new List<GeneralEntry>(), 0, 0); 
+                }
+            }
+
+            if (!string.IsNullOrEmpty(toGrower))
+            {
+                 // Search BankMasters now
+                 var farmerIds = await _context.BankMasters
+                    .Where(b => b.AccountName.Contains(toGrower))
+                    .Select(b => b.Id)
+                    .ToListAsync();
+                
+                 if (farmerIds.Any())
+                {
+                     query = query.Where(g => 
+                        (g.DebitAccountType == "BankMaster" && g.DebitAccountId != null && farmerIds.Contains((int)g.DebitAccountId)) ||
+                        (g.CreditAccountType == "BankMaster" && g.CreditAccountId != null && farmerIds.Contains((int)g.CreditAccountId))
+                    );
+                }
+                 else { return (new List<GeneralEntry>(), 0, 0); }
+            }
+
+            var totalCount = await query.CountAsync();
+            var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+
+            var entries = await query
+                .OrderByDescending(g => g.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            foreach (var entry in entries)
+            {
+                await LoadAccountNamesAsync(entry);
+
+                // Load AccountDetails for correct display names in list as seen in other methods
+                await LoadAccountDetailsAsync(entry);
+                await LoadAccountDetailsAsync(entry, isCredit: true);
+                
+                if (!entry.IsActive) entry.Status = "Deleted";
+            }
+
+            return (entries, totalCount, totalPages);
+        }
+        catch (Exception)
+        {
+            throw;
+        }
+    }
+    #endregion
+
+    #region Grower Book Lookups
+    public async Task<IEnumerable<object>> GetGrowerGroupsAsync(string? searchTerm)
+    {
+        try
+        {
+            var query = _context.SubGroupLedgers.AsNoTracking()
+                 .Include(s => s.MasterGroup)
+                 .Where(g => g.IsActive && (g.Name.Contains("Grower") || g.MasterGroup.Name.Contains("Grower")));
+
+            if (!string.IsNullOrEmpty(searchTerm))
+            {
+                query = query.Where(g => g.Name.Contains(searchTerm));
+            }
+
+            return await query
+                .OrderBy(g => g.Name)
+                .Take(20)
+                .Select(g => new { id = g.Id, name = $"{g.Name} ({g.MasterGroup.Name})" })
+                .ToListAsync();
+        }
+        catch (Exception)
+        {
+            throw;
+        }
+    }
+
+    public async Task<IEnumerable<object>> GetFarmersByGroupAsync(int? groupId, string? searchTerm, string? type = null)
+    {
+        try
+        {
+            // 1. Fetch grower-related SubGroupLedger IDs (Grower Groups)
+            var growerGroupIds = await _context.SubGroupLedgers
+                .Where(s => s.IsActive && (s.Name.Contains("Grower") || s.MasterGroup.Name.Contains("Grower")))
+                .Select(s => s.Id)
+                .ToListAsync();
+
+            if (!growerGroupIds.Any())
+            {
+                return new List<object>();
+            }
+
+            // 2. Fetch Rules dictionary for fast lookup
+            var rules = await _context.AccountRules
+                .Where(r => r.RuleType == "AllowedNature" && r.AccountType == "BankMaster")
+                .ToListAsync();
+            
+            var rulesDict = rules.ToDictionary(r => r.AccountId, r => r.Value);
+
+            // Helper to check if account is allowed
+            bool IsAllowed(int bankMasterId)
+            {
+                if (string.IsNullOrEmpty(type)) return true;
+
+                if (!rulesDict.ContainsKey(bankMasterId)) return true; // No rule = Allowed (Both)
+                var ruleValue = rulesDict[bankMasterId];
+                if (ruleValue == "Both") return true;
+
+                // Map GrowerBook Type to Debit/Credit
+                // Payment -> Debit Farmer
+                // Receipt/Journal -> Credit Farmer
+                string neededType = (type == "Payment") ? "Debit" : "Credit";
+
+                return ruleValue == neededType;
+            }
+
+            // 3. Query BankMasters that belong to Grower groups
+            var query = _context.BankMasters
+                .AsNoTracking()
+                .Where(b => b.IsActive && growerGroupIds.Contains(b.GroupId));
+
+            // 4. Apply specific group filter if provided
+            if (groupId.HasValue && groupId.Value > 0)
+            {
+                query = query.Where(b => b.GroupId == groupId.Value);
+            }
+
+            // 5. Apply search term filter
+            if (!string.IsNullOrEmpty(searchTerm))
+            {
+                query = query.Where(b => b.AccountName.Contains(searchTerm));
+            }
+
+            var list = await query
+                .OrderBy(b => b.AccountName)
+                .Take(50)
+                .ToListAsync();
+
+            return list
+                .Where(b => IsAllowed(b.Id))
+                .Select(b => new { id = b.Id, name = b.AccountName, type = AccountTypes.BankMaster });
+        }
+        catch (Exception)
+        {
+            throw;
+        }
+    }
+
+    public async Task<IEnumerable<LookupItem>> GetGrowerAccountsAsync(string? searchTerm, string? transactionType, string? accountSide, int? entryForId = null)
+    {
+        try
+        {
+            // Require EntryForId for strict filtering as per request (or handle null reasonably)
+            if (!entryForId.HasValue || entryForId == 0)
+            {
+                return new List<LookupItem>();
+            }
+
+            // 1. Fetch Rules dictionary for fast lookup
+            var rules = await _context.AccountRules
+                .Where(r => r.RuleType == "AllowedNature" && r.EntryAccountId == entryForId)
+                .ToListAsync();
+
+            bool CheckRule(string ruleValue)
+            {
+                if (string.IsNullOrWhiteSpace(ruleValue)) return false;
+                if (string.Equals(ruleValue, "Both", StringComparison.OrdinalIgnoreCase)) return true;
+                if (string.Equals(ruleValue, "Cancel", StringComparison.OrdinalIgnoreCase)) return false;
+
+                if (string.IsNullOrWhiteSpace(accountSide)) return true; 
+
+                if (string.Equals(ruleValue, "Debit", StringComparison.OrdinalIgnoreCase) && string.Equals(accountSide, "Debit", StringComparison.OrdinalIgnoreCase)) return true;
+                if (string.Equals(ruleValue, "Credit", StringComparison.OrdinalIgnoreCase) && string.Equals(accountSide, "Credit", StringComparison.OrdinalIgnoreCase)) return true;
+
+                return false;
+            }
+
+            // 2. Build Allowed ID Sets from Rules
+            var allowedSubGroupIds = rules
+                .Where(r => r.AccountType == "SubGroupLedger" && CheckRule(r.Value))
+                .Select(r => r.AccountId)
+                .ToHashSet();
+
+            var allowedGrowerGroupIds = rules
+                .Where(r => r.AccountType == "GrowerGroup" && CheckRule(r.Value))
+                .Select(r => r.AccountId)
+                .ToHashSet();
+
+            var allowedBankMasterIds = rules
+                .Where(r => r.AccountType == "BankMaster" && CheckRule(r.Value))
+                .Select(r => r.AccountId)
+                .ToHashSet();
+
+            var allowedFarmerIds = rules
+                .Where(r => r.AccountType == "Farmer" && CheckRule(r.Value))
+                .Select(r => r.AccountId)
+                .ToHashSet();
+
+            // 3. Query DB with Allowed List
+            var bankMastersQuery = _context.BankMasters.Where(bm => bm.IsActive);
+            var farmersQuery = _context.Farmers.Where(f => f.IsActive);
+
+            if (!string.IsNullOrEmpty(searchTerm))
+            {
+                bankMastersQuery = bankMastersQuery.Where(bm => bm.AccountName.Contains(searchTerm));
+                farmersQuery = farmersQuery.Where(f => f.FarmerName.Contains(searchTerm));
+            }
+
+            // Execute Queries - Filtering by ID sets
+            // For BankMasters: Match ID OR GroupId (SubGroupLedger)
+            var bankMasters = await bankMastersQuery
+                .Where(bm => allowedBankMasterIds.Contains(bm.Id) || allowedSubGroupIds.Contains(bm.GroupId))
+                .OrderBy(bm => bm.AccountName)
+                .Take(50)
+                .ToListAsync();
+
+            // For Farmers: Match ID OR GroupId (GrowerGroup)
+            var farmers = await farmersQuery
+                .Where(f => allowedFarmerIds.Contains(f.Id) || allowedGrowerGroupIds.Contains(f.GroupId))
+                .OrderBy(f => f.FarmerName)
+                .Take(50)
+                .ToListAsync();
+
+            var results = new List<LookupItem>();
+            results.AddRange(bankMasters.Select(bm => new LookupItem { Id = bm.Id, Name = bm.AccountName, Type = AccountTypes.BankMaster, AccountNumber = bm.AccountNumber }));
+            results.AddRange(farmers.Select(f => new LookupItem { Id = f.Id, Name = f.FarmerName, Type = AccountTypes.Farmer, AccountNumber = f.FarmerCode }));
+
+            return results.OrderBy(r => r.Name).Take(100).ToList();
+        }
+        catch (Exception)
+        {
+            throw;
+        }
+    }
+    #endregion
+
+    #region Misc
+    public async Task<List<string>> GetUnitNamesAsync()
+    {
+        try
+        {
+            return await _context.UnitMasters
+                .OrderBy(u => u.UnitName)
+                .Select(u => u.UnitName ?? "")
+                .Where(u => !string.IsNullOrEmpty(u))
+                .Distinct()
+                .ToListAsync();
+        }
+        catch (Exception)
+        {
+            throw;
+        }
+    }
+    #endregion
+}
