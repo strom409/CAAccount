@@ -8,39 +8,39 @@ namespace BlazorDemo.AbraqAccount.Models;
 public class PackingRecipe
 {
     [Key]
-    public int Recipeid { get; set; }
-    
+    public long Recipeid { get; set; }
+
     [MaxLength(10)]
     public string? RecipeCode { get; set; }
-    
+
     [MaxLength(250)]
     public string? itemId { get; set; }
-    
+
     public decimal? unitcost { get; set; }
-    
+
     public decimal? labourcost { get; set; }
-    
+
     public bool flagdeleted { get; set; }
-    
+
     public DateTime? endeffdt { get; set; }
-    
+
     public DateTime createddate { get; set; } = DateTime.Now;
-    
+
     public int? createdby { get; set; }
-    
+
     public int? updatedby { get; set; }
-    
+
     public DateTime? updateddate { get; set; }
-    
+
     [MaxLength(250)]
     public string? recipename { get; set; }
-    
+
     public bool? status { get; set; } = true;
-    
+
     public double ItemWeight { get; set; }
-    
+
     public int? RecipePackageId { get; set; }
-    
+
     public double HighDensityRate { get; set; }
 
     // Legacy fields used by UI (to be mapped in service/context)
@@ -51,7 +51,7 @@ public class PackingRecipe
     [NotMapped] public decimal Value { get => unitcost ?? 0; set => unitcost = value; }
     [NotMapped] public bool IsActive { get => status ?? false; set => status = value; }
     [NotMapped] public DateTime CreatedAt { get => createddate; set => createddate = value; }
-    
+
     // Navigation property
     public List<PackingRecipeMaterial> Materials { get; set; } = new List<PackingRecipeMaterial>();
 }
@@ -60,10 +60,10 @@ public class PackingRecipeMaterial
 {
     [Key]
     public long RecipeItemId { get; set; }
-    public int RecipeId { get; set; }
+    public long RecipeId { get; set; }
 
-    // Reverted to long to match DB bigint
-    public long packingitemid { get; set; }
+    // CHANGE 1: Use int to match PurchaseItem.Id (int)
+    public int packingitemid { get; set; }
 
     public double? qty { get; set; }
     public decimal? avgCost { get; set; }
@@ -77,16 +77,17 @@ public class PackingRecipeMaterial
     // Navigation properties
     public PackingRecipe? PackingRecipe { get; set; }
 
+    // CHANGE 2: Use [NotMapped] instead of [ForeignKey]
     [NotMapped]
     public PurchaseItem? PurchaseItem { get; set; }
 
     [NotMapped] public string? MaterialName { get; set; }
 
     // Legacy fields for UI compatibility
-    [NotMapped] public int PackingRecipeId { get => RecipeId; set => RecipeId = value; }
+    [NotMapped] public int PackingRecipeId { get => (int)RecipeId; set => RecipeId = value; }
 
     // Cast explicitly to int for UI
-    [NotMapped] public int PurchaseItemId { get => (int)packingitemid; set => packingitemid = value; }
+    [NotMapped] public int PurchaseItemId { get => packingitemid; set => packingitemid = value; }
 
     [NotMapped] public decimal Qty { get => (decimal)(qty ?? 0); set => qty = (double)value; }
 
@@ -106,7 +107,7 @@ public class PackingRecipeSpecialRate
     public decimal? HighDensityRate { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.Now;
     public bool IsActive { get; set; } = true;
-    
+
     // Navigation properties
     public PackingRecipe? PackingRecipe { get; set; }
     public GrowerGroup? GrowerGroup { get; set; }
@@ -120,10 +121,8 @@ public class PackingRecipeSpecialRateDetail
     public int PurchaseItemId { get; set; }
     public decimal Rate { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.Now;
-    
+
     // Navigation properties
     public PackingRecipeSpecialRate? PackingRecipeSpecialRate { get; set; }
     public PurchaseItem? PurchaseItem { get; set; }
 }
-
-

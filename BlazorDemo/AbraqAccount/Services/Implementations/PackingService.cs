@@ -89,6 +89,13 @@ public class PackingService : IPackingService
 
             foreach (var material in materials)
             {
+                // Prevent tracking error for materials
+                var localMat = _context.PackingRecipeMaterials.Local.FirstOrDefault(m => m.RecipeItemId == nextItemId);
+                if (localMat != null)
+                {
+                     _context.Entry(localMat).State = EntityState.Detached;
+                }
+
                 material.RecipeItemId = nextItemId++;
                 material.RecipeId = model.Recipeid;
                 material.createddate = DateTime.Now;
@@ -191,6 +198,14 @@ public class PackingService : IPackingService
                     flagdeleted = false,
                     status = true
                 };
+
+                // Prevent tracking error if ID is already in local context (e.g. from failed previous attempt)
+                var local = _context.PackingRecipes.Local.FirstOrDefault(r => r.Recipeid == nextId);
+                if (local != null)
+                {
+                    _context.Entry(local).State = EntityState.Detached;
+                }
+
                 _context.PackingRecipes.Add(existing);
             }
             else
@@ -222,18 +237,37 @@ public class PackingService : IPackingService
             if (materials != null && materials.Any())
             {
                 existing.unitcost = materials.Sum(m => m.Value);
-                
-                // Get last item ID for sequence
-                var lastItem = await _context.PackingRecipeMaterials
+
+                var lastItemIdLong = await _context.PackingRecipeMaterials
                     .AsNoTracking()
                     .OrderByDescending(m => m.RecipeItemId)
+                    .Select(m => (long)m.RecipeItemId) // fetch as long
                     .FirstOrDefaultAsync();
-                long nextItemId = (lastItem?.RecipeItemId ?? 0) + 1;
+
+                // Convert to int safely
+                int lastItemId = lastItemIdLong > int.MaxValue
+                    ? throw new OverflowException("RecipeItemId exceeds int.MaxValue")
+                    : (int)lastItemIdLong;
+
+                int nextItemId = lastItemId + 1;
+                // Get last item ID for sequence
+                //var lastItem = await _context.PackingRecipeMaterials
+                //    .AsNoTracking()
+                //    .OrderByDescending(m => m.RecipeItemId)
+                //    .FirstOrDefaultAsync();
+                //long nextItemId = (lastItem?.RecipeItemId ?? 0) + 1;
 
                 foreach (var material in materials)
                 {
                     if (material.PurchaseItemId > 0)
                     {
+                        // Prevent tracking error for materials
+                        var localMat = _context.PackingRecipeMaterials.Local.FirstOrDefault(m => m.RecipeItemId == nextItemId);
+                        if (localMat != null)
+                        {
+                            _context.Entry(localMat).State = EntityState.Detached;
+                        }
+
                         var newMat = new PackingRecipeMaterial
                         {
                             RecipeItemId = nextItemId++,
